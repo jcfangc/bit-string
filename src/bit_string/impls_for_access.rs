@@ -70,3 +70,6 @@ impl BitString {
         self.iter().collect()
     }
 }
+
+#[cfg(test)]
+mod tests_for_get;
