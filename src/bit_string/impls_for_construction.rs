@@ -1,4 +1,4 @@
-use crate::bit_string::errors::ParseBitStringError;
+use crate::bit_string::{errors::ParseBitStringError, funcs_for_share::mask_unused_bits};
 
 use super::*;
 
@@ -13,6 +13,29 @@ impl BitString {
             bits: Vec::new().into_boxed_slice(),
             len: 0,
         }
+    }
+
+    pub fn repeat(value: bool, len: usize) -> Self {
+        let word_count = len / WORD_BITS + usize::from(len % WORD_BITS != 0);
+
+        let fill = if value { u64::MAX } else { 0 };
+        let mut bits = Vec::with_capacity(word_count);
+        bits.resize(word_count, fill);
+
+        let mut bits = bits.into_boxed_slice();
+        mask_unused_bits(&mut bits, len);
+
+        Self { bits, len }
+    }
+
+    #[inline]
+    pub fn zeros(len: usize) -> Self {
+        Self::repeat(false, len)
+    }
+
+    #[inline]
+    pub fn ones(len: usize) -> Self {
+        Self::repeat(true, len)
     }
 
     pub(crate) fn from_bool_iter<I>(iter: I) -> Self
