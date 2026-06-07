@@ -1,5 +1,6 @@
 use alloc::{boxed::Box, vec::Vec};
-use core::ops::{Bound, RangeBounds};
+
+use int_interval::UsizeCO;
 
 use crate::bit_string::funcs_for_share::mask_unused_bits;
 
@@ -89,30 +90,15 @@ fn copy_bits(src: &[u64], src_start: usize, dst: &mut [u64], dst_start: usize, l
     }
 }
 
-fn normalize_range<R>(range: R, len: usize) -> (usize, usize)
-where
-    R: RangeBounds<usize>,
-{
-    let start = match range.start_bound() {
-        Bound::Included(&index) => index,
-        Bound::Excluded(&index) => index
-            .checked_add(1)
-            .expect("bit string range start overflow"),
-        Bound::Unbounded => 0,
-    };
-
-    let end = match range.end_bound() {
-        Bound::Included(&index) => index.checked_add(1).expect("bit string range end overflow"),
-        Bound::Excluded(&index) => index,
-        Bound::Unbounded => len,
-    };
-
+#[inline]
+fn assert_interval_in_bounds(interval: UsizeCO, len: usize) {
     assert!(
-        start <= end && end <= len,
-        "bit string range out of bounds: {start}..{end}, len={len}"
+        interval.end_excl() <= len,
+        "bit string interval out of bounds: {}..{}, len={}",
+        interval.start(),
+        interval.end_excl(),
+        len
     );
-
-    (start, end)
 }
 
 impl BitString {
@@ -322,11 +308,11 @@ impl BitString {
         }
     }
 
-    pub fn replace_range<R>(&mut self, range: R, replacement: &Self)
-    where
-        R: RangeBounds<usize>,
-    {
-        let (start, end) = normalize_range(range, self.len);
+    pub fn replace_interval(&mut self, interval: UsizeCO, replacement: &Self) {
+        assert_interval_in_bounds(interval, self.len);
+
+        let start = interval.start();
+        let end = interval.end_excl();
         let tail_len = self.len - end;
 
         let new_len = start
@@ -350,12 +336,12 @@ impl BitString {
         self.len = new_len;
     }
 
-    pub fn drain_range<R>(&mut self, range: R) -> Self
-    where
-        R: RangeBounds<usize>,
-    {
-        let (start, end) = normalize_range(range, self.len);
-        let removed_len = end - start;
+    pub fn drain_interval(&mut self, interval: UsizeCO) -> Self {
+        assert_interval_in_bounds(interval, self.len);
+
+        let start = interval.start();
+        let end = interval.end_excl();
+        let removed_len = interval.len();
         let tail_len = self.len - end;
 
         let mut removed_bits = zero_words(word_len(removed_len));
@@ -392,6 +378,18 @@ impl BitString {
         }
 
         self.truncate(write);
+    }
+
+    pub fn slice(&self, interval: UsizeCO) -> Self {
+        assert_interval_in_bounds(interval, self.len);
+
+        let start = interval.start();
+        let len = interval.len();
+
+        let mut bits = zero_words(word_len(len));
+        copy_bits(&self.bits, start, &mut bits, 0, len);
+
+        Self { bits, len }
     }
 }
 

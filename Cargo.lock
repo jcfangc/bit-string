@@ -5,3 +5,12 @@ version = 4
 [[package]]
 name = "bit-string"
 version = "0.1.0-test.0"
+dependencies = [
+ "int-interval",
+]
+
+[[package]]
+name = "int-interval"
+version = "0.9.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9801bebb6a8355e9a7bcc42ce9cc910b045bd5217cb750b8b9e0528eb1842e37"
