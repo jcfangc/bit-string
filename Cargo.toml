@@ -8,3 +8,10 @@ int-interval = "0.9.6"
 
 [lib]
 doctest = false
+
+[dev-dependencies]
+bitvec_simd = "0.20.5"
+criterion = { version = "4.7.0", package = "codspeed-criterion-compat", features = [
+    "html_reports",
+    "csv_output",
+] }
