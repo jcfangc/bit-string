@@ -319,3 +319,45 @@ impl<'a> Extend<&'a bool> for BitString {
         self.extend(iter.into_iter().copied());
     }
 }
+
+#[cfg(test)]
+mod tests_for_set;
+
+#[cfg(test)]
+mod tests_for_push;
+
+#[cfg(test)]
+mod tests_for_pop;
+
+#[cfg(test)]
+mod tests_for_truncate;
+
+#[cfg(test)]
+mod tests_for_insert;
+
+#[cfg(test)]
+mod tests_for_remove;
+
+#[cfg(test)]
+mod tests_for_push_bits;
+
+#[cfg(test)]
+mod tests_for_insert_bits;
+
+#[cfg(test)]
+mod tests_for_split_off;
+
+#[cfg(test)]
+mod tests_for_replace_interval;
+
+#[cfg(test)]
+mod tests_for_drain_interval;
+
+#[cfg(test)]
+mod tests_for_retain;
+
+#[cfg(test)]
+mod tests_for_slice;
+
+#[cfg(test)]
+mod tests_for_extend;
