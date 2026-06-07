@@ -5,3 +5,6 @@ edition = "2024"
 
 [dependencies]
 int-interval = "0.9.6"
+
+[lib]
+doctest = false

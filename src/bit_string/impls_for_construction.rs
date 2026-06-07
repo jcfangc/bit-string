@@ -1,4 +1,7 @@
-use crate::bit_string::{errors::ParseBitStringError, funcs_for_share::mask_unused_bits};
+use crate::bit_string::{
+    errors::ParseBitStringError,
+    funcs_for_share::{mask_unused_bits, word_len},
+};
 
 use super::*;
 
@@ -63,6 +66,26 @@ impl BitString {
             bits: bits.into_boxed_slice(),
             len,
         }
+    }
+
+    /// Constructs a bit string from packed little-endian words.
+    ///
+    /// The input must contain exactly enough words for `len`.
+    /// Unused high bits in the last word are masked out.
+    pub fn from_words(words: &[u64], len: usize) -> Option<Self> {
+        let word_count = word_len(len);
+
+        if words.len() != word_count {
+            return None;
+        }
+
+        let mut bits = Vec::with_capacity(word_count);
+        bits.extend_from_slice(words);
+
+        let mut bits = bits.into_boxed_slice();
+        mask_unused_bits(&mut bits, len);
+
+        Some(Self { bits, len })
     }
 }
 

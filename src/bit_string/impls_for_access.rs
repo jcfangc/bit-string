@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 use super::*;
 
 impl BitString {
@@ -40,5 +42,31 @@ impl BitString {
     #[inline]
     pub fn is_all_ones(&self) -> bool {
         self.all()
+    }
+}
+
+impl BitString {
+    /// Returns the internal little-endian words.
+    ///
+    /// Bit index `i` is stored in word `i / 64`, bit offset `i % 64`.
+    /// Unused high bits in the last word are guaranteed to be zero.
+    #[inline]
+    pub fn as_words(&self) -> &[u64] {
+        &self.bits
+    }
+
+    #[inline]
+    pub fn first(&self) -> Option<bool> {
+        self.get(0)
+    }
+
+    #[inline]
+    pub fn last(&self) -> Option<bool> {
+        self.len.checked_sub(1).and_then(|index| self.get(index))
+    }
+
+    #[inline]
+    pub fn to_bool_vec(&self) -> Vec<bool> {
+        self.iter().collect()
     }
 }

@@ -1,105 +1,13 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::vec::Vec;
 
 use int_interval::UsizeCO;
 
-use crate::bit_string::funcs_for_share::mask_unused_bits;
+use crate::bit_string::funcs_for_share::{
+    assert_interval_in_bounds, bit_at, copy_bits, mask_unused_bits, set_bit, shrink_words,
+    word_len, zero_words,
+};
 
 use super::*;
-
-#[inline]
-fn word_len(bit_len: usize) -> usize {
-    bit_len / WORD_BITS + usize::from(bit_len % WORD_BITS != 0)
-}
-
-#[inline]
-fn zero_words(words: usize) -> Box<[u64]> {
-    let mut bits = Vec::with_capacity(words);
-    bits.resize(words, 0);
-    bits.into_boxed_slice()
-}
-
-#[inline]
-fn shrink_words(bits: &[u64], words: usize) -> Box<[u64]> {
-    let mut out = Vec::with_capacity(words);
-    out.extend_from_slice(&bits[..words]);
-    out.into_boxed_slice()
-}
-
-#[inline]
-fn bit_at(bits: &[u64], index: usize) -> bool {
-    bits[index / WORD_BITS] & (1u64 << (index % WORD_BITS)) != 0
-}
-
-#[inline]
-fn set_bit(bits: &mut [u64], index: usize, value: bool) {
-    let word = index / WORD_BITS;
-    let mask = 1u64 << (index % WORD_BITS);
-
-    if value {
-        bits[word] |= mask;
-    } else {
-        bits[word] &= !mask;
-    }
-}
-
-#[inline]
-fn low_mask(bits: usize) -> u64 {
-    if bits == WORD_BITS {
-        u64::MAX
-    } else {
-        (1u64 << bits) - 1
-    }
-}
-
-#[inline]
-fn read_chunk(src: &[u64], bit_start: usize) -> u64 {
-    let word = bit_start / WORD_BITS;
-    let shift = bit_start % WORD_BITS;
-
-    let lo = src.get(word).copied().unwrap_or(0) >> shift;
-
-    if shift == 0 {
-        lo
-    } else {
-        let hi = src.get(word + 1).copied().unwrap_or(0);
-        lo | (hi << (WORD_BITS - shift))
-    }
-}
-
-#[inline]
-fn write_chunk(dst: &mut [u64], bit_start: usize, value: u64, len: usize) {
-    let value = value & low_mask(len);
-    let word = bit_start / WORD_BITS;
-    let shift = bit_start % WORD_BITS;
-
-    dst[word] |= value << shift;
-
-    if shift != 0 && word + 1 < dst.len() {
-        dst[word + 1] |= value >> (WORD_BITS - shift);
-    }
-}
-
-fn copy_bits(src: &[u64], src_start: usize, dst: &mut [u64], dst_start: usize, len: usize) {
-    let mut done = 0usize;
-
-    while done < len {
-        let take = (len - done).min(WORD_BITS);
-        let chunk = read_chunk(src, src_start + done);
-        write_chunk(dst, dst_start + done, chunk, take);
-        done += take;
-    }
-}
-
-#[inline]
-fn assert_interval_in_bounds(interval: UsizeCO, len: usize) {
-    assert!(
-        interval.end_excl() <= len,
-        "bit string interval out of bounds: {}..{}, len={}",
-        interval.start(),
-        interval.end_excl(),
-        len
-    );
-}
 
 impl BitString {
     pub fn set(&mut self, index: usize, value: bool) -> Option<bool> {
