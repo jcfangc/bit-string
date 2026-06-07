@@ -60,3 +60,6 @@ impl<'a> IntoIterator for &'a BitString {
         self.iter()
     }
 }
+
+#[cfg(test)]
+mod tests_for_iter;
