@@ -148,3 +148,12 @@ impl FromStr for BitString {
         Self::try_from(s)
     }
 }
+
+#[cfg(test)]
+mod tests_for_repeat;
+
+#[cfg(test)]
+mod tests_for_from_bool_iter;
+
+#[cfg(test)]
+mod tests_for_from_words;
