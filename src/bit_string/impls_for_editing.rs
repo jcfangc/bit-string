@@ -287,7 +287,9 @@ impl BitString {
 
         self.truncate(write);
     }
+}
 
+impl BitString {
     pub fn slice(&self, interval: UsizeCO) -> Self {
         assert_interval_in_bounds(interval, self.len);
 
@@ -298,6 +300,40 @@ impl BitString {
         copy_bits(&self.bits, start, &mut bits, 0, len);
 
         Self { bits, len }
+    }
+
+    pub fn slice_from(&self, start: usize) -> Self {
+        assert!(
+            start <= self.len,
+            "bit string slice start out of bounds: start={}, len={}",
+            start,
+            self.len
+        );
+
+        let len = self.len - start;
+
+        if len == 0 {
+            return Self::new();
+        }
+
+        let interval = UsizeCO::checked_from_start_len(start, len).unwrap();
+        self.slice(interval)
+    }
+
+    pub fn slice_until(&self, end: usize) -> Self {
+        assert!(
+            end <= self.len,
+            "bit string slice end out of bounds: end={}, len={}",
+            end,
+            self.len
+        );
+
+        if end == 0 {
+            return Self::new();
+        }
+
+        let interval = UsizeCO::checked_from_start_len(0, end).unwrap();
+        self.slice(interval)
     }
 }
 

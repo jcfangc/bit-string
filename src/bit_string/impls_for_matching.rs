@@ -1,5 +1,3 @@
-use int_interval::UsizeCO;
-
 use super::*;
 
 #[inline]
@@ -11,28 +9,6 @@ fn bits_equal_at(haystack: &BitString, offset: usize, needle: &BitString) -> boo
     }
 
     true
-}
-
-#[inline]
-fn slice_from(bit_string: &BitString, start: usize) -> BitString {
-    let len = bit_string.len - start;
-
-    if len == 0 {
-        return BitString::new();
-    }
-
-    let interval = UsizeCO::checked_from_start_len(start, len).unwrap();
-    bit_string.slice(interval)
-}
-
-#[inline]
-fn slice_until(bit_string: &BitString, end: usize) -> BitString {
-    if end == 0 {
-        return BitString::new();
-    }
-
-    let interval = UsizeCO::checked_from_start_len(0, end).unwrap();
-    bit_string.slice(interval)
 }
 
 impl BitString {
@@ -95,11 +71,38 @@ impl BitString {
 
     pub fn strip_prefix(&self, prefix: &Self) -> Option<Self> {
         self.starts_with(prefix)
-            .then(|| slice_from(self, prefix.len))
+            .then(|| self.slice_from(prefix.len))
     }
 
     pub fn strip_suffix(&self, suffix: &Self) -> Option<Self> {
         self.ends_with(suffix)
-            .then(|| slice_until(self, self.len - suffix.len))
+            .then(|| self.slice_until(self.len - suffix.len))
     }
 }
+
+#[cfg(test)]
+mod tests_for_bits_equal_at;
+
+#[cfg(test)]
+mod tests_for_matches_at;
+
+#[cfg(test)]
+mod tests_for_starts_with;
+
+#[cfg(test)]
+mod tests_for_ends_with;
+
+#[cfg(test)]
+mod tests_for_contains_bits;
+
+#[cfg(test)]
+mod tests_for_find_bits;
+
+#[cfg(test)]
+mod tests_for_rfind_bits;
+
+#[cfg(test)]
+mod tests_for_strip_prefix;
+
+#[cfg(test)]
+mod tests_for_strip_suffix;
