@@ -121,3 +121,28 @@ pub(crate) fn assert_interval_in_bounds(interval: UsizeCO, len: usize) {
         len
     );
 }
+
+#[cfg(test)]
+mod tests_for_assert_interval_in_bounds;
+#[cfg(test)]
+mod tests_for_bit_at;
+#[cfg(test)]
+mod tests_for_copy_bits;
+#[cfg(test)]
+mod tests_for_last_word_mask;
+#[cfg(test)]
+mod tests_for_low_mask;
+#[cfg(test)]
+mod tests_for_mask_unused_bits;
+#[cfg(test)]
+mod tests_for_read_chunk;
+#[cfg(test)]
+mod tests_for_set_bit;
+#[cfg(test)]
+mod tests_for_shrink_words;
+#[cfg(test)]
+mod tests_for_word_len;
+#[cfg(test)]
+mod tests_for_write_chunk;
+#[cfg(test)]
+mod tests_for_zero_words;
