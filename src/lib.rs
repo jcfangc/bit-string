@@ -6,4 +6,4 @@ mod bit_string;
 
 pub use bit_string::BitString;
 
-pub use bit_string::errors::ParseBitStringError;
+pub use bit_string::errors::*;

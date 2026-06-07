@@ -11,5 +11,6 @@ pub mod errors;
 mod impls_for_access;
 mod impls_for_bit_ops;
 mod impls_for_construction;
+mod impls_for_editing;
 
 pub(crate) mod funcs_for_share;
