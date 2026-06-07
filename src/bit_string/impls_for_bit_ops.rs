@@ -56,6 +56,7 @@ impl BitString {
         self.binary_bits(rhs, |lhs, rhs| lhs ^ rhs)
     }
 
+    #[inline]
     pub fn not_bits(&self) -> Self {
         let mut bits = self.bits.clone();
 
@@ -71,6 +72,7 @@ impl BitString {
         }
     }
 
+    #[inline]
     pub fn count_ones(&self) -> usize {
         let full_words = self.len / WORD_BITS;
         let rem = self.len % WORD_BITS;
@@ -171,3 +173,24 @@ impl BitString {
         }
     }
 }
+
+#[cfg(test)]
+mod tests_for_and_bits;
+
+#[cfg(test)]
+mod tests_for_or_bits;
+
+#[cfg(test)]
+mod tests_for_xor_bits;
+
+#[cfg(test)]
+mod tests_for_not_bits;
+
+#[cfg(test)]
+mod tests_for_count_ones;
+
+#[cfg(test)]
+mod tests_for_shl_zeros;
+
+#[cfg(test)]
+mod tests_for_shr_zeros;
