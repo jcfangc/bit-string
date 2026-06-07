@@ -15,13 +15,13 @@ impl BitString {
         let mut len = 0usize;
 
         for value in iter {
-            if len % 64 == 0 {
+            if len % WORD_BITS == 0 {
                 bits.push(0);
             }
 
             if value {
-                let word = len / 64;
-                let offset = len % 64;
+                let word = len / WORD_BITS;
+                let offset = len % WORD_BITS;
                 bits[word] |= 1u64 << offset;
             }
 
