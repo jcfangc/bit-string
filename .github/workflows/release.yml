@@ -1,0 +1,42 @@
+name: release
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "Cargo.toml"
+
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dryrun: cargo publish --dry-run, no official tag"
+        required: true
+        default: "dryrun"
+        type: choice
+        options: ["dryrun", "real"]
+      tag_dryrun:
+        description: "If true, create vX.Y.Z-dryrun.<run_id> tag in dryrun mode"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crates-release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: jcfangc/ci/.github/workflows/rust-crates-release.yml@v0
+    with:
+      mode: ${{ inputs.mode || 'real' }}
+      tag_dryrun: ${{ inputs.tag_dryrun || 'false' }}
+      rust_toolchain: stable
+      package_manifest: Cargo.toml
+      test_command: cargo test --locked
+      run_tests: true
+    secrets:
+      CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
