@@ -1,6 +1,74 @@
 [package]
 name = "bit-string"
-version = "0.1.0-test.0"
+version = "0.1.0"
 edition = "2024"
+description = "A compact owned bit string type with editing, matching, and bitwise operations."
+readme = "README.md"
+repository = "https://github.com/jcfangc/bit-string"
+license = "MIT OR Apache-2.0"
+keywords = ["bitstring", "bits", "bitset", "sequence"]
+categories = ["data-structures", "no-std"]
+
 
 [dependencies]
+int-interval = "0.9.6"
+
+[lib]
+doctest = false
+
+[dev-dependencies]
+bitvec_simd = "0.20.5"
+divan = { package = "codspeed-divan-compat", version = "4.7.0" }
+
+
+[[bench]]
+name = "bit_ops_xor"
+harness = false
+
+[[bench]]
+name = "bit_ops_not"
+harness = false
+
+[[bench]]
+name = "bit_ops_count_ones"
+harness = false
+
+[[bench]]
+name = "bit_ops_shl"
+harness = false
+
+[[bench]]
+name = "editing_push"
+harness = false
+
+[[bench]]
+name = "editing_insert_middle"
+harness = false
+
+[[bench]]
+name = "editing_remove_middle"
+harness = false
+
+[[bench]]
+name = "editing_push_bits"
+harness = false
+
+[[bench]]
+name = "editing_replace_interval"
+harness = false
+
+[[bench]]
+name = "editing_slice"
+harness = false
+
+[[bench]]
+name = "matching_ends_with"
+harness = false
+
+[[bench]]
+name = "matching_find"
+harness = false
+
+[[bench]]
+name = "matching_strip_prefix"
+harness = false
