@@ -12,129 +12,84 @@ struct NeedleCase {
     needle_string: String,
 }
 
-#[divan::bench_group]
-mod find {
-    use super::*;
+#[divan::bench(name = "find/len_65/front/bit_string")]
+fn find_len_65_front_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, make_case(65, 0));
+}
 
-    #[divan::bench_group]
-    mod len_65_front {
-        use super::*;
+#[divan::bench(name = "find/len_65/front/string")]
+fn find_len_65_front_string(bencher: Bencher) {
+    bench_string(bencher, make_case(65, 0));
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, make_case(65, 0));
-        }
+#[divan::bench(name = "find/len_65/middle/bit_string")]
+fn find_len_65_middle_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, middle_case(65));
+}
 
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, make_case(65, 0));
-        }
-    }
+#[divan::bench(name = "find/len_65/middle/string")]
+fn find_len_65_middle_string(bencher: Bencher) {
+    bench_string(bencher, middle_case(65));
+}
 
-    #[divan::bench_group]
-    mod len_65_middle {
-        use super::*;
+#[divan::bench(name = "find/len_65/end/bit_string")]
+fn find_len_65_end_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, end_case(65));
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, middle_case(65));
-        }
+#[divan::bench(name = "find/len_65/end/string")]
+fn find_len_65_end_string(bencher: Bencher) {
+    bench_string(bencher, end_case(65));
+}
 
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, middle_case(65));
-        }
-    }
+#[divan::bench(name = "find/len_65/miss/bit_string")]
+fn find_len_65_miss_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, miss_case(65));
+}
 
-    #[divan::bench_group]
-    mod len_65_end {
-        use super::*;
+#[divan::bench(name = "find/len_65/miss/string")]
+fn find_len_65_miss_string(bencher: Bencher) {
+    bench_string(bencher, miss_case(65));
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, end_case(65));
-        }
+#[divan::bench(name = "find/len_65536/front/bit_string")]
+fn find_len_65536_front_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, make_case(65_536, 0));
+}
 
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, end_case(65));
-        }
-    }
+#[divan::bench(name = "find/len_65536/front/string")]
+fn find_len_65536_front_string(bencher: Bencher) {
+    bench_string(bencher, make_case(65_536, 0));
+}
 
-    #[divan::bench_group]
-    mod len_65_miss {
-        use super::*;
+#[divan::bench(name = "find/len_65536/middle/bit_string")]
+fn find_len_65536_middle_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, middle_case(65_536));
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, miss_case(65));
-        }
+#[divan::bench(name = "find/len_65536/middle/string")]
+fn find_len_65536_middle_string(bencher: Bencher) {
+    bench_string(bencher, middle_case(65_536));
+}
 
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, miss_case(65));
-        }
-    }
+#[divan::bench(name = "find/len_65536/end/bit_string")]
+fn find_len_65536_end_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, end_case(65_536));
+}
 
-    #[divan::bench_group]
-    mod len_65536_front {
-        use super::*;
+#[divan::bench(name = "find/len_65536/end/string")]
+fn find_len_65536_end_string(bencher: Bencher) {
+    bench_string(bencher, end_case(65_536));
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, make_case(65_536, 0));
-        }
+#[divan::bench(name = "find/len_65536/miss/bit_string")]
+fn find_len_65536_miss_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, miss_case(65_536));
+}
 
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, make_case(65_536, 0));
-        }
-    }
-
-    #[divan::bench_group]
-    mod len_65536_middle {
-        use super::*;
-
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, middle_case(65_536));
-        }
-
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, middle_case(65_536));
-        }
-    }
-
-    #[divan::bench_group]
-    mod len_65536_end {
-        use super::*;
-
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, end_case(65_536));
-        }
-
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, end_case(65_536));
-        }
-    }
-
-    #[divan::bench_group]
-    mod len_65536_miss {
-        use super::*;
-
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, miss_case(65_536));
-        }
-
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, miss_case(65_536));
-        }
-    }
+#[divan::bench(name = "find/len_65536/miss/string")]
+fn find_len_65536_miss_string(bencher: Bencher) {
+    bench_string(bencher, miss_case(65_536));
 }
 
 fn bench_bit_string(bencher: Bencher, case: NeedleCase) {

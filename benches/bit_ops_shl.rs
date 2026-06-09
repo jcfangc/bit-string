@@ -5,59 +5,29 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench_group]
-mod shl {
-    use super::*;
+#[divan::bench(name = "shl/len_65/amount_1/bit_string")]
+fn shl_len_65_amount_1_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65, 1);
+}
 
-    #[divan::bench_group]
-    mod len_65_amount_1 {
-        use super::*;
+#[divan::bench(name = "shl/len_4096/amount_1/bit_string")]
+fn shl_len_4096_amount_1_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 4096, 1);
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65, 1);
-        }
-    }
+#[divan::bench(name = "shl/len_4096/amount_65/bit_string")]
+fn shl_len_4096_amount_65_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 4096, 65);
+}
 
-    #[divan::bench_group]
-    mod len_4096_amount_1 {
-        use super::*;
+#[divan::bench(name = "shl/len_65536/amount_1/bit_string")]
+fn shl_len_65536_amount_1_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65_536, 1);
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 4096, 1);
-        }
-    }
-
-    #[divan::bench_group]
-    mod len_4096_amount_65 {
-        use super::*;
-
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 4096, 65);
-        }
-    }
-
-    #[divan::bench_group]
-    mod len_65536_amount_1 {
-        use super::*;
-
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65_536, 1);
-        }
-    }
-
-    #[divan::bench_group]
-    mod len_65536_amount_65 {
-        use super::*;
-
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65_536, 65);
-        }
-    }
+#[divan::bench(name = "shl/len_65536/amount_65/bit_string")]
+fn shl_len_65536_amount_65_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65_536, 65);
 }
 
 fn bench_bit_string(bencher: Bencher, len: usize, amount: usize) {

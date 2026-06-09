@@ -6,99 +6,64 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench_group]
-mod replace_interval {
-    use super::*;
+#[divan::bench(name = "replace_interval/len_65/same_len/bit_string")]
+fn replace_interval_len_65_same_len_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65, ReplaceShape::SameLen);
+}
 
-    #[divan::bench_group]
-    mod len_65_same_len {
-        use super::*;
+#[divan::bench(name = "replace_interval/len_65/same_len/string")]
+fn replace_interval_len_65_same_len_string(bencher: Bencher) {
+    bench_string(bencher, 65, ReplaceShape::SameLen);
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65, ReplaceShape::SameLen);
-        }
+#[divan::bench(name = "replace_interval/len_65/shorter/bit_string")]
+fn replace_interval_len_65_shorter_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65, ReplaceShape::Shorter);
+}
 
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, 65, ReplaceShape::SameLen);
-        }
-    }
+#[divan::bench(name = "replace_interval/len_65/shorter/string")]
+fn replace_interval_len_65_shorter_string(bencher: Bencher) {
+    bench_string(bencher, 65, ReplaceShape::Shorter);
+}
 
-    #[divan::bench_group]
-    mod len_65_shorter {
-        use super::*;
+#[divan::bench(name = "replace_interval/len_65/longer/bit_string")]
+fn replace_interval_len_65_longer_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65, ReplaceShape::Longer);
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65, ReplaceShape::Shorter);
-        }
+#[divan::bench(name = "replace_interval/len_65/longer/string")]
+fn replace_interval_len_65_longer_string(bencher: Bencher) {
+    bench_string(bencher, 65, ReplaceShape::Longer);
+}
 
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, 65, ReplaceShape::Shorter);
-        }
-    }
+#[divan::bench(name = "replace_interval/len_65536/same_len/bit_string")]
+fn replace_interval_len_65536_same_len_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65_536, ReplaceShape::SameLen);
+}
 
-    #[divan::bench_group]
-    mod len_65_longer {
-        use super::*;
+#[divan::bench(name = "replace_interval/len_65536/same_len/string")]
+fn replace_interval_len_65536_same_len_string(bencher: Bencher) {
+    bench_string(bencher, 65_536, ReplaceShape::SameLen);
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65, ReplaceShape::Longer);
-        }
+#[divan::bench(name = "replace_interval/len_65536/shorter/bit_string")]
+fn replace_interval_len_65536_shorter_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65_536, ReplaceShape::Shorter);
+}
 
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, 65, ReplaceShape::Longer);
-        }
-    }
+#[divan::bench(name = "replace_interval/len_65536/shorter/string")]
+fn replace_interval_len_65536_shorter_string(bencher: Bencher) {
+    bench_string(bencher, 65_536, ReplaceShape::Shorter);
+}
 
-    #[divan::bench_group]
-    mod len_65536_same_len {
-        use super::*;
+#[divan::bench(name = "replace_interval/len_65536/longer/bit_string")]
+fn replace_interval_len_65536_longer_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65_536, ReplaceShape::Longer);
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65_536, ReplaceShape::SameLen);
-        }
-
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, 65_536, ReplaceShape::SameLen);
-        }
-    }
-
-    #[divan::bench_group]
-    mod len_65536_shorter {
-        use super::*;
-
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65_536, ReplaceShape::Shorter);
-        }
-
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, 65_536, ReplaceShape::Shorter);
-        }
-    }
-
-    #[divan::bench_group]
-    mod len_65536_longer {
-        use super::*;
-
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65_536, ReplaceShape::Longer);
-        }
-
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, 65_536, ReplaceShape::Longer);
-        }
-    }
+#[divan::bench(name = "replace_interval/len_65536/longer/string")]
+fn replace_interval_len_65536_longer_string(bencher: Bencher) {
+    bench_string(bencher, 65_536, ReplaceShape::Longer);
 }
 
 #[derive(Clone, Copy)]
@@ -161,11 +126,9 @@ fn make_bit_string(len: usize) -> BitString {
 
 fn make_string(len: usize) -> String {
     let mut out = String::with_capacity(len);
-
     for index in 0..len {
         out.push(bit_char(bit_at(index)));
     }
-
     out
 }
 

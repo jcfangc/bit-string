@@ -5,39 +5,24 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench_group]
-mod remove_middle {
-    use super::*;
+#[divan::bench(name = "remove_middle/len_65/bit_string")]
+fn remove_middle_len_65_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65);
+}
 
-    #[divan::bench_group]
-    mod len_65 {
-        use super::*;
+#[divan::bench(name = "remove_middle/len_65/string")]
+fn remove_middle_len_65_string(bencher: Bencher) {
+    bench_string(bencher, 65);
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65);
-        }
+#[divan::bench(name = "remove_middle/len_65536/bit_string")]
+fn remove_middle_len_65536_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65_536);
+}
 
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, 65);
-        }
-    }
-
-    #[divan::bench_group]
-    mod len_65536 {
-        use super::*;
-
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65_536);
-        }
-
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, 65_536);
-        }
-    }
+#[divan::bench(name = "remove_middle/len_65536/string")]
+fn remove_middle_len_65536_string(bencher: Bencher) {
+    bench_string(bencher, 65_536);
 }
 
 fn bench_bit_string(bencher: Bencher, len: usize) {
@@ -64,16 +49,14 @@ fn bench_string(bencher: Bencher, len: usize) {
 
 #[inline]
 fn make_bit_string(len: usize) -> BitString {
-    (0..len).map(|index| bit_at(index)).collect()
+    (0..len).map(bit_at).collect()
 }
 
 fn make_string(len: usize) -> String {
     let mut out = String::with_capacity(len);
-
     for index in 0..len {
         out.push(bit_char(bit_at(index)));
     }
-
     out
 }
 

@@ -5,39 +5,24 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench_group]
-mod push_bits {
-    use super::*;
+#[divan::bench(name = "push_bits/len_65/bit_string")]
+fn push_bits_len_65_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65);
+}
 
-    #[divan::bench_group]
-    mod len_65 {
-        use super::*;
+#[divan::bench(name = "push_bits/len_65/string")]
+fn push_bits_len_65_string(bencher: Bencher) {
+    bench_string(bencher, 65);
+}
 
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65);
-        }
+#[divan::bench(name = "push_bits/len_65536/bit_string")]
+fn push_bits_len_65536_bit_string(bencher: Bencher) {
+    bench_bit_string(bencher, 65_536);
+}
 
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, 65);
-        }
-    }
-
-    #[divan::bench_group]
-    mod len_65536 {
-        use super::*;
-
-        #[divan::bench]
-        fn bit_string(bencher: Bencher) {
-            bench_bit_string(bencher, 65_536);
-        }
-
-        #[divan::bench]
-        fn string(bencher: Bencher) {
-            bench_string(bencher, 65_536);
-        }
-    }
+#[divan::bench(name = "push_bits/len_65536/string")]
+fn push_bits_len_65536_string(bencher: Bencher) {
+    bench_string(bencher, 65_536);
 }
 
 fn bench_bit_string(bencher: Bencher, len: usize) {
