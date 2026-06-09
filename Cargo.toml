@@ -62,5 +62,13 @@ name = "editing_slice"
 harness = false
 
 [[bench]]
-name = "matching"
+name = "matching_ends_with"
+harness = false
+
+[[bench]]
+name = "matching_find"
+harness = false
+
+[[bench]]
+name = "matching_strip_prefix"
 harness = false
