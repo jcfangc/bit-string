@@ -1,0 +1,25 @@
+name: Benchmark Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: benchmark-pages
+  cancel-in-progress: true
+
+jobs:
+  benchmark-pages:
+    uses: jcfangc/ci/.github/workflows/rust-benchmark-pages.yml@v0
+    with:
+      rust_toolchain: stable
+      package_manifest: Cargo.toml
+      run_command: cargo bench -- --color never
+      pages_artifact_path: target/divan-pages
+      divan_output_path: target/divan-pages/divan.txt
