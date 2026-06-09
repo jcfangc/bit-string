@@ -38,7 +38,27 @@ name = "bit_ops_shl"
 harness = false
 
 [[bench]]
-name = "editing"
+name = "editing_push"
+harness = false
+
+[[bench]]
+name = "editing_insert_middle"
+harness = false
+
+[[bench]]
+name = "editing_remove_middle"
+harness = false
+
+[[bench]]
+name = "editing_push_bits"
+harness = false
+
+[[bench]]
+name = "editing_replace_interval"
+harness = false
+
+[[bench]]
+name = "editing_slice"
 harness = false
 
 [[bench]]
