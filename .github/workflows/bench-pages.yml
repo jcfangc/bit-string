@@ -19,7 +19,6 @@ jobs:
     uses: jcfangc/ci/.github/workflows/rust-benchmark-pages.yml@v0
     with:
       rust_toolchain: stable
-      package_manifest: Cargo.toml
       run_command: cargo bench -- --color never
       pages_artifact_path: target/divan-pages
       divan_output_path: target/divan-pages/divan.txt
