@@ -7,6 +7,8 @@ use crate::bit_string::{
 
 use super::*;
 
+mod and;
+
 impl BitString {
     #[inline]
     fn require_same_len(&self, rhs: &Self) -> Result<(), BitStringLenMismatch> {
@@ -39,11 +41,6 @@ impl BitString {
             bits,
             len: self.len,
         })
-    }
-
-    #[inline]
-    pub fn and_bits(&self, rhs: &Self) -> Result<Self, BitStringLenMismatch> {
-        self.binary_bits(rhs, |lhs, rhs| lhs & rhs)
     }
 
     #[inline]
@@ -173,9 +170,6 @@ impl BitString {
         }
     }
 }
-
-#[cfg(test)]
-mod tests_for_and_bits;
 
 #[cfg(test)]
 mod tests_for_or_bits;

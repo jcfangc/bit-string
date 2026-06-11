@@ -7,7 +7,7 @@ fn computes_bitwise_and_for_same_len_inputs() {
     let lhs = BitString::try_from("101101").unwrap();
     let rhs = BitString::try_from("110011").unwrap();
 
-    let result = lhs.and_bits(&rhs).unwrap();
+    let result = lhs.and(&rhs).unwrap();
 
     assert_eq!(result.to_string(), "100001");
 }
@@ -17,7 +17,7 @@ fn ones_are_identity_for_and() {
     let lhs = BitString::try_from("101001101").unwrap();
     let rhs = BitString::ones(lhs.len());
 
-    let result = lhs.and_bits(&rhs).unwrap();
+    let result = lhs.and(&rhs).unwrap();
 
     assert_eq!(result, lhs);
 }
@@ -27,7 +27,7 @@ fn zeros_absorb_for_and() {
     let lhs = BitString::try_from("101001101").unwrap();
     let rhs = BitString::zeros(lhs.len());
 
-    let result = lhs.and_bits(&rhs).unwrap();
+    let result = lhs.and(&rhs).unwrap();
 
     assert_eq!(result, rhs);
     assert_eq!(result.count_ones(), 0);
@@ -46,7 +46,7 @@ fn works_across_word_boundaries() {
         rhs.set(index, true);
     }
 
-    let result = lhs.and_bits(&rhs).unwrap();
+    let result = lhs.and(&rhs).unwrap();
 
     assert_eq!(result.len(), 130);
     assert_eq!(result.count_ones(), 3);
@@ -64,7 +64,7 @@ fn returns_len_mismatch_for_different_lengths() {
     let lhs = BitString::try_from("101").unwrap();
     let rhs = BitString::try_from("1010").unwrap();
 
-    let err = lhs.and_bits(&rhs).unwrap_err();
+    let err = lhs.and(&rhs).unwrap_err();
 
     assert_eq!(
         err,
