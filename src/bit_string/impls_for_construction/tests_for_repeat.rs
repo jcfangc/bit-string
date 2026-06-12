@@ -77,7 +77,7 @@ fn repeat_true_masks_unused_bits_in_last_word() {
         let bits = BitString::repeat(true, len);
 
         assert_eq!(bits.count_ones(), len, "len={len}");
-        assert_eq!(bits.not_bits().count_ones(), 0, "len={len}");
+        assert_eq!(bits.not_into().count_ones(), 0, "len={len}");
     }
 }
 

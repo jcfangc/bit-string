@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 
 use super::*;
 
-type Backend = unsafe fn(*mut u64, *const u64, *const u64, usize);
+type Backend<const OP: u8> = unsafe fn(*mut u64, *const u64, *const u64, usize);
 
 const CASES: &[&[u64]] = &[
     &[],
@@ -35,7 +35,7 @@ fn rhs_for(len: usize) -> Vec<u64> {
         .collect()
 }
 
-fn run_backend_owned(backend: Backend, lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
+fn run_backend_owned<const OP: u8>(backend: Backend<OP>, lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
     debug_assert_eq!(lhs.len(), rhs.len());
 
     let len = lhs.len();
@@ -45,7 +45,7 @@ fn run_backend_owned(backend: Backend, lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
     // - `out` has capacity for `len` u64 values.
     // - `lhs` and `rhs` are valid for reads of `len` u64 values.
     // - `out.as_mut_ptr()` is valid for writes of `len` u64 values.
-    // - `out` is freshly allocated, so it does not overlap `lhs` or `rhs`.
+    // - `out` is freshly allocated, so it cannot overlap `lhs` or `rhs`.
     // - The backend contract requires it to write every slot in `0..len`.
     unsafe {
         backend(out.as_mut_ptr(), lhs.as_ptr(), rhs.as_ptr(), len);
@@ -55,7 +55,7 @@ fn run_backend_owned(backend: Backend, lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
     out
 }
 
-fn run_backend_in_place(backend: Backend, lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
+fn run_backend_in_place<const OP: u8>(backend: Backend<OP>, lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
     debug_assert_eq!(lhs.len(), rhs.len());
 
     let len = lhs.len();
@@ -74,14 +74,13 @@ fn run_backend_in_place(backend: Backend, lhs: &[u64], rhs: &[u64]) -> Vec<u64> 
     out
 }
 
-fn assert_backend_matches_scalar(backend: Backend) {
+fn assert_backend_matches_scalar<const OP: u8>(backend: Backend<OP>) {
     for &lhs in CASES {
         let rhs = rhs_for(lhs.len());
 
-        let expected = run_backend_owned(scalar::and_words, lhs, &rhs);
-
-        let actual_owned = run_backend_owned(backend, lhs, &rhs);
-        let actual_in_place = run_backend_in_place(backend, lhs, &rhs);
+        let expected = run_backend_owned::<OP>(scalar::words::<OP>, lhs, &rhs);
+        let actual_owned = run_backend_owned::<OP>(backend, lhs, &rhs);
+        let actual_in_place = run_backend_in_place::<OP>(backend, lhs, &rhs);
 
         assert_eq!(
             actual_owned, expected,
@@ -99,22 +98,64 @@ fn assert_backend_matches_scalar(backend: Backend) {
     any(target_arch = "x86", target_arch = "x86_64"),
     target_feature = "sse2"
 ))]
-#[test]
-fn sse2_matches_scalar() {
-    assert_backend_matches_scalar(sse2::and_words);
+mod tests_for_sse2 {
+    use super::*;
+
+    #[test]
+    fn and_matches_scalar() {
+        assert_backend_matches_scalar::<OP_AND>(sse2::words::<OP_AND>);
+    }
+
+    #[test]
+    fn or_matches_scalar() {
+        assert_backend_matches_scalar::<OP_OR>(sse2::words::<OP_OR>);
+    }
+
+    #[test]
+    fn xor_matches_scalar() {
+        assert_backend_matches_scalar::<OP_XOR>(sse2::words::<OP_XOR>);
+    }
 }
 
 #[cfg(all(
     any(target_arch = "x86", target_arch = "x86_64"),
     target_feature = "avx2"
 ))]
-#[test]
-fn avx2_matches_scalar() {
-    assert_backend_matches_scalar(avx2::and_words);
+mod tests_for_avx2 {
+    use super::*;
+
+    #[test]
+    fn and_matches_scalar() {
+        assert_backend_matches_scalar::<OP_AND>(avx2::words::<OP_AND>);
+    }
+
+    #[test]
+    fn or_matches_scalar() {
+        assert_backend_matches_scalar::<OP_OR>(avx2::words::<OP_OR>);
+    }
+
+    #[test]
+    fn xor_matches_scalar() {
+        assert_backend_matches_scalar::<OP_XOR>(avx2::words::<OP_XOR>);
+    }
 }
 
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-#[test]
-fn neon_matches_scalar() {
-    assert_backend_matches_scalar(neon::and_words);
+mod tests_for_neon {
+    use super::*;
+
+    #[test]
+    fn and_matches_scalar() {
+        assert_backend_matches_scalar::<OP_AND>(neon::words::<OP_AND>);
+    }
+
+    #[test]
+    fn or_matches_scalar() {
+        assert_backend_matches_scalar::<OP_OR>(neon::words::<OP_OR>);
+    }
+
+    #[test]
+    fn xor_matches_scalar() {
+        assert_backend_matches_scalar::<OP_XOR>(neon::words::<OP_XOR>);
+    }
 }
