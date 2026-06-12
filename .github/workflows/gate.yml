@@ -23,6 +23,10 @@ jobs:
             os: ubuntu-latest
             rustflags: ""
 
+          - name: linux-x64-ssse3
+            os: ubuntu-latest
+            rustflags: "-C target-feature=+ssse3"
+
           - name: linux-x64-avx2
             os: ubuntu-latest
             rustflags: "-C target-feature=+avx2"
