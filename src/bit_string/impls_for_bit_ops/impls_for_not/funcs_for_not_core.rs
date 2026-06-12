@@ -255,7 +255,11 @@ mod neon {
 
     #[inline]
     fn not_vec(src: uint64x2_t) -> uint64x2_t {
-        veorq_u64(src, vdupq_n_u64(u64::MAX))
+        // SAFETY:
+        // - This helper is only called from `words`, which has
+        //   `#[target_feature(enable = "neon")]`.
+        // - The dispatch path only reaches `words` when NEON is enabled.
+        unsafe { veorq_u64(src, vdupq_n_u64(u64::MAX)) }
     }
 
     /// NEON backend for `dst[i] = !src[i]`.

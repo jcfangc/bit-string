@@ -306,11 +306,17 @@ mod neon {
 
     #[inline]
     fn apply<const OP: u8>(lhs: uint64x2_t, rhs: uint64x2_t) -> uint64x2_t {
-        match OP {
-            OP_AND => vandq_u64(lhs, rhs),
-            OP_OR => vorrq_u64(lhs, rhs),
-            OP_XOR => veorq_u64(lhs, rhs),
-            _ => unreachable!("unsupported binary bit operation"),
+        // SAFETY:
+        // - This helper is only called from `words`, which has
+        //   `#[target_feature(enable = "neon")]`.
+        // - The dispatch path only reaches `words` when NEON is enabled.
+        unsafe {
+            match OP {
+                OP_AND => vandq_u64(lhs, rhs),
+                OP_OR => vorrq_u64(lhs, rhs),
+                OP_XOR => veorq_u64(lhs, rhs),
+                _ => unreachable!("unsupported binary bit operation"),
+            }
         }
     }
 
