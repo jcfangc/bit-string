@@ -33,7 +33,7 @@ fn shl_len_65536_amount_65_bit_string(bencher: Bencher) {
 fn bench_bit_string(bencher: Bencher, len: usize, amount: usize) {
     let bits = make_bit_string(len);
 
-    bencher.bench(|| black_box(&bits).shl_zeros(black_box(amount)));
+    bencher.bench(|| black_box(&bits).shl(black_box(amount)));
 }
 
 #[inline]

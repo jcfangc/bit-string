@@ -70,7 +70,8 @@ unsafe fn dispatch<const OP: u8>(dst: *mut u64, lhs: *const u64, rhs: *const u64
 
     #[cfg(all(
         any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2"
+        target_feature = "sse2",
+        not(target_feature = "avx2")
     ))]
     {
         // SAFETY:
