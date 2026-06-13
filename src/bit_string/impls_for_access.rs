@@ -60,6 +60,25 @@ impl BitString {
         self.get(0)
     }
 
+    /// Reads up to 64 bits starting at `bit_start`, returning them in the
+    /// low bits of a `u64`.
+    ///
+    /// Bits beyond `self.len()` are treated as zero.
+    #[inline]
+    pub fn get_chunk(&self, bit_start: usize) -> u64 {
+        let word = bit_start / WORD_BITS;
+        let shift = bit_start % WORD_BITS;
+
+        let lo = self.bits.get(word).copied().unwrap_or(0) >> shift;
+
+        if shift == 0 {
+            lo
+        } else {
+            let hi = self.bits.get(word + 1).copied().unwrap_or(0);
+            lo | (hi << (WORD_BITS - shift))
+        }
+    }
+
     #[inline]
     pub fn last(&self) -> Option<bool> {
         self.len.checked_sub(1).and_then(|index| self.get(index))
@@ -73,3 +92,5 @@ impl BitString {
 
 #[cfg(test)]
 mod tests_for_get;
+#[cfg(test)]
+mod tests_for_get_chunk;

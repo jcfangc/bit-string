@@ -3,8 +3,8 @@ use alloc::vec::Vec;
 use int_interval::UsizeCO;
 
 use crate::bit_string::funcs_for_share::{
-    assert_interval_in_bounds, bit_at, copy_bits, mask_unused_bits, set_bit, shrink_words,
-    word_len, zero_words,
+    assert_interval_in_bounds, bit_at, copy_bits, low_mask, mask_unused_bits, set_bit,
+    shrink_words, word_len, write_chunk, zero_words,
 };
 
 use super::*;
@@ -18,6 +18,28 @@ impl BitString {
         let old = bit_at(&self.bits, index);
         set_bit(&mut self.bits, index, value);
         Some(old)
+    }
+
+    /// Writes `len` bits of `value` starting at `bit_start`, OR-ing them
+    /// with the existing bits.  Bits beyond `self.len()` are ignored.
+    ///
+    /// Only the low `len` bits of `value` are used; higher bits are
+    /// masked out.
+    #[inline]
+    pub fn set_chunk(&mut self, bit_start: usize, value: u64, len: usize) {
+        let value = value & low_mask(len);
+        let word = bit_start / WORD_BITS;
+        let shift = bit_start % WORD_BITS;
+
+        if let Some(w) = self.bits.get_mut(word) {
+            *w |= value << shift;
+        }
+
+        if shift != 0 {
+            if let Some(w) = self.bits.get_mut(word + 1) {
+                *w |= value >> (WORD_BITS - shift);
+            }
+        }
     }
 
     pub fn push(&mut self, value: bool) {
@@ -358,6 +380,8 @@ impl<'a> Extend<&'a bool> for BitString {
 
 #[cfg(test)]
 mod tests_for_set;
+#[cfg(test)]
+mod tests_for_set_chunk;
 
 #[cfg(test)]
 mod tests_for_push;
