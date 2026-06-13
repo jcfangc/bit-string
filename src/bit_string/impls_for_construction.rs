@@ -134,19 +134,13 @@ impl TryFrom<&str> for BitString {
     type Error = ParseBitStringError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let iter = value.bytes().enumerate().map(|(index, byte)| match byte {
-            b'0' => Ok(false),
-            b'1' => Ok(true),
-            byte => Err(ParseBitStringError { index, byte }),
-        });
+        let src = value.as_ptr();
+        let len = value.len();
 
-        let mut bools = Vec::with_capacity(value.len());
-
-        for item in iter {
-            bools.push(item?);
+        match funcs_for_pack_str_core::owned(src, len) {
+            Ok(bits) => Ok(Self { bits, len }),
+            Err((index, byte)) => Err(ParseBitStringError { index, byte }),
         }
-
-        Ok(Self::from_bool_iter(bools))
     }
 }
 
@@ -162,6 +156,8 @@ impl FromStr for BitString {
 mod funcs_for_repeat_core;
 
 mod funcs_for_pack_bools_core;
+
+mod funcs_for_pack_str_core;
 
 #[cfg(test)]
 mod tests_for_repeat;
