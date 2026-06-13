@@ -17,4 +17,4 @@ mod impls_for_fmt;
 mod impls_for_iter;
 mod impls_for_matching;
 
-pub(crate) mod funcs_for_share;
+pub(crate) mod bits;

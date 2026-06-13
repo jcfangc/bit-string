@@ -1,7 +1,4 @@
-use crate::bit_string::{
-    errors::ParseBitStringError,
-    funcs_for_share::{mask_unused_bits, word_len},
-};
+use crate::bit_string::{bits::Bits, errors::ParseBitStringError};
 
 use super::*;
 
@@ -26,7 +23,7 @@ impl BitString {
         bits.resize(word_count, fill);
 
         let mut bits = bits.into_boxed_slice();
-        mask_unused_bits(&mut bits, len);
+        Bits::mask_unused(&mut bits, len);
 
         Self { bits, len }
     }
@@ -73,7 +70,7 @@ impl BitString {
     /// The input must contain exactly enough words for `len`.
     /// Unused high bits in the last word are masked out.
     pub fn from_words(words: &[u64], len: usize) -> Option<Self> {
-        let word_count = word_len(len);
+        let word_count = Bits::word_len(len);
 
         if words.len() != word_count {
             return None;
@@ -83,7 +80,7 @@ impl BitString {
         bits.extend_from_slice(words);
 
         let mut bits = bits.into_boxed_slice();
-        mask_unused_bits(&mut bits, len);
+        Bits::mask_unused(&mut bits, len);
 
         Some(Self { bits, len })
     }

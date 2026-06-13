@@ -1,4 +1,4 @@
-use crate::bit_string::funcs_for_share::last_word_mask;
+use crate::bit_string::bits::Bits;
 
 use super::*;
 
@@ -10,7 +10,7 @@ pub(super) fn count_ones(bits: &[u64], bit_len: usize) -> usize {
     let mut count = count_full_words(&bits[..full_words]);
 
     if rem != 0 {
-        count += (bits[full_words] & last_word_mask(bit_len)).count_ones() as usize;
+        count += (bits[full_words] & Bits::last_word_mask(bit_len)).count_ones() as usize;
     }
 
     count

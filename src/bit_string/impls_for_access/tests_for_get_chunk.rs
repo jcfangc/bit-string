@@ -4,8 +4,9 @@ use crate::BitString;
 fn reads_aligned_chunk() {
     let bits = BitString::try_from(
         "0000000000000000000000000000000000000000000000000000000000000001\
-         1000000000000000000000000000000000000000000000000000000000000000"
-    ).unwrap();
+         1000000000000000000000000000000000000000000000000000000000000000",
+    )
+    .unwrap();
     // Word 0 = 0x8000000000000000 (bit 63 set) → wait, BitString displays
     // position 0 on the left. "000...001" means bit 0 = 0, bit 63 = 1.
     // That's 0x8000000000000000 in the u64.

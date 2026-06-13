@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, vec::Vec};
 
-use crate::bit_string::funcs_for_share::mask_unused_bits;
+use crate::bit_string::bits::Bits;
 
 #[inline]
 pub(super) fn owned(src: &[u64], bit_len: usize) -> Box<[u64]> {
@@ -18,7 +18,7 @@ pub(super) fn owned(src: &[u64], bit_len: usize) -> Box<[u64]> {
         out.set_len(word_len);
     }
 
-    mask_unused_bits(&mut out, bit_len);
+    Bits::mask_unused(&mut out, bit_len);
     out.into_boxed_slice()
 }
 
@@ -35,7 +35,7 @@ pub(super) fn assign(bits: &mut [u64], bit_len: usize) {
         dispatch(ptr, ptr.cast_const(), word_len);
     }
 
-    mask_unused_bits(bits, bit_len);
+    Bits::mask_unused(bits, bit_len);
 }
 
 /// Writes `!src[i]` into `dst[i]` for every `i in 0..len`.

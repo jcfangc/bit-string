@@ -2,7 +2,7 @@ use alloc::{boxed::Box, vec::Vec};
 
 use crate::WORD_BITS;
 
-use crate::bit_string::funcs_for_share::mask_unused_bits;
+use crate::bit_string::bits::Bits;
 
 #[inline]
 pub(super) fn owned(src: &[u64], bit_len: usize, amount: usize) -> Box<[u64]> {
@@ -20,7 +20,7 @@ pub(super) fn owned(src: &[u64], bit_len: usize, amount: usize) -> Box<[u64]> {
         out.set_len(word_len);
     }
 
-    mask_unused_bits(&mut out, bit_len);
+    Bits::mask_unused(&mut out, bit_len);
     out.into_boxed_slice()
 }
 
@@ -39,7 +39,7 @@ pub(super) fn assign(bits: &mut [u64], bit_len: usize, amount: usize) {
         dispatch(ptr, ptr.cast_const(), word_len, amount);
     }
 
-    mask_unused_bits(bits, bit_len);
+    Bits::mask_unused(bits, bit_len);
 }
 
 /// Writes `src >> amount` into `dst`.
@@ -160,8 +160,8 @@ mod scalar {
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 mod avx2 {
-    use crate::WORD_BITS;
     use super::{scalar_word, split_amount};
+    use crate::WORD_BITS;
 
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
@@ -260,8 +260,8 @@ mod avx2 {
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 mod sse2 {
-    use crate::WORD_BITS;
     use super::{scalar_word, split_amount};
+    use crate::WORD_BITS;
 
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
@@ -357,8 +357,8 @@ mod sse2 {
 #[allow(unused)]
 #[cfg(target_arch = "aarch64")]
 mod neon {
-    use crate::WORD_BITS;
     use super::{scalar_word, split_amount};
+    use crate::WORD_BITS;
 
     use core::arch::aarch64::{
         int64x2_t, uint64x2_t, vdupq_n_s64, vld1q_u64, vorrq_u64, vshlq_u64, vst1q_u64,
