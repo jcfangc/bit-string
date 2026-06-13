@@ -1,4 +1,5 @@
-use super::{WORD_BITS, low_mask};
+use crate::WORD_BITS;
+use super::low_mask;
 
 #[test]
 fn returns_zero_for_zero_bits() {

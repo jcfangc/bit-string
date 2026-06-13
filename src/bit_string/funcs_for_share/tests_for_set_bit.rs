@@ -1,5 +1,5 @@
 use super::set_bit;
-use crate::bit_string::WORD_BITS;
+use crate::WORD_BITS;
 
 #[test]
 fn sets_selected_bit_to_true() {

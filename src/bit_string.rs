@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-const WORD_BITS: usize = u64::BITS as usize;
+use crate::WORD_BITS;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct BitString {

@@ -1,4 +1,5 @@
-use super::{WORD_BITS, mask_unused_bits};
+use crate::WORD_BITS;
+use super::mask_unused_bits;
 
 #[test]
 fn does_nothing_for_empty_words() {

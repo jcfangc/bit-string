@@ -1,4 +1,5 @@
-use super::{WORD_BITS, word_len};
+use crate::WORD_BITS;
+use super::word_len;
 
 #[test]
 fn returns_zero_for_empty_bit_len() {

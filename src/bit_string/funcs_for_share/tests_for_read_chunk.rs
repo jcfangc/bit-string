@@ -1,4 +1,5 @@
-use super::{WORD_BITS, read_chunk};
+use crate::WORD_BITS;
+use super::read_chunk;
 
 #[test]
 fn returns_word_when_bit_start_is_word_aligned() {

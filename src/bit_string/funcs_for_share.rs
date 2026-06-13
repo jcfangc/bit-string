@@ -1,6 +1,7 @@
 use alloc::vec::Vec;
 use int_interval::UsizeCO;
 
+use crate::WORD_BITS;
 use super::*;
 
 #[inline]

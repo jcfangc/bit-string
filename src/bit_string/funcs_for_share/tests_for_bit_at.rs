@@ -1,4 +1,5 @@
-use super::{WORD_BITS, bit_at};
+use crate::WORD_BITS;
+use super::bit_at;
 
 #[test]
 fn reads_low_bits_within_first_word() {

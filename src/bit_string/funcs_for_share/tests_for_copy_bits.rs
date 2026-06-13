@@ -1,7 +1,8 @@
 use alloc::vec;
 use alloc::vec::Vec;
 
-use super::{WORD_BITS, bit_at, copy_bits, set_bit};
+use crate::WORD_BITS;
+use super::{bit_at, copy_bits, set_bit};
 
 fn words_from_indices(indices: &[usize], word_count: usize) -> Vec<u64> {
     let mut words = vec![0; word_count];

@@ -1,4 +1,5 @@
-use super::{WORD_BITS, funcs_for_share::last_word_mask};
+use crate::WORD_BITS;
+use super::funcs_for_share::last_word_mask;
 
 #[test]
 fn returns_full_mask_when_len_is_word_aligned() {

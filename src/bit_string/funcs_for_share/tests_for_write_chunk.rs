@@ -1,5 +1,5 @@
 use super::write_chunk;
-use crate::bit_string::WORD_BITS;
+use crate::WORD_BITS;
 
 #[test]
 fn writes_aligned_chunk_into_single_word() {
