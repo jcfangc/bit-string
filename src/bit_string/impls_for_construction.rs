@@ -102,7 +102,16 @@ impl FromIterator<bool> for BitString {
 impl From<&[bool]> for BitString {
     #[inline]
     fn from(values: &[bool]) -> Self {
-        Self::from_bool_iter(values.iter().copied())
+        // SAFETY:
+        // - `bool` has layout/size/alignment 1, so `*const bool` → `*const u8`
+        //   is a valid pointer cast.
+        // - Valid bool values are 0x00 (false) or 0x01 (true).
+        let src = values.as_ptr() as *const u8;
+        let len = values.len();
+        Self {
+            bits: funcs_for_pack_bools_core::owned(src, len),
+            len,
+        }
     }
 }
 
