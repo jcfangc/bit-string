@@ -35,7 +35,7 @@ src/
         impls_for_and.rs         # and, and_assign, and_into
         impls_for_or.rs          # or, or_assign, or_into
         impls_for_xor.rs         # xor, xor_assign, xor_into
-      tests_for_shr_zeros.rs     # Tests for shr_zeros (not yet refactored to SIMD)
+      impls_for_shr.rs           # shr, shr_assign, shr_into (right shift with zero fill)
 ```
 
 ### SIMD Backend Dispatch Pattern
