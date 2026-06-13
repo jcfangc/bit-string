@@ -105,7 +105,7 @@ fn not_len_65536_alternating_bitvec_simd(bencher: Bencher) {
 
 fn bench_bit_string(bencher: Bencher, len: usize, pattern: Pattern) {
     let bits = make_bit_string(len, pattern);
-    bencher.bench(|| black_box(&bits).not_bits());
+    bencher.bench(|| black_box(&bits).not());
 }
 
 fn bench_bitvec_simd(bencher: Bencher, len: usize, pattern: Pattern) {

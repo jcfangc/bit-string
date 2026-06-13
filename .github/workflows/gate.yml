@@ -11,8 +11,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
+  test:
+    name: test / ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64-scalar
+            os: ubuntu-latest
+            rustflags: ""
+
+          - name: linux-x64-ssse3
+            os: ubuntu-latest
+            rustflags: "-C target-feature=+ssse3"
+
+          - name: linux-x64-avx2
+            os: ubuntu-latest
+            rustflags: "-C target-feature=+avx2"
+
+          - name: linux-arm64-neon
+            os: ubuntu-24.04-arm
+            rustflags: "-C target-feature=+neon"
+
+    env:
+      RUSTFLAGS: ${{ matrix.rustflags }}
 
     steps:
       - uses: actions/checkout@v5
@@ -20,6 +44,19 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: gate-${{ matrix.name }}
+
+      - name: Show Rust target info
+        run: |
+          rustc -Vv
+          cargo -V
+
+      - name: Verify AVX2 runner support
+        if: matrix.name == 'linux-x64-avx2'
+        run: |
+          grep -m1 '^flags' /proc/cpuinfo
+          grep -q avx2 /proc/cpuinfo
 
       - name: Test
         run: cargo test --locked

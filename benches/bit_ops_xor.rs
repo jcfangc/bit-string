@@ -107,7 +107,7 @@ fn xor_len_65536_alternating_bitvec_simd(bencher: Bencher) {
 fn bench_bit_string(bencher: Bencher, len: usize, pattern: Pattern) {
     let lhs = make_bit_string(len, pattern);
     let rhs = make_bit_string(len, pattern);
-    bencher.bench(|| black_box(&lhs).xor_bits(black_box(&rhs)).unwrap());
+    bencher.bench(|| black_box(&lhs).xor(black_box(&rhs)).unwrap());
 }
 
 fn bench_bitvec_simd(bencher: Bencher, len: usize, pattern: Pattern) {

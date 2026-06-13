@@ -5,35 +5,35 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench(name = "shl/len_65/amount_1/bit_string")]
-fn shl_len_65_amount_1_bit_string(bencher: Bencher) {
+#[divan::bench(name = "shr/len_65/amount_1/bit_string")]
+fn shr_len_65_amount_1_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65, 1);
 }
 
-#[divan::bench(name = "shl/len_4096/amount_1/bit_string")]
-fn shl_len_4096_amount_1_bit_string(bencher: Bencher) {
+#[divan::bench(name = "shr/len_4096/amount_1/bit_string")]
+fn shr_len_4096_amount_1_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 4096, 1);
 }
 
-#[divan::bench(name = "shl/len_4096/amount_65/bit_string")]
-fn shl_len_4096_amount_65_bit_string(bencher: Bencher) {
+#[divan::bench(name = "shr/len_4096/amount_65/bit_string")]
+fn shr_len_4096_amount_65_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 4096, 65);
 }
 
-#[divan::bench(name = "shl/len_65536/amount_1/bit_string")]
-fn shl_len_65536_amount_1_bit_string(bencher: Bencher) {
+#[divan::bench(name = "shr/len_65536/amount_1/bit_string")]
+fn shr_len_65536_amount_1_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65_536, 1);
 }
 
-#[divan::bench(name = "shl/len_65536/amount_65/bit_string")]
-fn shl_len_65536_amount_65_bit_string(bencher: Bencher) {
+#[divan::bench(name = "shr/len_65536/amount_65/bit_string")]
+fn shr_len_65536_amount_65_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65_536, 65);
 }
 
 fn bench_bit_string(bencher: Bencher, len: usize, amount: usize) {
     let bits = make_bit_string(len);
 
-    bencher.bench(|| black_box(&bits).shl(black_box(amount)));
+    bencher.bench(|| black_box(&bits).shr(black_box(amount)));
 }
 
 #[inline]

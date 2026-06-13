@@ -2,10 +2,7 @@ use alloc::vec::Vec;
 
 use int_interval::UsizeCO;
 
-use crate::bit_string::funcs_for_share::{
-    assert_interval_in_bounds, bit_at, copy_bits, mask_unused_bits, set_bit, shrink_words,
-    word_len, zero_words,
-};
+use crate::bit_string::bits::Bits;
 
 use super::*;
 
@@ -15,14 +12,36 @@ impl BitString {
             return None;
         }
 
-        let old = bit_at(&self.bits, index);
-        set_bit(&mut self.bits, index, value);
+        let old = Bits::bit_at(&self.bits, index);
+        Bits::set_bit(&mut self.bits, index, value);
         Some(old)
+    }
+
+    /// Writes `len` bits of `value` starting at `bit_start`, OR-ing them
+    /// with the existing bits.  Bits beyond `self.len()` are ignored.
+    ///
+    /// Only the low `len` bits of `value` are used; higher bits are
+    /// masked out.
+    #[inline]
+    pub fn set_chunk(&mut self, bit_start: usize, value: u64, len: usize) {
+        let value = value & Bits::low_mask(len);
+        let word = bit_start / WORD_BITS;
+        let shift = bit_start % WORD_BITS;
+
+        if let Some(w) = self.bits.get_mut(word) {
+            *w |= value << shift;
+        }
+
+        if shift != 0 {
+            if let Some(w) = self.bits.get_mut(word + 1) {
+                *w |= value >> (WORD_BITS - shift);
+            }
+        }
     }
 
     pub fn push(&mut self, value: bool) {
         let new_len = self.len.checked_add(1).expect("bit string length overflow");
-        let new_words = word_len(new_len);
+        let new_words = Bits::word_len(new_len);
 
         if new_words != self.bits.len() {
             let mut bits = Vec::with_capacity(new_words);
@@ -32,7 +51,7 @@ impl BitString {
         }
 
         if value {
-            set_bit(&mut self.bits, self.len, true);
+            Bits::set_bit(&mut self.bits, self.len, true);
         }
 
         self.len = new_len;
@@ -40,16 +59,16 @@ impl BitString {
 
     pub fn pop(&mut self) -> Option<bool> {
         let index = self.len.checked_sub(1)?;
-        let value = bit_at(&self.bits, index);
+        let value = Bits::bit_at(&self.bits, index);
 
-        set_bit(&mut self.bits, index, false);
+        Bits::set_bit(&mut self.bits, index, false);
         self.len = index;
 
-        let words = word_len(self.len);
+        let words = Bits::word_len(self.len);
         if words != self.bits.len() {
-            self.bits = shrink_words(&self.bits, words);
+            self.bits = Bits::shrink_words(&self.bits, words);
         } else {
-            mask_unused_bits(&mut self.bits, self.len);
+            Bits::mask_unused(&mut self.bits, self.len);
         }
 
         Some(value)
@@ -69,16 +88,16 @@ impl BitString {
 
         self.len = len;
 
-        let words = word_len(len);
+        let words = Bits::word_len(len);
         if words != self.bits.len() {
-            self.bits = shrink_words(&self.bits, words);
+            self.bits = Bits::shrink_words(&self.bits, words);
         }
 
-        mask_unused_bits(&mut self.bits, len);
+        Bits::mask_unused(&mut self.bits, len);
     }
 
     pub fn clear(&mut self) {
-        self.bits = zero_words(0);
+        self.bits = Bits::zero_words(0);
         self.len = 0;
     }
 
@@ -96,11 +115,11 @@ impl BitString {
         }
 
         let new_len = self.len.checked_add(1).expect("bit string length overflow");
-        let mut bits = zero_words(word_len(new_len));
+        let mut bits = Bits::zero_words(Bits::word_len(new_len));
 
-        copy_bits(&self.bits, 0, &mut bits, 0, index);
-        set_bit(&mut bits, index, value);
-        copy_bits(&self.bits, index, &mut bits, index + 1, self.len - index);
+        Bits::copy(&self.bits, 0, &mut bits, 0, index);
+        Bits::set_bit(&mut bits, index, value);
+        Bits::copy(&self.bits, index, &mut bits, index + 1, self.len - index);
 
         self.bits = bits;
         self.len = new_len;
@@ -114,12 +133,12 @@ impl BitString {
             self.len
         );
 
-        let value = bit_at(&self.bits, index);
+        let value = Bits::bit_at(&self.bits, index);
         let new_len = self.len - 1;
-        let mut bits = zero_words(word_len(new_len));
+        let mut bits = Bits::zero_words(Bits::word_len(new_len));
 
-        copy_bits(&self.bits, 0, &mut bits, 0, index);
-        copy_bits(
+        Bits::copy(&self.bits, 0, &mut bits, 0, index);
+        Bits::copy(
             &self.bits,
             index + 1,
             &mut bits,
@@ -149,10 +168,10 @@ impl BitString {
             .checked_add(rhs.len)
             .expect("bit string length overflow");
 
-        let mut bits = zero_words(word_len(new_len));
+        let mut bits = Bits::zero_words(Bits::word_len(new_len));
 
-        copy_bits(&self.bits, 0, &mut bits, 0, self.len);
-        copy_bits(&rhs.bits, 0, &mut bits, old_len, rhs.len);
+        Bits::copy(&self.bits, 0, &mut bits, 0, self.len);
+        Bits::copy(&rhs.bits, 0, &mut bits, old_len, rhs.len);
 
         self.bits = bits;
         self.len = new_len;
@@ -180,11 +199,11 @@ impl BitString {
             .checked_add(rhs.len)
             .expect("bit string length overflow");
 
-        let mut bits = zero_words(word_len(new_len));
+        let mut bits = Bits::zero_words(Bits::word_len(new_len));
 
-        copy_bits(&self.bits, 0, &mut bits, 0, index);
-        copy_bits(&rhs.bits, 0, &mut bits, index, rhs.len);
-        copy_bits(
+        Bits::copy(&self.bits, 0, &mut bits, 0, index);
+        Bits::copy(&rhs.bits, 0, &mut bits, index, rhs.len);
+        Bits::copy(
             &self.bits,
             index,
             &mut bits,
@@ -205,9 +224,9 @@ impl BitString {
         );
 
         let rhs_len = self.len - at;
-        let mut rhs_bits = zero_words(word_len(rhs_len));
+        let mut rhs_bits = Bits::zero_words(Bits::word_len(rhs_len));
 
-        copy_bits(&self.bits, at, &mut rhs_bits, 0, rhs_len);
+        Bits::copy(&self.bits, at, &mut rhs_bits, 0, rhs_len);
         self.truncate(at);
 
         Self {
@@ -217,7 +236,7 @@ impl BitString {
     }
 
     pub fn replace_interval(&mut self, interval: UsizeCO, replacement: &Self) {
-        assert_interval_in_bounds(interval, self.len);
+        Bits::assert_interval_in_bounds(interval, self.len);
 
         let start = interval.start();
         let end = interval.end_excl();
@@ -228,11 +247,11 @@ impl BitString {
             .and_then(|len| len.checked_add(tail_len))
             .expect("bit string length overflow");
 
-        let mut bits = zero_words(word_len(new_len));
+        let mut bits = Bits::zero_words(Bits::word_len(new_len));
 
-        copy_bits(&self.bits, 0, &mut bits, 0, start);
-        copy_bits(&replacement.bits, 0, &mut bits, start, replacement.len);
-        copy_bits(
+        Bits::copy(&self.bits, 0, &mut bits, 0, start);
+        Bits::copy(&replacement.bits, 0, &mut bits, start, replacement.len);
+        Bits::copy(
             &self.bits,
             end,
             &mut bits,
@@ -245,21 +264,21 @@ impl BitString {
     }
 
     pub fn drain_interval(&mut self, interval: UsizeCO) -> Self {
-        assert_interval_in_bounds(interval, self.len);
+        Bits::assert_interval_in_bounds(interval, self.len);
 
         let start = interval.start();
         let end = interval.end_excl();
         let removed_len = interval.len();
         let tail_len = self.len - end;
 
-        let mut removed_bits = zero_words(word_len(removed_len));
-        copy_bits(&self.bits, start, &mut removed_bits, 0, removed_len);
+        let mut removed_bits = Bits::zero_words(Bits::word_len(removed_len));
+        Bits::copy(&self.bits, start, &mut removed_bits, 0, removed_len);
 
         let new_len = self.len - removed_len;
-        let mut bits = zero_words(word_len(new_len));
+        let mut bits = Bits::zero_words(Bits::word_len(new_len));
 
-        copy_bits(&self.bits, 0, &mut bits, 0, start);
-        copy_bits(&self.bits, end, &mut bits, start, tail_len);
+        Bits::copy(&self.bits, 0, &mut bits, 0, start);
+        Bits::copy(&self.bits, end, &mut bits, start, tail_len);
 
         self.bits = bits;
         self.len = new_len;
@@ -277,10 +296,10 @@ impl BitString {
         let mut write = 0usize;
 
         for read in 0..self.len {
-            let value = bit_at(&self.bits, read);
+            let value = Bits::bit_at(&self.bits, read);
 
             if f(value) {
-                set_bit(&mut self.bits, write, value);
+                Bits::set_bit(&mut self.bits, write, value);
                 write += 1;
             }
         }
@@ -291,13 +310,13 @@ impl BitString {
 
 impl BitString {
     pub fn slice(&self, interval: UsizeCO) -> Self {
-        assert_interval_in_bounds(interval, self.len);
+        Bits::assert_interval_in_bounds(interval, self.len);
 
         let start = interval.start();
         let len = interval.len();
 
-        let mut bits = zero_words(word_len(len));
-        copy_bits(&self.bits, start, &mut bits, 0, len);
+        let mut bits = Bits::zero_words(Bits::word_len(len));
+        Bits::copy(&self.bits, start, &mut bits, 0, len);
 
         Self { bits, len }
     }
@@ -358,6 +377,8 @@ impl<'a> Extend<&'a bool> for BitString {
 
 #[cfg(test)]
 mod tests_for_set;
+#[cfg(test)]
+mod tests_for_set_chunk;
 
 #[cfg(test)]
 mod tests_for_push;

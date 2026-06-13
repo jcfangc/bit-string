@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-const WORD_BITS: usize = u64::BITS as usize;
+use crate::WORD_BITS;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct BitString {
@@ -17,4 +17,4 @@ mod impls_for_fmt;
 mod impls_for_iter;
 mod impls_for_matching;
 
-pub(crate) mod funcs_for_share;
+pub(crate) mod bits;

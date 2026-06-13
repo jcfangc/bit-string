@@ -1,6 +1,6 @@
 [package]
 name = "bit-string"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "A compact owned bit string type with editing, matching, and bitwise operations."
 readme = "README.md"
@@ -35,6 +35,10 @@ harness = false
 
 [[bench]]
 name = "bit_ops_shl"
+harness = false
+
+[[bench]]
+name = "bit_ops_shr"
 harness = false
 
 [[bench]]
