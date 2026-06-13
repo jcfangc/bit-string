@@ -2,15 +2,7 @@
 
 A `no_std` Rust crate providing a compact owned bit string type with editing, matching, and bitwise operations.
 
-## Build & Test
-
-```bash
-cargo test              # Run all tests
-cargo bench             # Run all benchmarks
-cargo clippy            # Lint
-```
-
-Tests include per-function unit tests and backend-equivalence tests that verify SIMD implementations (SSE2, AVX2, NEON) match the scalar reference across a matrix of inputs and shift amounts.
+通用约定参见父级：`../CLAUDE.md`
 
 ## Architecture
 
@@ -55,16 +47,6 @@ Each bit operation follows the same multi-backend architecture:
 ### Core Data Structure
 
 `BitString` stores bits in a `Box<[u64]>` array. The logical bit length (`len: usize`) is tracked separately. The last `u64` word is masked via `last_word_mask` to zero bits beyond `len`. Internal word size: `WORD_BITS = u64::BITS = 64`.
-
-### Key Conventions
-
-- `impls_for_*` implements methods for a unified theme (`impl BitString { … }` blocks).
-- `funcs_for_*` provides pure functions that serve a unified theme.
-- `funcs_for_*_core` is the low-level dispatch layer for a SIMD-backed operation.
-- Safety comments for `unsafe` blocks document preconditions and how they're satisfied.
-- `unsafe` blocks are kept minimal — each has a comment referencing the relevant guarantees.
-- Functions that work on raw pointers are `unsafe` and document their safety contract in doc comments.
-- Tests are structured as `mod tests_for_*` submodules inside each feature module.
 
 ## Key Dependencies
 
