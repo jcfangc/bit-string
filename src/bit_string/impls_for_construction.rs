@@ -109,7 +109,15 @@ impl From<&[bool]> for BitString {
 impl<const N: usize> From<[bool; N]> for BitString {
     #[inline]
     fn from(values: [bool; N]) -> Self {
-        Self::from_bool_iter(values)
+        // SAFETY:
+        // - `bool` has layout/size/alignment 1, so `*const bool` → `*const u8`
+        //   is a valid pointer cast.
+        // - Valid bool values are 0x00 (false) or 0x01 (true).
+        let src = values.as_ptr() as *const u8;
+        Self {
+            bits: funcs_for_pack_bools_core::owned(src, N),
+            len: N,
+        }
     }
 }
 
@@ -143,6 +151,8 @@ impl FromStr for BitString {
 }
 
 mod funcs_for_repeat_core;
+
+mod funcs_for_pack_bools_core;
 
 #[cfg(test)]
 mod tests_for_repeat;
