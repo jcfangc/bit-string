@@ -16,16 +16,12 @@ impl BitString {
     }
 
     pub fn repeat(value: bool, len: usize) -> Self {
-        let word_count = len / WORD_BITS + usize::from(len % WORD_BITS != 0);
-
+        let word_count = Bits::word_len(len);
         let fill = if value { u64::MAX } else { 0 };
-        let mut bits = Vec::with_capacity(word_count);
-        bits.resize(word_count, fill);
-
-        let mut bits = bits.into_boxed_slice();
-        Bits::mask_unused(&mut bits, len);
-
-        Self { bits, len }
+        Self {
+            bits: funcs_for_repeat_core::owned(word_count, fill, len),
+            len,
+        }
     }
 
     #[inline]
@@ -145,6 +141,8 @@ impl FromStr for BitString {
         Self::try_from(s)
     }
 }
+
+mod funcs_for_repeat_core;
 
 #[cfg(test)]
 mod tests_for_repeat;
