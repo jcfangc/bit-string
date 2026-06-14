@@ -1,16 +1,53 @@
-use crate::bit_string::bits::Bits;
-
 use super::*;
+
+/// Below this many full words, a direct `u64::count_ones()` loop beats the
+/// SIMD dispatch overhead.  Must match each backend's `LANES`.
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
+const SMALL_WORDS: usize = 4;
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "ssse3",
+    not(target_feature = "avx2")
+))]
+const SMALL_WORDS: usize = 2;
+#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+const SMALL_WORDS: usize = 2;
+#[cfg(not(any(
+    all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        any(target_feature = "avx2", target_feature = "ssse3")
+    ),
+    all(target_arch = "aarch64", target_feature = "neon"),
+)))]
+const SMALL_WORDS: usize = 0;
 
 #[inline]
 pub(super) fn count_ones(bits: &[u64], bit_len: usize) -> usize {
     let full_words = bit_len / WORD_BITS;
     let rem = bit_len % WORD_BITS;
 
+    // Fast path: for inputs too short to amortize SIMD setup, loop over
+    // the words directly with scalar popcnt, skipping dispatch entirely.
+    // No mask needed on the last word: mask_unused() is called after every
+    // mutation, so bits beyond `bit_len` are always zero.
+    if full_words < SMALL_WORDS {
+        let mut count = 0usize;
+        for i in 0..full_words {
+            count += bits[i].count_ones() as usize;
+        }
+        if rem != 0 {
+            count += bits[full_words].count_ones() as usize;
+        }
+        return count;
+    }
+
     let mut count = count_full_words(&bits[..full_words]);
 
     if rem != 0 {
-        count += (bits[full_words] & Bits::last_word_mask(bit_len)).count_ones() as usize;
+        count += bits[full_words].count_ones() as usize;
     }
 
     count
