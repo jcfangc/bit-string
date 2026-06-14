@@ -31,15 +31,21 @@ fn count_full_words(words: &[u64]) -> usize {
 /// - `src` must be valid for reads of `len` initialized `u64` values.
 #[inline]
 unsafe fn dispatch(src: *const u64, len: usize) -> usize {
+    // Small inputs: skip SIMD setup overhead, go straight to scalar popcnt.
+    // Threshold equals the backend's LANES count.
+
     #[cfg(all(
         any(target_arch = "x86", target_arch = "x86_64"),
         target_feature = "avx2"
     ))]
     {
-        // SAFETY:
-        // - Forwarded from `dispatch`'s safety contract.
-        // - This branch is compiled only when AVX2 is enabled.
-        return unsafe { avx2::count_words(src, len) };
+        if len >= 4 {
+            // SAFETY:
+            // - Forwarded from `dispatch`'s safety contract.
+            // - This branch is compiled only when AVX2 is enabled.
+            return unsafe { avx2::count_words(src, len) };
+        }
+        // len < 4: fall through to scalar below.
     }
 
     #[cfg(all(
@@ -48,18 +54,24 @@ unsafe fn dispatch(src: *const u64, len: usize) -> usize {
         not(target_feature = "avx2")
     ))]
     {
-        // SAFETY:
-        // - Forwarded from `dispatch`'s safety contract.
-        // - This branch is compiled only when SSSE3 is enabled.
-        return unsafe { ssse3::count_words(src, len) };
+        if len >= 2 {
+            // SAFETY:
+            // - Forwarded from `dispatch`'s safety contract.
+            // - This branch is compiled only when SSSE3 is enabled.
+            return unsafe { ssse3::count_words(src, len) };
+        }
+        // len < 2: fall through to scalar below.
     }
 
     #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
     {
-        // SAFETY:
-        // - Forwarded from `dispatch`'s safety contract.
-        // - This branch is compiled only when NEON is enabled.
-        return unsafe { neon::count_words(src, len) };
+        if len >= 2 {
+            // SAFETY:
+            // - Forwarded from `dispatch`'s safety contract.
+            // - This branch is compiled only when NEON is enabled.
+            return unsafe { neon::count_words(src, len) };
+        }
+        // len < 2: fall through to scalar below.
     }
 
     #[allow(unused)]
@@ -100,16 +112,16 @@ mod avx2 {
 
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
-        __m256i, _mm256_add_epi8, _mm256_and_si256, _mm256_loadu_si256, _mm256_sad_epu8,
-        _mm256_set1_epi8, _mm256_setr_epi8, _mm256_setzero_si256, _mm256_shuffle_epi8,
-        _mm256_srli_epi16, _mm256_storeu_si256,
+        __m256i, _mm256_add_epi8, _mm256_add_epi64, _mm256_and_si256, _mm256_loadu_si256,
+        _mm256_sad_epu8, _mm256_set1_epi8, _mm256_setr_epi8, _mm256_setzero_si256,
+        _mm256_shuffle_epi8, _mm256_srli_epi16, _mm256_storeu_si256,
     };
 
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::{
-        __m256i, _mm256_add_epi8, _mm256_and_si256, _mm256_loadu_si256, _mm256_sad_epu8,
-        _mm256_set1_epi8, _mm256_setr_epi8, _mm256_setzero_si256, _mm256_shuffle_epi8,
-        _mm256_srli_epi16, _mm256_storeu_si256,
+        __m256i, _mm256_add_epi8, _mm256_add_epi64, _mm256_and_si256, _mm256_loadu_si256,
+        _mm256_sad_epu8, _mm256_set1_epi8, _mm256_setr_epi8, _mm256_setzero_si256,
+        _mm256_shuffle_epi8, _mm256_srli_epi16, _mm256_storeu_si256,
     };
 
     const LANES: usize = 4;
@@ -125,7 +137,6 @@ mod avx2 {
     #[target_feature(enable = "avx2")]
     pub(super) unsafe fn count_words(src: *const u64, len: usize) -> usize {
         let chunks = len / LANES;
-        let mut count = 0usize;
 
         // SAFETY:
         // - These constructors require AVX2 to be available.
@@ -137,6 +148,10 @@ mod avx2 {
         let low_mask = _mm256_set1_epi8(0x0F);
         let zero = _mm256_setzero_si256();
 
+        // Accumulate popcounts in a SIMD register to avoid per-chunk
+        // store-to-memory round-trips. Reduced to scalar only once at the end.
+        let mut acc = zero;
+
         for chunk in 0..chunks {
             let offset = chunk * LANES;
 
@@ -144,7 +159,6 @@ mod avx2 {
             // - `offset + LANES <= len`.
             // - `_mm256_loadu_si256` permits unaligned reads.
             // - `src` validity is guaranteed by the caller.
-            // - `lane_sums` has exactly 4 u64 lanes for `_mm256_storeu_si256`.
             unsafe {
                 let bytes = _mm256_loadu_si256(src.add(offset).cast::<__m256i>());
 
@@ -156,13 +170,14 @@ mod avx2 {
                 let byte_counts = _mm256_add_epi8(low_counts, high_counts);
 
                 let sums = _mm256_sad_epu8(byte_counts, zero);
-
-                let mut lane_sums = [0u64; LANES];
-                _mm256_storeu_si256(lane_sums.as_mut_ptr().cast::<__m256i>(), sums);
-
-                count += lane_sums.iter().map(|&sum| sum as usize).sum::<usize>();
+                acc = _mm256_add_epi64(acc, sums);
             }
         }
+
+        let mut lane_sums = [0u64; LANES];
+        // SAFETY: `lane_sums` has sufficient space for 4 u64 values.
+        unsafe { _mm256_storeu_si256(lane_sums.as_mut_ptr().cast::<__m256i>(), acc) };
+        let mut count = lane_sums.iter().map(|&sum| sum as usize).sum::<usize>();
 
         let done = chunks * LANES;
 
@@ -170,7 +185,8 @@ mod avx2 {
         // - `done <= len`.
         // - Tail range is `done..len`.
         // - Pointer validity is guaranteed by the caller.
-        count + unsafe { scalar::count_words(src.add(done), len - done) }
+        count += unsafe { scalar::count_words(src.add(done), len - done) };
+        count
     }
 }
 
@@ -181,14 +197,16 @@ mod ssse3 {
 
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
-        __m128i, _mm_add_epi8, _mm_and_si128, _mm_loadu_si128, _mm_sad_epu8, _mm_set1_epi8,
-        _mm_setr_epi8, _mm_setzero_si128, _mm_shuffle_epi8, _mm_srli_epi16, _mm_storeu_si128,
+        __m128i, _mm_add_epi8, _mm_add_epi64, _mm_and_si128, _mm_loadu_si128, _mm_sad_epu8,
+        _mm_set1_epi8, _mm_setr_epi8, _mm_setzero_si128, _mm_shuffle_epi8, _mm_srli_epi16,
+        _mm_storeu_si128,
     };
 
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::{
-        __m128i, _mm_add_epi8, _mm_and_si128, _mm_loadu_si128, _mm_sad_epu8, _mm_set1_epi8,
-        _mm_setr_epi8, _mm_setzero_si128, _mm_shuffle_epi8, _mm_srli_epi16, _mm_storeu_si128,
+        __m128i, _mm_add_epi8, _mm_add_epi64, _mm_and_si128, _mm_loadu_si128, _mm_sad_epu8,
+        _mm_set1_epi8, _mm_setr_epi8, _mm_setzero_si128, _mm_shuffle_epi8, _mm_srli_epi16,
+        _mm_storeu_si128,
     };
 
     const LANES: usize = 2;
@@ -204,7 +222,6 @@ mod ssse3 {
     #[target_feature(enable = "ssse3")]
     pub(super) unsafe fn count_words(src: *const u64, len: usize) -> usize {
         let chunks = len / LANES;
-        let mut count = 0usize;
 
         let lookup = _mm_setr_epi8(
             0, 1, 1, 2, 1, 2, 2, 3, //
@@ -213,6 +230,10 @@ mod ssse3 {
         let low_mask = _mm_set1_epi8(0x0F);
         let zero = _mm_setzero_si128();
 
+        // Accumulate popcounts in a SIMD register to avoid per-chunk
+        // store-to-memory round-trips. Reduced to scalar only once at the end.
+        let mut acc = zero;
+
         for chunk in 0..chunks {
             let offset = chunk * LANES;
 
@@ -220,7 +241,6 @@ mod ssse3 {
             // - `offset + LANES <= len`.
             // - `_mm_loadu_si128` permits unaligned reads.
             // - `src` validity is guaranteed by the caller.
-            // - `lane_sums` has exactly 2 u64 lanes for `_mm_storeu_si128`.
             unsafe {
                 let bytes = _mm_loadu_si128(src.add(offset).cast::<__m128i>());
 
@@ -232,13 +252,14 @@ mod ssse3 {
                 let byte_counts = _mm_add_epi8(low_counts, high_counts);
 
                 let sums = _mm_sad_epu8(byte_counts, zero);
-
-                let mut lane_sums = [0u64; LANES];
-                _mm_storeu_si128(lane_sums.as_mut_ptr().cast::<__m128i>(), sums);
-
-                count += lane_sums.iter().map(|&sum| sum as usize).sum::<usize>();
+                acc = _mm_add_epi64(acc, sums);
             }
         }
+
+        let mut lane_sums = [0u64; LANES];
+        // SAFETY: `lane_sums` has sufficient space for 2 u64 values.
+        unsafe { _mm_storeu_si128(lane_sums.as_mut_ptr().cast::<__m128i>(), acc) };
+        let mut count = lane_sums.iter().map(|&sum| sum as usize).sum::<usize>();
 
         let done = chunks * LANES;
 
@@ -246,7 +267,8 @@ mod ssse3 {
         // - `done <= len`.
         // - Tail range is `done..len`.
         // - Pointer validity is guaranteed by the caller.
-        count + unsafe { scalar::count_words(src.add(done), len - done) }
+        count += unsafe { scalar::count_words(src.add(done), len - done) };
+        count
     }
 }
 
