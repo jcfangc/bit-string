@@ -1,6 +1,20 @@
 repos:
   - repo: local
     hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt -- --check
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: cargo-check-aarch64
+        name: cargo check aarch64 (NEON)
+        entry: cargo check --target aarch64-unknown-linux-gnu
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: cargo-test
         name: cargo test
         entry: cargo test --quiet
