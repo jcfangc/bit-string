@@ -1,6 +1,6 @@
 [package]
 name = "bit-string"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 description = "A compact owned bit string type with editing, matching, and bitwise operations."
 readme = "README.md"
