@@ -6,7 +6,7 @@ fn inserts_bits_at_start() {
     let mut bits = BitString::try_from("101").unwrap();
     let rhs = BitString::try_from("00").unwrap();
 
-    bits.insert_bits(0, &rhs);
+    bits.insert_bit_string(0, &rhs);
 
     assert_eq!(bits.len(), 5);
     assert_eq!(bits.to_string(), "00101");
@@ -17,7 +17,7 @@ fn inserts_bits_in_middle() {
     let mut bits = BitString::try_from("1001").unwrap();
     let rhs = BitString::try_from("11").unwrap();
 
-    bits.insert_bits(2, &rhs);
+    bits.insert_bit_string(2, &rhs);
 
     assert_eq!(bits.len(), 6);
     assert_eq!(bits.to_string(), "101101");
@@ -28,7 +28,7 @@ fn inserts_bits_at_end() {
     let mut bits = BitString::try_from("101").unwrap();
     let rhs = BitString::try_from("01").unwrap();
 
-    bits.insert_bits(bits.len(), &rhs);
+    bits.insert_bit_string(bits.len(), &rhs);
 
     assert_eq!(bits.len(), 5);
     assert_eq!(bits.to_string(), "10101");
@@ -39,7 +39,7 @@ fn inserts_bits_into_empty_bit_string() {
     let mut bits = BitString::new();
     let rhs = BitString::try_from("1011").unwrap();
 
-    bits.insert_bits(0, &rhs);
+    bits.insert_bit_string(0, &rhs);
 
     assert_eq!(bits.len(), 4);
     assert_eq!(bits.to_string(), "1011");
@@ -50,7 +50,7 @@ fn inserting_empty_rhs_is_noop() {
     let mut bits = BitString::try_from("1011").unwrap();
     let rhs = BitString::new();
 
-    bits.insert_bits(2, &rhs);
+    bits.insert_bit_string(2, &rhs);
 
     assert_eq!(bits.len(), 4);
     assert_eq!(bits.to_string(), "1011");
@@ -66,7 +66,7 @@ fn inserts_across_word_boundary() {
 
     let rhs = BitString::try_from("10").unwrap();
 
-    bits.insert_bits(63, &rhs);
+    bits.insert_bit_string(63, &rhs);
 
     assert_eq!(bits.len(), 132);
 
@@ -80,11 +80,11 @@ fn inserts_across_word_boundary() {
 }
 
 #[test]
-fn insert_bits_updates_counts() {
+fn insert_bit_string_updates_counts() {
     let mut bits = BitString::try_from("1001").unwrap();
     let rhs = BitString::try_from("111").unwrap();
 
-    bits.insert_bits(2, &rhs);
+    bits.insert_bit_string(2, &rhs);
 
     assert_eq!(bits.to_string(), "1011101");
     assert_eq!(bits.count_ones(), 5);
@@ -97,5 +97,5 @@ fn panics_when_inserting_past_len() {
     let mut bits = BitString::try_from("101").unwrap();
     let rhs = BitString::try_from("1").unwrap();
 
-    bits.insert_bits(4, &rhs);
+    bits.insert_bit_string(4, &rhs);
 }

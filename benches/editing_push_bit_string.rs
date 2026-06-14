@@ -5,22 +5,22 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench(name = "push_bits/len_65/bit_string")]
+#[divan::bench(name = "push_bit_string/len_65/bit_string")]
 fn push_bits_len_65_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65);
 }
 
-#[divan::bench(name = "push_bits/len_65/string")]
+#[divan::bench(name = "push_bit_string/len_65/string")]
 fn push_bits_len_65_string(bencher: Bencher) {
     bench_string(bencher, 65);
 }
 
-#[divan::bench(name = "push_bits/len_65536/bit_string")]
+#[divan::bench(name = "push_bit_string/len_65536/bit_string")]
 fn push_bits_len_65536_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65_536);
 }
 
-#[divan::bench(name = "push_bits/len_65536/string")]
+#[divan::bench(name = "push_bit_string/len_65536/string")]
 fn push_bits_len_65536_string(bencher: Bencher) {
     bench_string(bencher, 65_536);
 }
@@ -31,7 +31,7 @@ fn bench_bit_string(bencher: Bencher, len: usize) {
 
     bencher.bench(|| {
         let mut bits = black_box(input.clone());
-        bits.push_bits(black_box(&rhs));
+        bits.push_bit_string(black_box(&rhs));
         black_box(bits)
     });
 }

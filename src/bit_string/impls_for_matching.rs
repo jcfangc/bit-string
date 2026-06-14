@@ -35,11 +35,11 @@ impl BitString {
     }
 
     #[inline]
-    pub fn contains_bits(&self, needle: &Self) -> bool {
-        self.find_bits(needle).is_some()
+    pub fn contains(&self, needle: &Self) -> bool {
+        self.find(needle).is_some()
     }
 
-    pub fn find_bits(&self, needle: &Self) -> Option<usize> {
+    pub fn find(&self, needle: &Self) -> Option<usize> {
         if needle.len == 0 {
             return Some(0);
         }
@@ -53,7 +53,7 @@ impl BitString {
         (0..=last_start).find(|&index| bits_equal_at(self, index, needle))
     }
 
-    pub fn rfind_bits(&self, needle: &Self) -> Option<usize> {
+    pub fn rfind(&self, needle: &Self) -> Option<usize> {
         if needle.len == 0 {
             return Some(self.len);
         }
@@ -93,13 +93,13 @@ mod tests_for_starts_with;
 mod tests_for_ends_with;
 
 #[cfg(test)]
-mod tests_for_contains_bits;
+mod tests_for_contains;
 
 #[cfg(test)]
-mod tests_for_find_bits;
+mod tests_for_find;
 
 #[cfg(test)]
-mod tests_for_rfind_bits;
+mod tests_for_rfind;
 
 #[cfg(test)]
 mod tests_for_strip_prefix;

@@ -12,8 +12,8 @@ The core type is `BitString`. Bits are packed into `Box<[u64]>` with unused high
 - **Construction**: `new`, `zeros`, `repeat`, `from_bool_iter`, `from_words`, `try_from(&str)`
 - **Bitwise ops**: `and_bits`, `or_bits`, `xor_bits`, `not_bits`, `shl`, `shr`
 - **Bit counting**: `count_ones`, `count_zeros`
-- **Editing**: `push`, `pop`, `insert`, `remove`, `set`, `extend`, `truncate`, `slice`, `split_off`, `replace_interval`, `retain`
-- **Matching**: `starts_with`, `ends_with`, `contains_bits`, `find_bits`, `rfind_bits`, `strip_prefix`, `strip_suffix`
+- **Editing**: `push`, `pop`, `insert`, `remove`, `set`, `extend`, `truncate`, `slice`, `split_off`, `replace_interval`, `retain`, `push_bit_string`, `insert_bit_string`
+- **Matching**: `starts_with`, `ends_with`, `contains`, `find`, `rfind`, `strip_prefix`, `strip_suffix`
 - **Access**: `get`, `len`, `is_empty`, `as_words`, `get_chunk`, `to_string`, `iter`
 
 ### SIMD backends

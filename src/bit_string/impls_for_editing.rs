@@ -152,7 +152,7 @@ impl BitString {
         value
     }
 
-    pub fn push_bits(&mut self, rhs: &Self) {
+    pub fn push_bit_string(&mut self, rhs: &Self) {
         if rhs.len == 0 {
             return;
         }
@@ -177,7 +177,7 @@ impl BitString {
         self.len = new_len;
     }
 
-    pub fn insert_bits(&mut self, index: usize, rhs: &Self) {
+    pub fn insert_bit_string(&mut self, index: usize, rhs: &Self) {
         assert!(
             index <= self.len,
             "bit string insert index out of bounds: index={}, len={}",
@@ -190,7 +190,7 @@ impl BitString {
         }
 
         if index == self.len {
-            self.push_bits(rhs);
+            self.push_bit_string(rhs);
             return;
         }
 
@@ -362,7 +362,7 @@ impl Extend<bool> for BitString {
         I: IntoIterator<Item = bool>,
     {
         let rhs = Self::from_bool_iter(iter);
-        self.push_bits(&rhs);
+        self.push_bit_string(&rhs);
     }
 }
 
@@ -396,10 +396,10 @@ mod tests_for_insert;
 mod tests_for_remove;
 
 #[cfg(test)]
-mod tests_for_push_bits;
+mod tests_for_push_bit_string;
 
 #[cfg(test)]
-mod tests_for_insert_bits;
+mod tests_for_insert_bit_string;
 
 #[cfg(test)]
 mod tests_for_split_off;
