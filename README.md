@@ -46,15 +46,11 @@ assert_eq!((!a).to_string(),              "0101");
 assert_eq!(a.count_ones(), 2);
 ```
 
-## Benchmark highlights
+## Benchmarks
 
-`count_ones` vs `bitvec_simd` on an Intel Broadwell laptop (lower is better):
+Continuous benchmarking results are published at:
 
-| length     | bit-string | bitvec_simd |
-|------------|-----------:|------------:|
-| 65 bits    |    8.6 ns  |    5.7 ns   |
-| 4 096 bits |   31.7 ns  |   46.4 ns   |
-| 65 536 bits|  388  ns   |  629  ns    |
+<https://jcfangc.github.io/bit-string/compare-plotly/index.html>
 
 ## Status
 
