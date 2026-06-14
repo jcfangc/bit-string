@@ -1,6 +1,7 @@
 use alloc::string::ToString;
+use alloc::vec::Vec;
 
-use super::*;
+use crate::{BitString, WORD_BITS};
 
 #[test]
 fn builds_empty_bit_string_from_empty_iter() {

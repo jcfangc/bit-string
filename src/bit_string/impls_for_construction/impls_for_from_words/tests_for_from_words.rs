@@ -1,6 +1,6 @@
 use alloc::string::ToString;
 
-use super::*;
+use crate::BitString;
 
 #[test]
 fn constructs_empty_from_empty_words() {

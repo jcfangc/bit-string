@@ -1,5 +1,6 @@
-use super::super::*;
 use alloc::string::ToString;
+
+use crate::BitString;
 
 #[test]
 fn repeat_false_with_zero_len_builds_empty_bit_string() {
