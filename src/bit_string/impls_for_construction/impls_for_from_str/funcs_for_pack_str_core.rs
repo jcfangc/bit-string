@@ -8,7 +8,7 @@ use crate::bit_string::bits::Bits;
 /// Bits are packed in little-endian order: byte `i` becomes bit `i % 64`
 /// of word `i / 64`.
 #[inline]
-pub(super) fn owned(src: *const u8, bit_len: usize) -> Result<Box<[u64]>, (usize, u8)> {
+pub(super) fn str_core(src: *const u8, bit_len: usize) -> Result<Box<[u64]>, (usize, u8)> {
     let word_len = Bits::word_len(bit_len);
     let mut out = Vec::<u64>::with_capacity(word_len);
 
@@ -329,13 +329,14 @@ mod neon {
     use super::scalar;
 
     use core::arch::aarch64::{
-        uint8x8_t, vand_u8, vdup_n_u8, veor_u8, vget_lane_u64, vld1_u8, vpaddl_u8, vpaddl_u16,
-        vpaddl_u32, vreinterpret_u64_u8,
+        vand_u8, vdup_n_u8, veor_u8, vget_lane_u64, vld1_u8, vpaddl_u8, vpaddl_u16, vpaddl_u32,
+        vreinterpret_u64_u8,
     };
 
-    const LANES: usize = 8;
+    /// Bit-position masks for vpaddl reduction.
+    const BIT_MASKS: [u8; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
 
-    /// NEON backend: validate + pack, 8 bytes → 1 u64.
+    /// NEON backend: validate + pack, 64 bytes at a time.
     ///
     /// Uses `(v ^ 0x30) & (v ^ 0x31)` for validation, reusing `v ^ 0x30`
     /// (which holds the bit value in LSB) for extraction.
@@ -347,53 +348,60 @@ mod neon {
     ) -> Option<(usize, u8)> {
         let zero_byte = vdup_n_u8(b'0');
         let one_byte = vdup_n_u8(b'1');
-        // Bit-position masks for vpaddl reduction.
-        const BIT_MASKS: [u8; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
         let bit_masks = vld1_u8(BIT_MASKS.as_ptr());
         let mut global_offset = 0usize;
 
-        while bit_len >= LANES {
-            // SAFETY: `bit_len >= 8`.
-            let v = unsafe { vld1_u8(src) };
+        while bit_len >= 64 {
+            // Validate all 8 groups, then pack them into one u64.
+            let mut word = 0u64;
+            for group in 0..8 {
+                // SAFETY: `bit_len >= 64` and `group < 8`, so the
+                // 8-byte read from `src + group*8` is in bounds.
+                let v = unsafe { vld1_u8(src.add(group * 8)) };
 
-            // `xor0 = v ^ 0x30`:
-            //   b'0' → 0x00, b'1' → 0x01  (bit value in LSB)
-            // `xor1 = v ^ 0x31`:
-            //   b'0' → 0x01, b'1' → 0x00
-            // `invalid = xor0 & xor1`:
-            //   valid → 0x00, invalid → non-zero
-            let xor0 = veor_u8(v, zero_byte);
-            let xor1 = veor_u8(v, one_byte);
-            let invalid = vand_u8(xor0, xor1);
+                // `xor0 = v ^ 0x30`:
+                //   b'0' → 0x00, b'1' → 0x01  (bit value in LSB)
+                // `xor1 = v ^ 0x31`:
+                //   b'0' → 0x01, b'1' → 0x00
+                // `invalid = xor0 & xor1`:
+                //   valid → 0x00, invalid → non-zero
+                let xor0 = veor_u8(v, zero_byte);
+                let xor1 = veor_u8(v, one_byte);
+                let invalid = vand_u8(xor0, xor1);
 
-            // Check whether any lane is non-zero (cheap all-zero test via
-            // reinterpret as u64 and compare).
-            let invalid_u64 = vget_lane_u64::<0>(vreinterpret_u64_u8(invalid));
-            if invalid_u64 != 0 {
-                // Fall back to scalar for exact error position.
-                let (i, b) =
-                    unsafe { scalar::words(dst, src, LANES) }.expect("chunk has invalid byte");
-                return Some((global_offset + i, b));
+                // Cheap all-zero test via reinterpret as u64.
+                let invalid_u64 = vget_lane_u64::<0>(vreinterpret_u64_u8(invalid));
+                if invalid_u64 != 0 {
+                    // Fall back to scalar for exact error position within
+                    // this 64-byte chunk.
+                    let (i, b) =
+                        unsafe { scalar::words(dst, src, 64) }.expect("chunk has invalid byte");
+                    return Some((global_offset + i, b));
+                }
+
+                // Pack: xor0 already holds the bit value (0 or 1).  Use
+                // vand with bit-position masks, then horizontal pairwise
+                // add to collapse into one u64.
+                let masked = vand_u8(xor0, bit_masks);
+                let sum16 = vpaddl_u8(masked);
+                let sum32 = vpaddl_u16(sum16);
+                let sum64 = vpaddl_u32(sum32);
+
+                let group_bits = vget_lane_u64::<0>(sum64);
+                word |= group_bits << (group * 8);
             }
 
-            // Pack: xor0 already holds the bit value.  Use vand with bit-
-            // position masks, then horizontal pairwise add.
-            let masked = vand_u8(xor0, bit_masks);
-            let sum16 = vpaddl_u8(masked);
-            let sum32 = vpaddl_u16(sum16);
-            let sum64 = vpaddl_u32(sum32);
-
-            // SAFETY: `dst` points to the next output slot.
+            // SAFETY: `dst` points to the current output slot.
             unsafe {
-                *dst = vget_lane_u64::<0>(sum64);
+                *dst = word;
                 dst = dst.add(1);
-                src = src.add(LANES);
+                src = src.add(64);
             }
-            global_offset += LANES;
-            bit_len -= LANES;
+            global_offset += 64;
+            bit_len -= 64;
         }
 
-        // SAFETY: `bit_len < 8`.
+        // SAFETY: `bit_len < 64`.
         unsafe {
             if let Some((i, b)) = scalar::words(dst, src, bit_len) {
                 return Some((global_offset + i, b));

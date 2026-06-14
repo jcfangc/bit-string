@@ -3,7 +3,15 @@ use alloc::{boxed::Box, vec::Vec};
 use crate::bit_string::bits::Bits;
 
 #[inline]
-pub(super) fn owned(word_len: usize, value: u64, bit_len: usize) -> Box<[u64]> {
+pub(super) fn repeat_core(word_len: usize, value: u64, bit_len: usize) -> Box<[u64]> {
+    // Fast path: resize to zero (memset) is cheaper than SIMD fill for zeros.
+    if value == 0 {
+        let mut out = Vec::<u64>::with_capacity(word_len);
+        out.resize(word_len, 0);
+        Bits::mask_unused(&mut out, bit_len);
+        return out.into_boxed_slice();
+    }
+
     let mut out = Vec::<u64>::with_capacity(word_len);
 
     // SAFETY:

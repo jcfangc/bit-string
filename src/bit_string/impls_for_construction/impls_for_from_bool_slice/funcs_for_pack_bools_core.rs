@@ -8,7 +8,7 @@ use crate::bit_string::bits::Bits;
 /// Bits are packed in little-endian order: byte `i` becomes bit `i % 64`
 /// of word `i / 64`.
 #[inline]
-pub(super) fn owned(src: *const u8, bit_len: usize) -> Box<[u64]> {
+pub(super) fn bool_core(src: *const u8, bit_len: usize) -> Box<[u64]> {
     let word_len = Bits::word_len(bit_len);
     let mut out = Vec::<u64>::with_capacity(word_len);
 
@@ -282,9 +282,13 @@ mod neon {
 
     use core::arch::aarch64::{vand_u8, vget_lane_u64, vld1_u8, vpaddl_u8, vpaddl_u16, vpaddl_u32};
 
-    const LANES: usize = 8;
+    /// Bit-position masks: [1, 2, 4, 8, 16, 32, 64, 128].
+    const BIT_MASKS: [u8; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
 
-    /// NEON backend: 8 bytes → 1 u64 via bit-position masking + pairwise add.
+    /// NEON backend: packs 64 bytes at a time into one u64.
+    ///
+    /// Each 8-byte group contributes bits at `group * 8` offset within the
+    /// current word, then 8 groups are OR'd together.
     ///
     /// # Safety
     ///
@@ -293,42 +297,39 @@ mod neon {
     /// - `dst` must be valid for writes of `ceil(bit_len / 64)` u64 values.
     #[target_feature(enable = "neon")]
     pub(super) unsafe fn words(mut dst: *mut u64, mut src: *const u8, mut bit_len: usize) {
-        while bit_len >= LANES {
-            // SAFETY:
-            // - `bit_len >= 8`, so reading 8 bytes from `src` is in bounds.
-            // - `vld1_u8` permits unaligned loads.
-            // - `mask` is a compile-time constant with valid bit positions 1,2,4,...,128.
-            let bytes = unsafe { vld1_u8(src) };
+        // SAFETY: constant pointer to static mask array.
+        let bit_masks = vld1_u8(BIT_MASKS.as_ptr());
 
-            // Bit-position masks: [1, 2, 4, 8, 16, 32, 64, 128]
-            const MASK: [u8; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
-            let masks = vld1_u8(MASK.as_ptr());
+        while bit_len >= 64 {
+            // Accumulate 8 groups × 8 bytes → one u64.
+            let mut word = 0u64;
+            for group in 0..8 {
+                // SAFETY: `bit_len >= 64` and `group < 8`, so the load
+                // is within bounds. `vld1_u8` permits unaligned reads.
+                let bytes = unsafe { vld1_u8(src.add(group * 8)) };
 
-            // Zero out all but the LSB, then position each bit via the mask.
-            let masked = vand_u8(bytes, masks);
+                // Extract LSB from each byte, position via mask,
+                // then reduce to a single u64 via pairwise adds.
+                let masked = vand_u8(bytes, bit_masks);
+                let sum16 = vpaddl_u8(masked);
+                let sum32 = vpaddl_u16(sum16);
+                let sum64 = vpaddl_u32(sum32);
 
-            // Horizontal pairwise add to collapse into a single u64:
-            //   vpaddl_u8:  [8×u8]  → [4×u16]
-            //   vpaddl_u16: [4×u16] → [2×u32]
-            //   vpaddl_u32: [2×u32] → [1×u64]
-            let sum16 = vpaddl_u8(masked);
-            let sum32 = vpaddl_u16(sum16);
-            let sum64 = vpaddl_u32(sum32);
-
-            // SAFETY: `dst` points to the next output slot.
-            unsafe {
-                *dst = vget_lane_u64::<0>(sum64);
+                let group_bits = vget_lane_u64::<0>(sum64);
+                word |= group_bits << (group * 8);
             }
 
-            // SAFETY: destination has capacity; source has `bit_len >= LANES`.
+            // SAFETY: `dst` points to the current output slot; destination
+            // has capacity for this write per the caller's contract.
             unsafe {
+                *dst = word;
                 dst = dst.add(1);
-                src = src.add(LANES);
+                src = src.add(64);
             }
-            bit_len -= LANES;
+            bit_len -= 64;
         }
 
-        // SAFETY: `bit_len < 8`, delegate tail to scalar.
+        // SAFETY: `bit_len < 64`, delegate tail to scalar.
         unsafe {
             scalar::words(dst, src, bit_len);
         }

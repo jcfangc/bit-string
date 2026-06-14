@@ -59,7 +59,7 @@ fn assert_backend_matches_scalar(backend: Backend) {
         assert_eq!(actual, expected, "mismatch: len={len}",);
 
         // Also verify `owned()` round-trip (applies mask_unused).
-        let owned = super::owned(src.as_ptr(), len).unwrap();
+        let owned = super::str_core(src.as_ptr(), len).unwrap();
         assert_eq!(&*owned, &*expected, "owned mismatch: len={len}",);
     }
 }
