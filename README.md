@@ -1,6 +1,9 @@
 
 # bit-string
 
+[![Crates.io](https://img.shields.io/crates/v/bit-string.svg)](https://crates.io/crates/bit-string)
+[![License](https://img.shields.io/crates/l/bit-string.svg)](https://crates.io/crates/bit-string)
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/gh/jcfangc/bit-string)
 [![Coverage](https://codecov.io/gh/jcfangc/bit-string/branch/main/graph/badge.svg)](https://codecov.io/gh/jcfangc/bit-string)
 
 A `no_std` Rust crate providing a compact owned bit string type with construction, editing, matching, and bitwise operations.
