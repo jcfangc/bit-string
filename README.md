@@ -1,6 +1,8 @@
 
 # bit-string
 
+[![Coverage](https://codecov.io/gh/jcfangc/bit-string/branch/main/graph/badge.svg)](https://codecov.io/gh/jcfangc/bit-string)
+
 `bit-string` provides an owned bit string type for Rust.
 
 A bit string is a sequence type whose elements are bits. It is intended to feel close to primitive bitwise values where possible, while also behaving like a growable sequence.
