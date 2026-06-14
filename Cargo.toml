@@ -1,6 +1,6 @@
 [package]
 name = "bit-string"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 description = "A compact owned bit string type with editing, matching, and bitwise operations."
 readme = "README.md"
@@ -62,7 +62,7 @@ name = "editing_remove_middle"
 harness = false
 
 [[bench]]
-name = "editing_push_bits"
+name = "editing_push_bit_string"
 harness = false
 
 [[bench]]

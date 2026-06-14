@@ -1,68 +1,60 @@
 
 # bit-string
 
-`bit-string` provides an owned bit string type for Rust.
+[![Crates.io](https://img.shields.io/crates/v/bit-string.svg)](https://crates.io/crates/bit-string)
+[![License](https://img.shields.io/crates/l/bit-string.svg)](https://crates.io/crates/bit-string)
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/gh/jcfangc/bit-string)
+[![Coverage](https://codecov.io/gh/jcfangc/bit-string/branch/main/graph/badge.svg)](https://codecov.io/gh/jcfangc/bit-string)
 
-A bit string is a sequence type whose elements are bits. It is intended to feel close to primitive bitwise values where possible, while also behaving like a growable sequence.
+A `no_std` Rust crate providing a compact owned bit string type with construction, editing, matching, and bitwise operations.
 
-The core type is `BitString`.
+The core type is `BitString`. Bits are packed into `Box<[u64]>` with unused high bits in the last word always zero (masked after every mutation).
 
 ## Features
 
-- Owned bit string storage.
-- Bitwise operations:
-  - `and_bits`
-  - `or_bits`
-  - `xor_bits`
-  - `not_bits`
-- Bit counting:
-  - `count_ones`
-  - `count_zeros`
-- Editing operations:
-  - `push`
-  - `pop`
-  - `insert`
-  - `remove`
-  - `truncate`
-  - `clear`
-  - `push_bits`
-  - `insert_bits`
-  - `replace_interval`
-  - `drain_interval`
-  - `slice`
-- Matching operations:
-  - `starts_with`
-  - `ends_with`
-  - `contains_bits`
-  - `find_bits`
-  - `rfind_bits`
-  - `strip_prefix`
-  - `strip_suffix`
+- **Construction**: `new`, `zeros`, `repeat`, `from_bool_iter`, `from_words`, `try_from(&str)`
+- **Bitwise ops**: `and_bits`, `or_bits`, `xor_bits`, `not_bits`, `shl`, `shr`
+- **Bit counting**: `count_ones`, `count_zeros`
+- **Editing**: `push`, `pop`, `insert`, `remove`, `set`, `extend`, `truncate`, `slice`, `split_off`, `replace_interval`, `retain`, `push_bit_string`, `insert_bit_string`
+- **Matching**: `starts_with`, `ends_with`, `contains`, `find`, `rfind`, `strip_prefix`, `strip_suffix`
+- **Access**: `get`, `len`, `is_empty`, `as_words`, `get_chunk`, `to_string`, `iter`
+
+### SIMD backends
+
+Bitwise operations and construction routines dispatch to SIMD backends automatically:
+
+| Backend | Target | Width |
+|---------|--------|-------|
+| AVX2    | x86 / x86_64 | 256-bit (4×u64) |
+| SSSE3   | x86 / x86_64 | 128-bit (2×u64) |
+| NEON    | aarch64  | 128-bit (2×u64) |
+| Scalar  | all targets | fallback |
+
+Enable `target-cpu=native` via `.cargo/config.toml` to test your local CPU's best backend.
 
 ## Example
 
 ```rust
 use bit_string::BitString;
 
-let lhs = BitString::try_from("1010").unwrap();
-let rhs = BitString::try_from("1100").unwrap();
+let a = BitString::try_from("1010").unwrap();
+let b = BitString::try_from("1100").unwrap();
 
-let and = lhs.and_bits(&rhs).unwrap();
-let or = lhs.or_bits(&rhs).unwrap();
-let not = lhs.not_bits();
-
-assert_eq!(and.to_string(), "1000");
-assert_eq!(or.to_string(), "1110");
-assert_eq!(not.to_string(), "0101");
+assert_eq!(a.and_bits(&b).unwrap().to_string(), "1000");
+assert_eq!(a.or_bits(&b).unwrap().to_string(),  "1110");
+assert_eq!((!a).to_string(),                     "0101");
+assert_eq!(a.count_ones(), 2);
 ```
 
-## Design goal
+## Benchmark highlights
 
-The goal of this crate is simple: make bit strings usable as ordinary sequence values.
+`count_ones` vs `bitvec_simd` on an Intel Broadwell laptop (lower is better):
 
-In the short term, `BitString` focuses on compact storage, bitwise operations, editing, slicing, and matching.
-
-In the long term, this crate will try to fill out the operations people expect from `String` and other sequence-like types, while keeping bit-level operations explicit and efficient.
+| length     | bit-string | bitvec_simd |
+|------------|-----------:|------------:|
+| 65 bits    |    8.6 ns  |    5.7 ns   |
+| 4 096 bits |   31.7 ns  |   46.4 ns   |
+| 65 536 bits|  388  ns   |  629  ns    |
 
 ## Status
 

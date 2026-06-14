@@ -6,7 +6,7 @@ fn appending_empty_bit_string_is_noop() {
     let mut bits = BitString::try_from("1010").unwrap();
     let rhs = BitString::new();
 
-    bits.push_bits(&rhs);
+    bits.push_bit_string(&rhs);
 
     assert_eq!(bits.len(), 4);
     assert_eq!(bits.to_string(), "1010");
@@ -17,7 +17,7 @@ fn appends_to_empty_bit_string() {
     let mut bits = BitString::new();
     let rhs = BitString::try_from("101001").unwrap();
 
-    bits.push_bits(&rhs);
+    bits.push_bit_string(&rhs);
 
     assert_eq!(bits.len(), 6);
     assert_eq!(bits.to_string(), "101001");
@@ -28,7 +28,7 @@ fn appends_non_empty_bit_strings() {
     let mut bits = BitString::try_from("1010").unwrap();
     let rhs = BitString::try_from("011").unwrap();
 
-    bits.push_bits(&rhs);
+    bits.push_bit_string(&rhs);
 
     assert_eq!(bits.len(), 7);
     assert_eq!(bits.to_string(), "1010011");
@@ -42,7 +42,7 @@ fn appends_when_lhs_ends_before_word_boundary() {
     bits.set(0, true);
     bits.set(62, true);
 
-    bits.push_bits(&rhs);
+    bits.push_bit_string(&rhs);
 
     assert_eq!(bits.len(), 65);
     assert_eq!(bits.get(0), Some(true));
@@ -58,7 +58,7 @@ fn appends_when_lhs_is_word_aligned() {
     let mut bits = BitString::ones(64);
     let rhs = BitString::try_from("01").unwrap();
 
-    bits.push_bits(&rhs);
+    bits.push_bit_string(&rhs);
 
     assert_eq!(bits.len(), 66);
     assert_eq!(bits.get(0), Some(true));
@@ -77,7 +77,7 @@ fn appends_rhs_spanning_multiple_words() {
     rhs.set(64, true);
     rhs.set(129, true);
 
-    bits.push_bits(&rhs);
+    bits.push_bit_string(&rhs);
 
     assert_eq!(bits.len(), 132);
     assert_eq!(bits.get(0), Some(true));
@@ -97,7 +97,7 @@ fn does_not_mutate_rhs() {
     let mut bits = BitString::try_from("10").unwrap();
     let rhs = BitString::try_from("0110").unwrap();
 
-    bits.push_bits(&rhs);
+    bits.push_bit_string(&rhs);
 
     assert_eq!(bits.to_string(), "100110");
     assert_eq!(rhs.to_string(), "0110");

@@ -93,7 +93,7 @@ fn find_len_65536_miss_string(bencher: Bencher) {
 }
 
 fn bench_bit_string(bencher: Bencher, case: NeedleCase) {
-    bencher.bench(|| black_box(&case.haystack_bits).find_bits(black_box(&case.needle_bits)));
+    bencher.bench(|| black_box(&case.haystack_bits).find(black_box(&case.needle_bits)));
 }
 
 fn bench_string(bencher: Bencher, case: NeedleCase) {

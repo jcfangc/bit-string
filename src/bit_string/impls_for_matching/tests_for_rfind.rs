@@ -5,7 +5,7 @@ fn returns_len_for_empty_needle() {
     let bits = BitString::try_from("101001").unwrap();
     let needle = BitString::new();
 
-    assert_eq!(bits.rfind_bits(&needle), Some(bits.len()));
+    assert_eq!(bits.rfind(&needle), Some(bits.len()));
 }
 
 #[test]
@@ -13,7 +13,7 @@ fn returns_none_when_needle_is_longer_than_self() {
     let bits = BitString::try_from("101").unwrap();
     let needle = BitString::try_from("1010").unwrap();
 
-    assert_eq!(bits.rfind_bits(&needle), None);
+    assert_eq!(bits.rfind(&needle), None);
 }
 
 #[test]
@@ -21,7 +21,7 @@ fn returns_last_match_index() {
     let bits = BitString::try_from("00110110").unwrap();
     let needle = BitString::try_from("110").unwrap();
 
-    assert_eq!(bits.rfind_bits(&needle), Some(5));
+    assert_eq!(bits.rfind(&needle), Some(5));
 }
 
 #[test]
@@ -29,7 +29,7 @@ fn returns_start_when_only_match_is_at_start() {
     let bits = BitString::try_from("101001").unwrap();
     let needle = BitString::try_from("101").unwrap();
 
-    assert_eq!(bits.rfind_bits(&needle), Some(0));
+    assert_eq!(bits.rfind(&needle), Some(0));
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn returns_end_match_when_match_is_at_end() {
     let bits = BitString::try_from("101001").unwrap();
     let needle = BitString::try_from("001").unwrap();
 
-    assert_eq!(bits.rfind_bits(&needle), Some(3));
+    assert_eq!(bits.rfind(&needle), Some(3));
 }
 
 #[test]
@@ -45,7 +45,7 @@ fn returns_none_when_needle_is_absent() {
     let bits = BitString::try_from("101001").unwrap();
     let needle = BitString::try_from("111").unwrap();
 
-    assert_eq!(bits.rfind_bits(&needle), None);
+    assert_eq!(bits.rfind(&needle), None);
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn returns_zero_when_needle_equals_self() {
     let bits = BitString::try_from("101001").unwrap();
     let needle = BitString::try_from("101001").unwrap();
 
-    assert_eq!(bits.rfind_bits(&needle), Some(0));
+    assert_eq!(bits.rfind(&needle), Some(0));
 }
 
 #[test]
@@ -70,5 +70,5 @@ fn works_across_word_boundaries() {
 
     let needle = BitString::try_from("01110").unwrap();
 
-    assert_eq!(bits.rfind_bits(&needle), Some(126));
+    assert_eq!(bits.rfind(&needle), Some(126));
 }
