@@ -336,5 +336,8 @@ mod neon {
     }
 }
 
+mod impls_for_from_bool_iter;
+mod impls_for_from_bool_slice;
+
 #[cfg(test)]
 mod tests_for_backend_equivalence;
