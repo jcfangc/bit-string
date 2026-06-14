@@ -13,7 +13,7 @@ The core type is `BitString`. Bits are packed into `Box<[u64]>` with unused high
 ## Features
 
 - **Construction**: `new`, `zeros`, `repeat`, `from_bool_iter`, `from_words`, `try_from(&str)`
-- **Bitwise ops**: `and_bits`, `or_bits`, `xor_bits`, `not_bits`, `shl`, `shr`
+- **Bitwise ops**: `and`, `or`, `xor`, `not`, `shl`, `shr` (each with `_assign` and `_into` variants)
 - **Bit counting**: `count_ones`, `count_zeros`
 - **Editing**: `push`, `pop`, `insert`, `remove`, `set`, `extend`, `truncate`, `slice`, `split_off`, `replace_interval`, `retain`, `push_bit_string`, `insert_bit_string`
 - **Matching**: `starts_with`, `ends_with`, `contains`, `find`, `rfind`, `strip_prefix`, `strip_suffix`
@@ -40,9 +40,9 @@ use bit_string::BitString;
 let a = BitString::try_from("1010").unwrap();
 let b = BitString::try_from("1100").unwrap();
 
-assert_eq!(a.and_bits(&b).unwrap().to_string(), "1000");
-assert_eq!(a.or_bits(&b).unwrap().to_string(),  "1110");
-assert_eq!((!a).to_string(),                     "0101");
+assert_eq!(a.and(&b).unwrap().to_string(), "1000");
+assert_eq!(a.or(&b).unwrap().to_string(),  "1110");
+assert_eq!((!a).to_string(),              "0101");
 assert_eq!(a.count_ones(), 2);
 ```
 
