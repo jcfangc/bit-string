@@ -329,7 +329,7 @@ mod neon {
     use super::scalar;
 
     use core::arch::aarch64::{
-        vand_u8, vceqq_u8, vdup_n_u8, veor_u8, vget_lane_u64, vld1_u8, vpaddl_u8, vpaddl_u16,
+        vand_u8, vceq_u8, vdup_n_u8, veor_u8, vget_lane_u64, vld1_u8, vpaddl_u8, vpaddl_u16,
         vpaddl_u32, vreinterpret_u64_u8,
     };
 
@@ -348,7 +348,7 @@ mod neon {
     ) -> Option<(usize, u8)> {
         let zero_byte = vdup_n_u8(b'0');
         let one_byte = vdup_n_u8(b'1');
-        let bit_masks = vld1_u8(BIT_MASKS.as_ptr());
+        let bit_masks = unsafe { vld1_u8(BIT_MASKS.as_ptr()) };
         let mut global_offset = 0usize;
 
         while bit_len >= 64 {
@@ -380,10 +380,10 @@ mod neon {
                 }
 
                 // Pack: xor0 holds the bit value (0x00 or 0x01).
-                // Expand 0x01 → 0xFF via vceqq so that vand with
+                // Expand 0x01 → 0xFF via vceq_u8 so that vand with
                 // bit-position masks correctly captures every lane,
                 // then horizontal pairwise add collapses to one u64.
-                let is_one = vceqq_u8(xor0, vdup_n_u8(1));
+                let is_one = vceq_u8(xor0, vdup_n_u8(1));
                 let masked = vand_u8(is_one, bit_masks);
                 let sum16 = vpaddl_u8(masked);
                 let sum32 = vpaddl_u16(sum16);

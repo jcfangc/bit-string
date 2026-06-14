@@ -281,7 +281,7 @@ mod neon {
     use super::scalar;
 
     use core::arch::aarch64::{
-        vand_u8, vceqq_u8, vdup_n_u8, vget_lane_u64, vld1_u8, vpaddl_u8, vpaddl_u16, vpaddl_u32,
+        vand_u8, vceq_u8, vdup_n_u8, vget_lane_u64, vld1_u8, vpaddl_u8, vpaddl_u16, vpaddl_u32,
     };
 
     /// Bit-position masks: [1, 2, 4, 8, 16, 32, 64, 128].
@@ -300,7 +300,7 @@ mod neon {
     #[target_feature(enable = "neon")]
     pub(super) unsafe fn words(mut dst: *mut u64, mut src: *const u8, mut bit_len: usize) {
         // SAFETY: constant pointer to static mask array.
-        let bit_masks = vld1_u8(BIT_MASKS.as_ptr());
+        let bit_masks = unsafe { vld1_u8(BIT_MASKS.as_ptr()) };
         let ones = vdup_n_u8(1);
 
         while bit_len >= 64 {
@@ -313,7 +313,7 @@ mod neon {
 
                 // Expand 1 → 0xFF (0 stays 0x00), then mask to position
                 // each bit before reducing to a single u64 via pairwise adds.
-                let is_one = vceqq_u8(bytes, ones);
+                let is_one = vceq_u8(bytes, ones);
                 let masked = vand_u8(is_one, bit_masks);
                 let sum16 = vpaddl_u8(masked);
                 let sum32 = vpaddl_u16(sum16);
