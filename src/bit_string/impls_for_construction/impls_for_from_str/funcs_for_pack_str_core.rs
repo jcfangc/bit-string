@@ -329,8 +329,8 @@ mod neon {
     use super::scalar;
 
     use core::arch::aarch64::{
-        vand_u8, vdup_n_u8, veor_u8, vget_lane_u64, vld1_u8, vpaddl_u8, vpaddl_u16, vpaddl_u32,
-        vreinterpret_u64_u8,
+        vand_u8, vceqq_u8, vdup_n_u8, veor_u8, vget_lane_u64, vld1_u8, vpaddl_u8, vpaddl_u16,
+        vpaddl_u32, vreinterpret_u64_u8,
     };
 
     /// Bit-position masks for vpaddl reduction.
@@ -379,10 +379,12 @@ mod neon {
                     return Some((global_offset + i, b));
                 }
 
-                // Pack: xor0 already holds the bit value (0 or 1).  Use
-                // vand with bit-position masks, then horizontal pairwise
-                // add to collapse into one u64.
-                let masked = vand_u8(xor0, bit_masks);
+                // Pack: xor0 holds the bit value (0x00 or 0x01).
+                // Expand 0x01 → 0xFF via vceqq so that vand with
+                // bit-position masks correctly captures every lane,
+                // then horizontal pairwise add collapses to one u64.
+                let is_one = vceqq_u8(xor0, vdup_n_u8(1));
+                let masked = vand_u8(is_one, bit_masks);
                 let sum16 = vpaddl_u8(masked);
                 let sum32 = vpaddl_u16(sum16);
                 let sum64 = vpaddl_u32(sum32);

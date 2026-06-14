@@ -280,7 +280,9 @@ mod sse2 {
 mod neon {
     use super::scalar;
 
-    use core::arch::aarch64::{vand_u8, vget_lane_u64, vld1_u8, vpaddl_u8, vpaddl_u16, vpaddl_u32};
+    use core::arch::aarch64::{
+        vand_u8, vceqq_u8, vdup_n_u8, vget_lane_u64, vld1_u8, vpaddl_u8, vpaddl_u16, vpaddl_u32,
+    };
 
     /// Bit-position masks: [1, 2, 4, 8, 16, 32, 64, 128].
     const BIT_MASKS: [u8; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
@@ -299,6 +301,7 @@ mod neon {
     pub(super) unsafe fn words(mut dst: *mut u64, mut src: *const u8, mut bit_len: usize) {
         // SAFETY: constant pointer to static mask array.
         let bit_masks = vld1_u8(BIT_MASKS.as_ptr());
+        let ones = vdup_n_u8(1);
 
         while bit_len >= 64 {
             // Accumulate 8 groups × 8 bytes → one u64.
@@ -308,9 +311,10 @@ mod neon {
                 // is within bounds. `vld1_u8` permits unaligned reads.
                 let bytes = unsafe { vld1_u8(src.add(group * 8)) };
 
-                // Extract LSB from each byte, position via mask,
-                // then reduce to a single u64 via pairwise adds.
-                let masked = vand_u8(bytes, bit_masks);
+                // Expand 1 → 0xFF (0 stays 0x00), then mask to position
+                // each bit before reducing to a single u64 via pairwise adds.
+                let is_one = vceqq_u8(bytes, ones);
+                let masked = vand_u8(is_one, bit_masks);
                 let sum16 = vpaddl_u8(masked);
                 let sum32 = vpaddl_u16(sum16);
                 let sum64 = vpaddl_u32(sum32);
