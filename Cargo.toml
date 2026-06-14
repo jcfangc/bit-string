@@ -1,6 +1,6 @@
 [package]
 name = "bit-string"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 description = "A compact owned bit string type with editing, matching, and bitwise operations."
 readme = "README.md"
@@ -8,6 +8,7 @@ repository = "https://github.com/jcfangc/bit-string"
 license = "MIT OR Apache-2.0"
 keywords = ["bitstring", "bits", "bitset", "sequence"]
 categories = ["data-structures", "no-std"]
+exclude = ["/benches"]
 
 
 [dependencies]
