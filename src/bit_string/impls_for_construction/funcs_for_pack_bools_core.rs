@@ -8,7 +8,7 @@ use crate::bit_string::bits::Bits;
 /// Bits are packed in little-endian order: byte `i` becomes bit `i % 64`
 /// of word `i / 64`.
 #[inline]
-pub(super) fn bool_core(src: *const u8, bit_len: usize) -> Box<[u64]> {
+pub(super) fn bools_core(src: *const u8, bit_len: usize) -> Box<[u64]> {
     let word_len = Bits::word_len(bit_len);
     let mut out = Vec::<u64>::with_capacity(word_len);
 

@@ -10,7 +10,7 @@ impl BitString {
         let len = bytes.len();
         let src = bytes.as_ptr();
         Self {
-            bits: super::bool_core(src, len),
+            bits: super::bools_core(src, len),
             len,
         }
     }
