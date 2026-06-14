@@ -205,8 +205,8 @@ mod avx2 {
 
             // Pack: movemask extracts the MSB of cmpeq result.
             // b'1' → 0xFF (MSB=1), b'0' → 0x00 (MSB=0).
-            let lo_bits = _mm256_movemask_epi8(lo_ones) as u64;
-            let hi_bits = _mm256_movemask_epi8(hi_ones) as u64;
+            let lo_bits = _mm256_movemask_epi8(lo_ones) as u32 as u64;
+            let hi_bits = _mm256_movemask_epi8(hi_ones) as u32 as u64;
 
             // SAFETY: `dst` points to the next output slot.
             unsafe {
@@ -294,10 +294,10 @@ mod sse2 {
                 return Some((global_offset + i, b));
             }
 
-            let b0 = _mm_movemask_epi8(ones0) as u64;
-            let b1 = _mm_movemask_epi8(ones1) as u64;
-            let b2 = _mm_movemask_epi8(ones2) as u64;
-            let b3 = _mm_movemask_epi8(ones3) as u64;
+            let b0 = _mm_movemask_epi8(ones0) as u32 as u64;
+            let b1 = _mm_movemask_epi8(ones1) as u32 as u64;
+            let b2 = _mm_movemask_epi8(ones2) as u32 as u64;
+            let b3 = _mm_movemask_epi8(ones3) as u32 as u64;
 
             // SAFETY: `dst` points to the next output slot.
             unsafe {

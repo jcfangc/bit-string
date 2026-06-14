@@ -191,8 +191,8 @@ mod avx2 {
             let hi_eq = _mm256_cmpeq_epi8(hi, ones);
 
             // movemask takes the MSB of each byte → the comparison result.
-            let lo_bits = _mm256_movemask_epi8(lo_eq) as u64;
-            let hi_bits = _mm256_movemask_epi8(hi_eq) as u64;
+            let lo_bits = _mm256_movemask_epi8(lo_eq) as u32 as u64;
+            let hi_bits = _mm256_movemask_epi8(hi_eq) as u32 as u64;
 
             // SAFETY: `dst` points to the next output slot.
             unsafe {
@@ -250,10 +250,10 @@ mod sse2 {
             let v2 = unsafe { _mm_loadu_si128(src.add(LANES * 2).cast::<__m128i>()) };
             let v3 = unsafe { _mm_loadu_si128(src.add(LANES * 3).cast::<__m128i>()) };
 
-            let m0 = _mm_movemask_epi8(_mm_cmpeq_epi8(v0, ones)) as u64;
-            let m1 = _mm_movemask_epi8(_mm_cmpeq_epi8(v1, ones)) as u64;
-            let m2 = _mm_movemask_epi8(_mm_cmpeq_epi8(v2, ones)) as u64;
-            let m3 = _mm_movemask_epi8(_mm_cmpeq_epi8(v3, ones)) as u64;
+            let m0 = _mm_movemask_epi8(_mm_cmpeq_epi8(v0, ones)) as u32 as u64;
+            let m1 = _mm_movemask_epi8(_mm_cmpeq_epi8(v1, ones)) as u32 as u64;
+            let m2 = _mm_movemask_epi8(_mm_cmpeq_epi8(v2, ones)) as u32 as u64;
+            let m3 = _mm_movemask_epi8(_mm_cmpeq_epi8(v3, ones)) as u32 as u64;
 
             // SAFETY: `dst` points to the next output slot.
             unsafe {
