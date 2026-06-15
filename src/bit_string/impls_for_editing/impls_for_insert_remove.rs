@@ -17,7 +17,20 @@ impl BitString {
         }
 
         let new_len = self.len.checked_add(1).expect("bit string length overflow");
-        let mut bits = Bits::zero_words(Bits::word_len(new_len));
+        let new_words = Bits::word_len(new_len);
+
+        // In-place fast path: word count unchanged (~98% of operations).
+        if new_words == self.bits.len() {
+            // Ensure the last word is present (Vec::len == new_words already).
+            self.bits.resize(new_words, 0);
+            Bits::shift_right_in_place(&mut self.bits, index, self.len - index);
+            Bits::set_bit(&mut self.bits, index, value);
+            self.len = new_len;
+            return;
+        }
+
+        // Word count changed — allocate a fresh buffer.
+        let mut bits = Bits::zero_words(new_words);
 
         Bits::copy(&self.bits, 0, &mut bits, 0, index);
         Bits::set_bit(&mut bits, index, value);
@@ -37,7 +50,18 @@ impl BitString {
 
         let value = Bits::bit_at(&self.bits, index);
         let new_len = self.len - 1;
-        let mut bits = Bits::zero_words(Bits::word_len(new_len));
+        let new_words = Bits::word_len(new_len);
+
+        // In-place fast path: word count unchanged.
+        if new_words == self.bits.len() {
+            Bits::shift_left_in_place(&mut self.bits, index + 1, self.len - index - 1);
+            self.len = new_len;
+            Bits::mask_unused(&mut self.bits, self.len);
+            return value;
+        }
+
+        // Word count changed — allocate a fresh buffer.
+        let mut bits = Bits::zero_words(new_words);
 
         Bits::copy(&self.bits, 0, &mut bits, 0, index);
         Bits::copy(

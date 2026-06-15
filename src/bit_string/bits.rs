@@ -152,6 +152,121 @@ impl Bits {
             len
         );
     }
+
+    /// Shifts `count` bits starting at `start` one position to the right
+    /// (each source bit `i` → destination `i+1`), working in-place word by word.
+    ///
+    /// Bits below `start` are untouched.  The bit originally at
+    /// `start + count - 1` lands at `start + count`; the bit at `start`
+    /// is left as-is (caller must set it).
+    #[inline]
+    pub(crate) fn shift_right_in_place(bits: &mut [u64], start: usize, count: usize) {
+        if count == 0 {
+            return;
+        }
+
+        // Combined operating range: [start, start + count + 1).
+        let dest_end = start + count + 1;
+        let first_word = start / WORD_BITS;
+        let last_word = (dest_end - 1) / WORD_BITS;
+        let first_shift = start % WORD_BITS;
+        let dest_end_shift = dest_end % WORD_BITS;
+
+        let mut carry: u64 = 0;
+
+        for w in first_word..=last_word {
+            let cur = bits[w];
+            let lo = if w == first_word { first_shift } else { 0 };
+            let hi = if w == last_word {
+                if dest_end_shift == 0 {
+                    WORD_BITS
+                } else {
+                    dest_end_shift
+                }
+            } else {
+                WORD_BITS
+            };
+
+            let preserve_mask = Bits::low_mask(lo);
+            let range_mask = Bits::low_mask(hi) & !Bits::low_mask(lo);
+            let range = cur & range_mask;
+
+            // The highest source bit in the range (at WORD_BITS-1) overflows
+            // to the next word.  For the last word, this only happens when
+            // hi == WORD_BITS (dest_end is word-aligned).
+            let overflow = if hi == WORD_BITS {
+                (range >> (WORD_BITS - 1)) & 1
+            } else {
+                0
+            };
+
+            // Shift left (i → i+1), OR carry from previous word at `lo`.
+            let shifted = ((range << 1) & range_mask) | (carry << lo);
+
+            bits[w] = (cur & preserve_mask) | shifted;
+            carry = overflow;
+        }
+    }
+
+    /// Shifts `count` bits starting at `start` one position to the left
+    /// (each source bit `i` → destination `i-1`), working in-place word by word.
+    ///
+    /// The bit originally at `start - 1` is overwritten by the bit from
+    /// `start`.  Bits at or above `start + count` are untouched.
+    ///
+    /// `start` must be >= 1 (so that `start - 1` does not underflow).
+    #[inline]
+    pub(crate) fn shift_left_in_place(bits: &mut [u64], start: usize, count: usize) {
+        if count == 0 {
+            return;
+        }
+
+        // Combined operating range: [start-1, start+count).
+        let combined_start = start - 1;
+        let end = start + count;
+        let first_word = combined_start / WORD_BITS;
+        let last_word = (end - 1) / WORD_BITS;
+        let first_shift = combined_start % WORD_BITS;
+        let end_shift = end % WORD_BITS;
+
+        let mut carry: u64 = 0;
+
+        // Process high-to-low: the LSB of each word's range overflows to
+        // the previous word's MSB.
+        for w in (first_word..=last_word).rev() {
+            let cur = bits[w];
+            let lo = if w == first_word { first_shift } else { 0 };
+            let hi = if w == last_word {
+                if end_shift == 0 { WORD_BITS } else { end_shift }
+            } else {
+                WORD_BITS
+            };
+
+            let preserve_mask = Bits::low_mask(lo) | !Bits::low_mask(hi);
+            let range_mask = Bits::low_mask(hi) & !Bits::low_mask(lo);
+            let range = cur & range_mask;
+
+            // The bit at position `lo` is destination-only for the first
+            // word of the combined range.  For non-first words (lo == 0),
+            // the lowest bit overflows to the previous word's MSB.
+            let overflow = if lo == 0 && w > first_word {
+                range & 1
+            } else {
+                0
+            };
+
+            // Shift right (i → i-1), OR carry from next-higher word at
+            // the highest position in this word's range.
+            let shifted = if hi > 0 {
+                ((range >> 1) & range_mask) | (carry << (hi - 1))
+            } else {
+                0
+            };
+
+            bits[w] = (cur & preserve_mask) | shifted;
+            carry = overflow;
+        }
+    }
 }
 
 #[cfg(test)]
