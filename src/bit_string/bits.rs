@@ -97,6 +97,13 @@ impl Bits {
         }
     }
 
+    /// Copies `len` bits from `src` (starting at `src_start`) to `dst`
+    /// (starting at `dst_start`).
+    ///
+    /// When both offsets are word-aligned, whole `u64` words are copied in
+    /// bulk via [`copy_from_slice`]; only the trailing partial word (if any)
+    /// falls back to the per-chunk path.  Unaligned copies use the original
+    /// chunk-by-chunk loop.
     #[inline]
     pub(crate) fn copy(
         src: &[u64],
@@ -105,6 +112,28 @@ impl Bits {
         dst_start: usize,
         len: usize,
     ) {
+        // Fast path: both source and destination are word-aligned.
+        if src_start.is_multiple_of(WORD_BITS) && dst_start.is_multiple_of(WORD_BITS) {
+            let src_word = src_start / WORD_BITS;
+            let dst_word = dst_start / WORD_BITS;
+            let full_words = len / WORD_BITS;
+
+            if full_words > 0 {
+                dst[dst_word..dst_word + full_words]
+                    .copy_from_slice(&src[src_word..src_word + full_words]);
+            }
+
+            let remainder_bits = len % WORD_BITS;
+            if remainder_bits > 0 {
+                let offset = full_words * WORD_BITS;
+                let chunk = Self::read_chunk(src, src_start + offset);
+                Self::write_chunk(dst, dst_start + offset, chunk, remainder_bits);
+            }
+
+            return;
+        }
+
+        // Slow path: unaligned copy, one chunk at a time.
         let mut done = 0usize;
 
         while done < len {
