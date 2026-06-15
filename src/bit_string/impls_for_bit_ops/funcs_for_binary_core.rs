@@ -1,11 +1,11 @@
 use super::*;
 
-pub(super) const OP_AND: u8 = 0;
-pub(super) const OP_OR: u8 = 1;
-pub(super) const OP_XOR: u8 = 2;
+const OP_AND: u8 = 0;
+const OP_OR: u8 = 1;
+const OP_XOR: u8 = 2;
 
 #[inline]
-pub(super) fn owned<const OP: u8>(lhs: &[u64], rhs: &[u64]) -> Box<[u64]> {
+pub(super) fn owned<const OP: u8>(lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
     debug_assert_eq!(lhs.len(), rhs.len());
 
     let len = lhs.len();
@@ -22,7 +22,7 @@ pub(super) fn owned<const OP: u8>(lhs: &[u64], rhs: &[u64]) -> Box<[u64]> {
         out.set_len(len);
     }
 
-    out.into_boxed_slice()
+    out
 }
 
 #[inline]

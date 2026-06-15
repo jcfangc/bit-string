@@ -6,7 +6,8 @@ fn returns_empty_box_when_target_word_count_is_zero() {
 
     let out = Bits::shrink_words(&bits, 0);
 
-    assert_eq!(&*out, &[]);
+    let empty: &[u64] = &[];
+    assert_eq!(&*out, empty);
 }
 
 #[test]

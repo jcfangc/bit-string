@@ -1,9 +1,9 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::vec::Vec;
 
 use crate::bit_string::bits::Bits;
 
 #[inline]
-pub(super) fn owned(src: &[u64], bit_len: usize) -> Box<[u64]> {
+pub(super) fn owned(src: &[u64], bit_len: usize) -> Vec<u64> {
     let word_len = src.len();
     let mut out = Vec::<u64>::with_capacity(word_len);
 
@@ -19,7 +19,7 @@ pub(super) fn owned(src: &[u64], bit_len: usize) -> Box<[u64]> {
     }
 
     Bits::mask_unused(&mut out, bit_len);
-    out.into_boxed_slice()
+    out
 }
 
 #[inline]

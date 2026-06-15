@@ -1,4 +1,3 @@
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use int_interval::UsizeCO;
 
@@ -30,17 +29,16 @@ impl Bits {
     }
 
     #[inline]
-    pub(crate) fn zero_words(words: usize) -> Box<[u64]> {
+    pub(crate) fn zero_words(words: usize) -> Vec<u64> {
         let mut bits = Vec::with_capacity(words);
         bits.resize(words, 0);
-        bits.into_boxed_slice()
+        bits
     }
 
     #[inline]
-    pub(crate) fn shrink_words(bits: &[u64], words: usize) -> Box<[u64]> {
-        let mut out = Vec::with_capacity(words);
-        out.extend_from_slice(&bits[..words]);
-        out.into_boxed_slice()
+    #[allow(dead_code)]
+    pub(crate) fn shrink_words(bits: &[u64], words: usize) -> Vec<u64> {
+        bits[..words].to_vec()
     }
 
     #[inline]

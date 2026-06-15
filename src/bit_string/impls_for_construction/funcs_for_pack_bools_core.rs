@@ -1,14 +1,14 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::vec::Vec;
 
 use crate::bit_string::bits::Bits;
 
-/// Pack `bit_len` LSBs from `src` into a `Box<[u64]>`.
+/// Pack `bit_len` LSBs from `src` into a `Vec<u64>`.
 ///
 /// Each source byte is treated as one bit (0 → 0, non-zero → 1).
 /// Bits are packed in little-endian order: byte `i` becomes bit `i % 64`
 /// of word `i / 64`.
 #[inline]
-pub(super) fn bools_core(src: *const u8, bit_len: usize) -> Box<[u64]> {
+pub(super) fn bools_core(src: *const u8, bit_len: usize) -> Vec<u64> {
     let word_len = Bits::word_len(bit_len);
     let mut out = Vec::<u64>::with_capacity(word_len);
 
@@ -22,7 +22,7 @@ pub(super) fn bools_core(src: *const u8, bit_len: usize) -> Box<[u64]> {
     }
 
     Bits::mask_unused(&mut out, bit_len);
-    out.into_boxed_slice()
+    out
 }
 
 /// Packs `bit_len` bytes from `src` into u64 words at `dst`.

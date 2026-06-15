@@ -9,10 +9,7 @@ impl BitString {
         let mut out = Vec::<u64>::with_capacity(word_count);
         out.resize(word_count, fill);
         Bits::mask_unused(&mut out, len);
-        Self {
-            bits: out.into_boxed_slice(),
-            len,
-        }
+        Self { bits: out, len }
     }
 
     #[inline]
@@ -21,10 +18,7 @@ impl BitString {
         // Direct memset — no branch, no mask needed.
         let mut out = Vec::<u64>::with_capacity(word_count);
         out.resize(word_count, 0);
-        Self {
-            bits: out.into_boxed_slice(),
-            len,
-        }
+        Self { bits: out, len }
     }
 
     #[inline]
@@ -33,10 +27,7 @@ impl BitString {
         let mut out = Vec::<u64>::with_capacity(word_count);
         out.resize(word_count, u64::MAX);
         Bits::mask_unused(&mut out, len);
-        Self {
-            bits: out.into_boxed_slice(),
-            len,
-        }
+        Self { bits: out, len }
     }
 }
 

@@ -1,6 +1,5 @@
 use super::*;
 use crate::bit_string::bits::Bits;
-use alloc::vec::Vec;
 
 impl BitString {
     /// Constructs a bit string from packed little-endian words.
@@ -14,10 +13,7 @@ impl BitString {
             return None;
         }
 
-        let mut bits = Vec::with_capacity(word_count);
-        bits.extend_from_slice(words);
-
-        let mut bits = bits.into_boxed_slice();
+        let mut bits = words.to_vec();
         Bits::mask_unused(&mut bits, len);
 
         Some(Self { bits, len })

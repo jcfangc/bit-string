@@ -7,7 +7,7 @@ fn does_nothing_for_empty_words() {
 
     Bits::mask_unused(&mut bits, 7);
 
-    assert_eq!(bits, []);
+    assert_eq!(bits, [0u64; 0]);
 }
 
 #[test]

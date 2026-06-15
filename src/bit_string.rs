@@ -1,10 +1,10 @@
-use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 use crate::WORD_BITS;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct BitString {
-    bits: Box<[u64]>,
+    bits: Vec<u64>,
     len: usize,
 }
 

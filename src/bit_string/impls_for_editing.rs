@@ -1,5 +1,3 @@
-use alloc::vec::Vec;
-
 use int_interval::UsizeCO;
 
 use crate::bit_string::bits::Bits;
@@ -43,11 +41,10 @@ impl BitString {
         let new_len = self.len.checked_add(1).expect("bit string length overflow");
         let new_words = Bits::word_len(new_len);
 
-        if new_words != self.bits.len() {
-            let mut bits = Vec::with_capacity(new_words);
-            bits.extend_from_slice(&self.bits);
-            bits.push(0);
-            self.bits = bits.into_boxed_slice();
+        // Vec::resize grows amortized O(1) — it only reallocates when
+        // crossing a capacity boundary, using Vec's doubling strategy.
+        if new_words > self.bits.len() {
+            self.bits.resize(new_words, 0);
         }
 
         if value {
@@ -65,8 +62,12 @@ impl BitString {
         self.len = index;
 
         let words = Bits::word_len(self.len);
-        if words != self.bits.len() {
-            self.bits = Bits::shrink_words(&self.bits, words);
+        if words < self.bits.len() {
+            self.bits.truncate(words);
+            // Lazy shrink: only reclaim memory when capacity exceeds 2× needed.
+            if self.bits.capacity() > words * 2 {
+                self.bits.shrink_to(words);
+            }
         } else {
             Bits::mask_unused(&mut self.bits, self.len);
         }
@@ -89,15 +90,20 @@ impl BitString {
         self.len = len;
 
         let words = Bits::word_len(len);
-        if words != self.bits.len() {
-            self.bits = Bits::shrink_words(&self.bits, words);
+        if words < self.bits.len() {
+            self.bits.truncate(words);
+            // Lazy shrink: only reclaim memory when capacity exceeds 2× needed.
+            if self.bits.capacity() > words * 2 {
+                self.bits.shrink_to(words);
+            }
         }
 
         Bits::mask_unused(&mut self.bits, len);
     }
 
     pub fn clear(&mut self) {
-        self.bits = Bits::zero_words(0);
+        self.bits.clear();
+        self.bits.shrink_to(0);
         self.len = 0;
     }
 
