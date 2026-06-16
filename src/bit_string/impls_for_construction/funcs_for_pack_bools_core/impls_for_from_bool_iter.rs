@@ -7,11 +7,11 @@ impl BitString {
         I: IntoIterator<Item = bool>,
     {
         let bytes: Vec<u8> = iter.into_iter().map(|v| v as u8).collect();
-        let len = bytes.len();
+        let bit_len = bytes.len();
         let src = bytes.as_ptr();
         Self {
-            bits: super::bools_core(src, len),
-            len,
+            words: super::bools_core(src, bit_len),
+            bit_len,
         }
     }
 }

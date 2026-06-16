@@ -7,7 +7,7 @@ fn retain_all_is_noop() {
 
     bits.retain(|_| true);
 
-    assert_eq!(bits.len(), 6);
+    assert_eq!(bits.bit_len(), 6);
     assert_eq!(bits.to_string(), "101001");
     assert_eq!(bits.count_ones(), 3);
     assert_eq!(bits.count_zeros(), 3);
@@ -19,7 +19,7 @@ fn retain_none_clears_bit_string() {
 
     bits.retain(|_| false);
 
-    assert_eq!(bits.len(), 0);
+    assert_eq!(bits.bit_len(), 0);
     assert!(bits.is_empty());
     assert_eq!(bits.to_string(), "");
     assert_eq!(bits.count_ones(), 0);
@@ -32,7 +32,7 @@ fn retains_only_true_bits() {
 
     bits.retain(|value| value);
 
-    assert_eq!(bits.len(), 3);
+    assert_eq!(bits.bit_len(), 3);
     assert_eq!(bits.to_string(), "111");
     assert_eq!(bits.count_ones(), 3);
     assert_eq!(bits.count_zeros(), 0);
@@ -44,7 +44,7 @@ fn retains_only_false_bits() {
 
     bits.retain(|value| !value);
 
-    assert_eq!(bits.len(), 3);
+    assert_eq!(bits.bit_len(), 3);
     assert_eq!(bits.to_string(), "000");
     assert_eq!(bits.count_ones(), 0);
     assert_eq!(bits.count_zeros(), 3);
@@ -75,7 +75,7 @@ fn retain_predicate_can_use_state() {
         keep
     });
 
-    assert_eq!(bits.len(), 3);
+    assert_eq!(bits.bit_len(), 3);
     assert_eq!(bits.to_string(), "111");
 }
 
@@ -91,7 +91,7 @@ fn retain_compresses_across_word_boundary() {
 
     bits.retain(|value| value);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.to_string(), "11111");
     assert_eq!(bits.count_ones(), 5);
     assert_eq!(bits.count_zeros(), 0);
@@ -103,7 +103,7 @@ fn retain_false_masks_old_true_bits_after_truncate() {
 
     bits.retain(|value| !value);
 
-    assert_eq!(bits.len(), 0);
+    assert_eq!(bits.bit_len(), 0);
     assert_eq!(bits.count_ones(), 0);
     assert_eq!(bits.count_zeros(), 0);
 }

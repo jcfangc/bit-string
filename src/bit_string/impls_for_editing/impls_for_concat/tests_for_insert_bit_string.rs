@@ -8,7 +8,7 @@ fn inserts_bits_at_start() {
 
     bits.insert_bit_string(0, &rhs);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.to_string(), "00101");
 }
 
@@ -19,7 +19,7 @@ fn inserts_bits_in_middle() {
 
     bits.insert_bit_string(2, &rhs);
 
-    assert_eq!(bits.len(), 6);
+    assert_eq!(bits.bit_len(), 6);
     assert_eq!(bits.to_string(), "101101");
 }
 
@@ -28,9 +28,9 @@ fn inserts_bits_at_end() {
     let mut bits = BitString::try_from("101").unwrap();
     let rhs = BitString::try_from("01").unwrap();
 
-    bits.insert_bit_string(bits.len(), &rhs);
+    bits.insert_bit_string(bits.bit_len(), &rhs);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.to_string(), "10101");
 }
 
@@ -41,7 +41,7 @@ fn inserts_bits_into_empty_bit_string() {
 
     bits.insert_bit_string(0, &rhs);
 
-    assert_eq!(bits.len(), 4);
+    assert_eq!(bits.bit_len(), 4);
     assert_eq!(bits.to_string(), "1011");
 }
 
@@ -52,7 +52,7 @@ fn inserting_empty_rhs_is_noop() {
 
     bits.insert_bit_string(2, &rhs);
 
-    assert_eq!(bits.len(), 4);
+    assert_eq!(bits.bit_len(), 4);
     assert_eq!(bits.to_string(), "1011");
 }
 
@@ -68,7 +68,7 @@ fn inserts_across_word_boundary() {
 
     bits.insert_bit_string(63, &rhs);
 
-    assert_eq!(bits.len(), 132);
+    assert_eq!(bits.bit_len(), 132);
 
     assert_eq!(bits.get(62), Some(true));
     assert_eq!(bits.get(63), Some(true)); // inserted 1

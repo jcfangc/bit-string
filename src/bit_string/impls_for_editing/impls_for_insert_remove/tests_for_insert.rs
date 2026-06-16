@@ -7,7 +7,7 @@ fn inserts_into_empty_bit_string() {
 
     bits.insert(0, true);
 
-    assert_eq!(bits.len(), 1);
+    assert_eq!(bits.bit_len(), 1);
     assert_eq!(bits.to_string(), "1");
 }
 
@@ -17,7 +17,7 @@ fn inserts_at_front() {
 
     bits.insert(0, true);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.to_string(), "10101");
 }
 
@@ -27,7 +27,7 @@ fn inserts_in_middle() {
 
     bits.insert(2, true);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.to_string(), "10101");
 }
 
@@ -37,7 +37,7 @@ fn inserts_false_in_middle() {
 
     bits.insert(2, false);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.to_string(), "11011");
 }
 
@@ -45,9 +45,9 @@ fn inserts_false_in_middle() {
 fn inserts_at_back_using_push_path() {
     let mut bits = BitString::try_from("1010").unwrap();
 
-    bits.insert(bits.len(), true);
+    bits.insert(bits.bit_len(), true);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.to_string(), "10101");
 }
 
@@ -63,7 +63,7 @@ fn shifts_bits_across_word_boundary() {
 
     bits.insert(64, false);
 
-    assert_eq!(bits.len(), 131);
+    assert_eq!(bits.bit_len(), 131);
 
     assert_eq!(bits.get(0), Some(true));
     assert_eq!(bits.get(62), Some(false));
@@ -85,7 +85,7 @@ fn inserts_true_at_word_boundary() {
 
     bits.insert(64, true);
 
-    assert_eq!(bits.len(), 129);
+    assert_eq!(bits.bit_len(), 129);
     assert_eq!(bits.get(63), Some(false));
     assert_eq!(bits.get(64), Some(true));
     assert_eq!(bits.get(65), Some(false));

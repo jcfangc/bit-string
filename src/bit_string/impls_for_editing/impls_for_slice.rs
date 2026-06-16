@@ -6,26 +6,29 @@ use super::*;
 
 impl BitString {
     pub fn slice(&self, interval: UsizeCO) -> Self {
-        Bits::assert_interval_in_bounds(interval, self.len);
+        Bits::assert_interval_in_bounds(interval, self.bit_len);
 
         let start = interval.start();
         let len = interval.len();
 
         let mut bits = Bits::zero_words(Bits::word_len(len));
-        Bits::copy(&self.bits, start, &mut bits, 0, len);
+        Bits::copy(&self.words, start, &mut bits, 0, len);
 
-        Self { bits, len }
+        Self {
+            words: bits,
+            bit_len: len,
+        }
     }
 
     pub fn slice_from(&self, start: usize) -> Self {
         assert!(
-            start <= self.len,
+            start <= self.bit_len,
             "bit string slice start out of bounds: start={}, len={}",
             start,
-            self.len
+            self.bit_len
         );
 
-        let len = self.len - start;
+        let len = self.bit_len - start;
 
         if len == 0 {
             return Self::new();
@@ -37,10 +40,10 @@ impl BitString {
 
     pub fn slice_until(&self, end: usize) -> Self {
         assert!(
-            end <= self.len,
+            end <= self.bit_len,
             "bit string slice end out of bounds: end={}, len={}",
             end,
-            self.len
+            self.bit_len
         );
 
         if end == 0 {

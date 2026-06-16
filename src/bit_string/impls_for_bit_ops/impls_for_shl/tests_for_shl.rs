@@ -24,7 +24,7 @@ fn shifting_empty_bit_string_keeps_it_empty() {
 
     let out = bits.shl(3);
 
-    assert_eq!(out.len(), 0);
+    assert_eq!(out.bit_len(), 0);
     assert!(out.is_empty());
 }
 
@@ -50,8 +50,8 @@ fn shifts_left_with_zero_fill() {
 fn shifting_by_len_or_more_returns_all_zeros() {
     let bits = BitString::try_from("101001").unwrap();
 
-    let by_len = bits.shl(bits.len());
-    let beyond_len = bits.shl(bits.len() + 1);
+    let by_len = bits.shl(bits.bit_len());
+    let beyond_len = bits.shl(bits.bit_len() + 1);
 
     assert_eq!(by_len.to_string(), "000000");
     assert_eq!(beyond_len.to_string(), "000000");
@@ -123,7 +123,7 @@ fn masks_bits_shifted_beyond_logical_len() {
 
     let out = bits.shl(1);
 
-    assert_eq!(out.len(), 65);
+    assert_eq!(out.bit_len(), 65);
     assert_eq!(out.get(63), Some(false));
     assert_eq!(out.get(64), Some(true));
     assert_eq!(out.get(65), None);
@@ -157,8 +157,8 @@ fn shift_variants_match_across_word_boundary() {
 #[test]
 fn shift_variants_match_when_shift_clears_all_bits() {
     let bits = BitString::try_from("101001").unwrap();
-    let expected = BitString::zeros(bits.len());
+    let expected = BitString::zeros(bits.bit_len());
 
-    assert_shl_variants(&bits, bits.len(), &expected);
-    assert_shl_variants(&bits, bits.len() + 1, &expected);
+    assert_shl_variants(&bits, bits.bit_len(), &expected);
+    assert_shl_variants(&bits, bits.bit_len() + 1, &expected);
 }

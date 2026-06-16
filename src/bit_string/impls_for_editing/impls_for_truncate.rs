@@ -5,34 +5,34 @@ use super::*;
 impl BitString {
     pub fn truncate(&mut self, len: usize) {
         assert!(
-            len <= self.len,
+            len <= self.bit_len,
             "cannot truncate bit string from len {} to larger len {}",
-            self.len,
+            self.bit_len,
             len
         );
 
-        if len == self.len {
+        if len == self.bit_len {
             return;
         }
 
-        self.len = len;
+        self.bit_len = len;
 
         let words = Bits::word_len(len);
-        if words < self.bits.len() {
-            self.bits.truncate(words);
+        if words < self.words.len() {
+            self.words.truncate(words);
             // Lazy shrink: only reclaim memory when capacity exceeds 2× needed.
-            if self.bits.capacity() > words * 2 {
-                self.bits.shrink_to(words);
+            if self.words.capacity() > words * 2 {
+                self.words.shrink_to(words);
             }
         }
 
-        Bits::mask_unused(&mut self.bits, len);
+        Bits::mask_unused(&mut self.words, len);
     }
 
     pub fn clear(&mut self) {
-        self.bits.clear();
-        self.bits.shrink_to(0);
-        self.len = 0;
+        self.words.clear();
+        self.words.shrink_to(0);
+        self.bit_len = 0;
     }
 }
 

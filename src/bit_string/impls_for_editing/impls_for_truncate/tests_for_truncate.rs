@@ -7,7 +7,7 @@ fn truncates_to_shorter_len() {
 
     bits.truncate(4);
 
-    assert_eq!(bits.len(), 4);
+    assert_eq!(bits.bit_len(), 4);
     assert_eq!(bits.to_string(), "1011");
     assert_eq!(bits.get(4), None);
 }
@@ -18,7 +18,7 @@ fn truncates_to_zero() {
 
     bits.truncate(0);
 
-    assert_eq!(bits.len(), 0);
+    assert_eq!(bits.bit_len(), 0);
     assert!(bits.is_empty());
     assert_eq!(bits.to_string(), "");
     assert_eq!(bits.count_ones(), 0);
@@ -29,9 +29,9 @@ fn truncates_to_zero() {
 fn truncating_to_same_len_is_noop() {
     let mut bits = BitString::try_from("101101").unwrap();
 
-    bits.truncate(bits.len());
+    bits.truncate(bits.bit_len());
 
-    assert_eq!(bits.len(), 6);
+    assert_eq!(bits.bit_len(), 6);
     assert_eq!(bits.to_string(), "101101");
 }
 
@@ -41,7 +41,7 @@ fn truncates_across_word_boundary() {
 
     bits.truncate(65);
 
-    assert_eq!(bits.len(), 65);
+    assert_eq!(bits.bit_len(), 65);
     assert_eq!(bits.count_ones(), 65);
     assert_eq!(bits.get(64), Some(true));
     assert_eq!(bits.get(65), None);
@@ -53,7 +53,7 @@ fn masks_unused_bits_after_truncating_inside_word() {
 
     bits.truncate(63);
 
-    assert_eq!(bits.len(), 63);
+    assert_eq!(bits.bit_len(), 63);
     assert_eq!(bits.count_ones(), 63);
     assert_eq!(bits.count_zeros(), 0);
     assert_eq!(bits.get(62), Some(true));

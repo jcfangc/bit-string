@@ -6,7 +6,7 @@ impl BitString {
         Iter {
             bit_string: self,
             front: 0,
-            back: self.len,
+            back: self.bit_len,
         }
     }
 }

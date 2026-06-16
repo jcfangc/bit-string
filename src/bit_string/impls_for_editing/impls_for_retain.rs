@@ -9,11 +9,11 @@ impl BitString {
     {
         let mut write = 0usize;
 
-        for read in 0..self.len {
-            let value = Bits::bit_at(&self.bits, read);
+        for read in 0..self.bit_len {
+            let value = Bits::bit_at(&self.words, read);
 
             if f(value) {
-                Bits::set_bit(&mut self.bits, write, value);
+                Bits::set_bit(&mut self.words, write, value);
                 write += 1;
             }
         }

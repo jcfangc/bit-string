@@ -4,8 +4,8 @@ use crate::WORD_BITS;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct BitString {
-    bits: Vec<u64>,
-    len: usize,
+    words: Vec<u64>,
+    bit_len: usize,
 }
 
 pub mod errors;

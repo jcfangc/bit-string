@@ -28,7 +28,7 @@ fn empty_needle_matches_at_valid_boundary_offsets() {
 
     assert!(bits_equal_at(&haystack, 0, &needle));
     assert!(bits_equal_at(&haystack, 3, &needle));
-    assert!(bits_equal_at(&haystack, haystack.len(), &needle));
+    assert!(bits_equal_at(&haystack, haystack.bit_len(), &needle));
 }
 
 #[test]

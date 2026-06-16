@@ -6,7 +6,7 @@ fn returns_none_for_empty_bit_string() {
     let mut bits = BitString::new();
 
     assert_eq!(bits.pop(), None);
-    assert_eq!(bits.len(), 0);
+    assert_eq!(bits.bit_len(), 0);
     assert_eq!(bits.to_string(), "");
 }
 
@@ -42,7 +42,7 @@ fn shrinks_when_crossing_word_boundary() {
     assert_eq!(bits.as_words().len(), 2);
     assert_eq!(bits.pop(), Some(true));
 
-    assert_eq!(bits.len(), 64);
+    assert_eq!(bits.bit_len(), 64);
     assert_eq!(bits.as_words().len(), 1);
     assert_eq!(bits.count_ones(), 64);
     assert_eq!(bits.to_string(), "1".repeat(64));
@@ -54,10 +54,10 @@ fn preserves_lower_bits_after_pop() {
         BitString::try_from("10000000000000000000000000000000000000000000000000000000000000001")
             .unwrap();
 
-    assert_eq!(bits.len(), 65);
+    assert_eq!(bits.bit_len(), 65);
     assert_eq!(bits.pop(), Some(true));
 
-    assert_eq!(bits.len(), 64);
+    assert_eq!(bits.bit_len(), 64);
     assert_eq!(bits.get(0), Some(true));
     assert_eq!(bits.get(63), Some(false));
     assert_eq!(bits.get(64), None);
@@ -68,7 +68,7 @@ fn removes_last_zero_bit() {
     let mut bits = BitString::try_from("1010").unwrap();
 
     assert_eq!(bits.pop(), Some(false));
-    assert_eq!(bits.len(), 3);
+    assert_eq!(bits.bit_len(), 3);
     assert_eq!(bits.to_string(), "101");
 }
 
@@ -81,7 +81,7 @@ fn repeated_pop_eventually_clears_storage() {
     }
 
     assert_eq!(bits.pop(), None);
-    assert_eq!(bits.len(), 0);
+    assert_eq!(bits.bit_len(), 0);
     assert_eq!(bits.as_words().len(), 0);
     assert_eq!(bits.to_string(), "");
 }

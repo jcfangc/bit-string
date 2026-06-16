@@ -30,7 +30,7 @@ fn computes_bitwise_xor_for_same_len_inputs() {
 #[test]
 fn zeros_are_identity_for_xor() {
     let lhs = BitString::try_from("101001101").unwrap();
-    let rhs = BitString::zeros(lhs.len());
+    let rhs = BitString::zeros(lhs.bit_len());
 
     assert_xor_variants(&lhs, &rhs, &lhs);
 }
@@ -38,7 +38,7 @@ fn zeros_are_identity_for_xor() {
 #[test]
 fn self_xor_is_zero() {
     let lhs = BitString::try_from("101001101").unwrap();
-    let expected = BitString::zeros(lhs.len());
+    let expected = BitString::zeros(lhs.bit_len());
 
     assert_xor_variants(&lhs, &lhs, &expected);
 
@@ -49,7 +49,7 @@ fn self_xor_is_zero() {
 #[test]
 fn ones_flip_all_bits_for_xor() {
     let lhs = BitString::try_from("101001101").unwrap();
-    let rhs = BitString::ones(lhs.len());
+    let rhs = BitString::ones(lhs.bit_len());
     let expected = BitString::try_from("010110010").unwrap();
 
     assert_xor_variants(&lhs, &rhs, &expected);
@@ -77,7 +77,7 @@ fn works_across_word_boundaries() {
 
     let result = lhs.xor(&rhs).unwrap();
 
-    assert_eq!(result.len(), 130);
+    assert_eq!(result.bit_len(), 130);
     assert_eq!(result.count_ones(), 3);
 
     assert_eq!(result.get(0), Some(true));

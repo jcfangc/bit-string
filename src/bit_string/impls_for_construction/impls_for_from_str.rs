@@ -10,7 +10,10 @@ impl TryFrom<&str> for BitString {
         let len = value.len();
 
         match funcs_for_pack_str_core::str_core(src, len) {
-            Ok(bits) => Ok(Self { bits, len }),
+            Ok(bits) => Ok(Self {
+                words: bits,
+                bit_len: len,
+            }),
             Err((index, byte)) => Err(ParseBitStringError { index, byte }),
         }
     }

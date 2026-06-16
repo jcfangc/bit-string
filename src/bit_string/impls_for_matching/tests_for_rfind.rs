@@ -5,7 +5,7 @@ fn returns_len_for_empty_needle() {
     let bits = BitString::try_from("101001").unwrap();
     let needle = BitString::new();
 
-    assert_eq!(bits.rfind(&needle), Some(bits.len()));
+    assert_eq!(bits.rfind(&needle), Some(bits.bit_len()));
 }
 
 #[test]

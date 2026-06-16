@@ -30,7 +30,7 @@ fn computes_bitwise_and_for_same_len_inputs() {
 #[test]
 fn ones_are_identity_for_and() {
     let lhs = BitString::try_from("101001101").unwrap();
-    let rhs = BitString::ones(lhs.len());
+    let rhs = BitString::ones(lhs.bit_len());
 
     assert_and_variants(&lhs, &rhs, &lhs);
 }
@@ -38,7 +38,7 @@ fn ones_are_identity_for_and() {
 #[test]
 fn zeros_absorb_for_and() {
     let lhs = BitString::try_from("101001101").unwrap();
-    let rhs = BitString::zeros(lhs.len());
+    let rhs = BitString::zeros(lhs.bit_len());
 
     assert_and_variants(&lhs, &rhs, &rhs);
 
@@ -68,7 +68,7 @@ fn works_across_word_boundaries() {
 
     let result = lhs.and(&rhs).unwrap();
 
-    assert_eq!(result.len(), 130);
+    assert_eq!(result.bit_len(), 130);
     assert_eq!(result.count_ones(), 3);
 
     assert_eq!(result.get(0), Some(false));

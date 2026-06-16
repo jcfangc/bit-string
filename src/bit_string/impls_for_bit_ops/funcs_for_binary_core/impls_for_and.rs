@@ -7,8 +7,8 @@ impl BitString {
         self.require_same_len(rhs)?;
 
         Ok(Self {
-            bits: owned::<OP_AND>(&self.bits, &rhs.bits),
-            len: self.len,
+            words: owned::<OP_AND>(&self.words, &rhs.words),
+            bit_len: self.bit_len,
         })
     }
 
@@ -16,7 +16,7 @@ impl BitString {
     #[inline]
     pub fn and_assign(&mut self, rhs: &Self) -> Result<(), BitStringLenMismatch> {
         self.require_same_len(rhs)?;
-        assign::<OP_AND>(&mut self.bits, &rhs.bits);
+        assign::<OP_AND>(&mut self.words, &rhs.words);
         Ok(())
     }
 
@@ -24,7 +24,7 @@ impl BitString {
     #[inline]
     pub fn and_into(mut self, rhs: &Self) -> Result<Self, BitStringLenMismatch> {
         self.require_same_len(rhs)?;
-        assign::<OP_AND>(&mut self.bits, &rhs.bits);
+        assign::<OP_AND>(&mut self.words, &rhs.words);
         Ok(self)
     }
 }

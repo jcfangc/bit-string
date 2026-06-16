@@ -9,8 +9,8 @@ impl BitString {
         self.require_same_len(rhs)?;
 
         Ok(Self {
-            bits: owned::<OP_XOR>(&self.bits, &rhs.bits),
-            len: self.len,
+            words: owned::<OP_XOR>(&self.words, &rhs.words),
+            bit_len: self.bit_len,
         })
     }
 
@@ -18,7 +18,7 @@ impl BitString {
     #[inline]
     pub fn xor_assign(&mut self, rhs: &Self) -> Result<(), BitStringLenMismatch> {
         self.require_same_len(rhs)?;
-        assign::<OP_XOR>(&mut self.bits, &rhs.bits);
+        assign::<OP_XOR>(&mut self.words, &rhs.words);
         Ok(())
     }
 
@@ -26,7 +26,7 @@ impl BitString {
     #[inline]
     pub fn xor_into(mut self, rhs: &Self) -> Result<Self, BitStringLenMismatch> {
         self.require_same_len(rhs)?;
-        assign::<OP_XOR>(&mut self.bits, &rhs.bits);
+        assign::<OP_XOR>(&mut self.words, &rhs.words);
         Ok(self)
     }
 }

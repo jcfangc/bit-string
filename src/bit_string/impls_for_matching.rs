@@ -2,7 +2,7 @@ use super::*;
 
 #[inline]
 fn bits_equal_at(haystack: &BitString, offset: usize, needle: &BitString) -> bool {
-    for index in 0..needle.len {
+    for index in 0..needle.bit_len {
         if haystack.get(offset + index).unwrap() != needle.get(index).unwrap() {
             return false;
         }
@@ -13,11 +13,11 @@ fn bits_equal_at(haystack: &BitString, offset: usize, needle: &BitString) -> boo
 
 impl BitString {
     pub fn matches_at(&self, index: usize, pattern: &Self) -> bool {
-        if index > self.len {
+        if index > self.bit_len {
             return false;
         }
 
-        if pattern.len > self.len - index {
+        if pattern.bit_len > self.bit_len - index {
             return false;
         }
 
@@ -31,7 +31,7 @@ impl BitString {
 
     #[inline]
     pub fn ends_with(&self, suffix: &Self) -> bool {
-        suffix.len <= self.len && self.matches_at(self.len - suffix.len, suffix)
+        suffix.bit_len <= self.bit_len && self.matches_at(self.bit_len - suffix.bit_len, suffix)
     }
 
     #[inline]
@@ -40,29 +40,29 @@ impl BitString {
     }
 
     pub fn find(&self, needle: &Self) -> Option<usize> {
-        if needle.len == 0 {
+        if needle.bit_len == 0 {
             return Some(0);
         }
 
-        if needle.len > self.len {
+        if needle.bit_len > self.bit_len {
             return None;
         }
 
-        let last_start = self.len - needle.len;
+        let last_start = self.bit_len - needle.bit_len;
 
         (0..=last_start).find(|&index| bits_equal_at(self, index, needle))
     }
 
     pub fn rfind(&self, needle: &Self) -> Option<usize> {
-        if needle.len == 0 {
-            return Some(self.len);
+        if needle.bit_len == 0 {
+            return Some(self.bit_len);
         }
 
-        if needle.len > self.len {
+        if needle.bit_len > self.bit_len {
             return None;
         }
 
-        let last_start = self.len - needle.len;
+        let last_start = self.bit_len - needle.bit_len;
 
         (0..=last_start)
             .rev()
@@ -71,12 +71,12 @@ impl BitString {
 
     pub fn strip_prefix(&self, prefix: &Self) -> Option<Self> {
         self.starts_with(prefix)
-            .then(|| self.slice_from(prefix.len))
+            .then(|| self.slice_from(prefix.bit_len))
     }
 
     pub fn strip_suffix(&self, suffix: &Self) -> Option<Self> {
         self.ends_with(suffix)
-            .then(|| self.slice_until(self.len - suffix.len))
+            .then(|| self.slice_until(self.bit_len - suffix.bit_len))
     }
 }
 

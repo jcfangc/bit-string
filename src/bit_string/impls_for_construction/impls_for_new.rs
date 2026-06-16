@@ -4,8 +4,8 @@ impl BitString {
     #[inline]
     pub fn new() -> Self {
         Self {
-            bits: Vec::new(),
-            len: 0,
+            words: Vec::new(),
+            bit_len: 0,
         }
     }
 }

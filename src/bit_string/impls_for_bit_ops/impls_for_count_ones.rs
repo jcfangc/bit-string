@@ -3,12 +3,12 @@ use super::*;
 impl BitString {
     #[inline]
     pub fn count_ones(&self) -> usize {
-        funcs_for_count_ones::count_ones(&self.bits, self.len)
+        funcs_for_count_ones::count_ones(&self.words, self.bit_len)
     }
 
     #[inline]
     pub fn count_zeros(&self) -> usize {
-        self.len - self.count_ones()
+        self.bit_len - self.count_ones()
     }
 }
 

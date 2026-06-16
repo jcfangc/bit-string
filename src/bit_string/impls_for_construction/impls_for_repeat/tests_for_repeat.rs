@@ -6,7 +6,7 @@ use crate::BitString;
 fn repeat_false_with_zero_len_builds_empty_bit_string() {
     let bits = BitString::repeat(false, 0);
 
-    assert_eq!(bits.len(), 0);
+    assert_eq!(bits.bit_len(), 0);
     assert!(bits.is_empty());
     assert_eq!(bits.count_ones(), 0);
     assert_eq!(bits.count_zeros(), 0);
@@ -17,7 +17,7 @@ fn repeat_false_with_zero_len_builds_empty_bit_string() {
 fn repeat_true_with_zero_len_builds_empty_bit_string() {
     let bits = BitString::repeat(true, 0);
 
-    assert_eq!(bits.len(), 0);
+    assert_eq!(bits.bit_len(), 0);
     assert!(bits.is_empty());
     assert_eq!(bits.count_ones(), 0);
     assert_eq!(bits.count_zeros(), 0);
@@ -29,7 +29,7 @@ fn repeat_false_fills_all_bits_with_zero() {
     for len in [1, 2, 63, 64, 65, 127, 128, 129] {
         let bits = BitString::repeat(false, len);
 
-        assert_eq!(bits.len(), len, "len={len}");
+        assert_eq!(bits.bit_len(), len, "len={len}");
         assert_eq!(bits.count_ones(), 0, "len={len}");
         assert_eq!(bits.count_zeros(), len, "len={len}");
 
@@ -46,7 +46,7 @@ fn repeat_true_fills_all_bits_with_one() {
     for len in [1, 2, 63, 64, 65, 127, 128, 129] {
         let bits = BitString::repeat(true, len);
 
-        assert_eq!(bits.len(), len, "len={len}");
+        assert_eq!(bits.bit_len(), len, "len={len}");
         assert_eq!(bits.count_ones(), len, "len={len}");
         assert_eq!(bits.count_zeros(), 0, "len={len}");
 

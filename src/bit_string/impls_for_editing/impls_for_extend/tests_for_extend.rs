@@ -8,7 +8,7 @@ fn extends_with_owned_bool_items() {
 
     bits.extend([false, true, false]);
 
-    assert_eq!(bits.len(), 6);
+    assert_eq!(bits.bit_len(), 6);
     assert_eq!(bits.to_string(), "101010");
 }
 
@@ -19,7 +19,7 @@ fn extends_with_borrowed_bool_items() {
 
     bits.extend(values.iter());
 
-    assert_eq!(bits.len(), 6);
+    assert_eq!(bits.bit_len(), 6);
     assert_eq!(bits.to_string(), "101010");
 }
 
@@ -29,7 +29,7 @@ fn extending_with_empty_iter_is_noop() {
 
     bits.extend(core::iter::empty::<bool>());
 
-    assert_eq!(bits.len(), 3);
+    assert_eq!(bits.bit_len(), 3);
     assert_eq!(bits.to_string(), "101");
 }
 
@@ -39,7 +39,7 @@ fn extends_empty_bit_string() {
 
     bits.extend([true, false, true, true]);
 
-    assert_eq!(bits.len(), 4);
+    assert_eq!(bits.bit_len(), 4);
     assert_eq!(bits.to_string(), "1011");
 }
 
@@ -49,7 +49,7 @@ fn extends_across_word_boundary() {
 
     bits.extend([true, false, true]);
 
-    assert_eq!(bits.len(), 66);
+    assert_eq!(bits.bit_len(), 66);
 
     assert_eq!(bits.get(62), Some(false));
     assert_eq!(bits.get(63), Some(true));

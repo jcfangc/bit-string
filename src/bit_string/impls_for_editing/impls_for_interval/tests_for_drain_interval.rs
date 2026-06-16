@@ -42,10 +42,10 @@ fn drains_suffix_interval() {
 fn drains_entire_bit_string() {
     let mut bits = BitString::try_from("101001").unwrap();
 
-    let removed = bits.drain_interval(iv(0, bits.len()));
+    let removed = bits.drain_interval(iv(0, bits.bit_len()));
 
     assert_eq!(removed.to_string(), "101001");
-    assert_eq!(bits.len(), 0);
+    assert_eq!(bits.bit_len(), 0);
     assert_eq!(bits.to_string(), "");
     assert_eq!(bits.as_words().len(), 0);
 }
@@ -62,10 +62,10 @@ fn drains_across_word_boundary() {
 
     let removed = bits.drain_interval(iv(63, 66));
 
-    assert_eq!(removed.len(), 3);
+    assert_eq!(removed.bit_len(), 3);
     assert_eq!(removed.to_string(), "111");
 
-    assert_eq!(bits.len(), 127);
+    assert_eq!(bits.bit_len(), 127);
     assert_eq!(bits.get(0), Some(true));
     assert_eq!(bits.get(62), Some(false));
     assert_eq!(bits.get(63), Some(false));

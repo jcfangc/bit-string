@@ -7,7 +7,7 @@ use crate::{BitString, WORD_BITS};
 fn builds_empty_bit_string_from_empty_iter() {
     let bits = BitString::from_bool_iter(core::iter::empty());
 
-    assert_eq!(bits.len(), 0);
+    assert_eq!(bits.bit_len(), 0);
     assert!(bits.is_empty());
     assert_eq!(bits.to_string(), "");
     assert_eq!(bits.count_ones(), 0);
@@ -18,7 +18,7 @@ fn builds_empty_bit_string_from_empty_iter() {
 fn builds_single_partial_word() {
     let bits = BitString::from_bool_iter([true, false, true, true, false]);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.to_string(), "10110");
     assert_eq!(bits.count_ones(), 3);
     assert_eq!(bits.count_zeros(), 2);
@@ -36,7 +36,7 @@ fn builds_exactly_one_full_word() {
     let values = (0..WORD_BITS).map(|index| index % 2 == 0);
     let bits = BitString::from_bool_iter(values);
 
-    assert_eq!(bits.len(), WORD_BITS);
+    assert_eq!(bits.bit_len(), WORD_BITS);
     assert_eq!(bits.count_ones(), WORD_BITS / 2);
     assert_eq!(bits.count_zeros(), WORD_BITS / 2);
 
@@ -51,7 +51,7 @@ fn builds_across_word_boundary() {
     let values = (0..len).map(|index| matches!(index, 0 | 63 | 64 | 66));
     let bits = BitString::from_bool_iter(values);
 
-    assert_eq!(bits.len(), len);
+    assert_eq!(bits.bit_len(), len);
     assert_eq!(bits.count_ones(), 4);
 
     assert_eq!(bits.get(0), Some(true));
@@ -78,6 +78,6 @@ fn preserves_iteration_order() {
 fn leaves_unused_tail_bits_zero() {
     let bits = BitString::from_bool_iter([true]);
 
-    assert_eq!(bits.len(), 1);
+    assert_eq!(bits.bit_len(), 1);
     assert_eq!(bits.as_words(), &[1]);
 }

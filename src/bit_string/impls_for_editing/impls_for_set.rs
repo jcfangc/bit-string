@@ -4,12 +4,12 @@ use super::*;
 
 impl BitString {
     pub fn set(&mut self, index: usize, value: bool) -> Option<bool> {
-        if index >= self.len {
+        if index >= self.bit_len {
             return None;
         }
 
-        let old = Bits::bit_at(&self.bits, index);
-        Bits::set_bit(&mut self.bits, index, value);
+        let old = Bits::bit_at(&self.words, index);
+        Bits::set_bit(&mut self.words, index, value);
         Some(old)
     }
 
@@ -24,12 +24,12 @@ impl BitString {
         let word = bit_start / WORD_BITS;
         let shift = bit_start % WORD_BITS;
 
-        if let Some(w) = self.bits.get_mut(word) {
+        if let Some(w) = self.words.get_mut(word) {
             *w |= value << shift;
         }
 
         if shift != 0 {
-            if let Some(w) = self.bits.get_mut(word + 1) {
+            if let Some(w) = self.words.get_mut(word + 1) {
                 *w |= value >> (WORD_BITS - shift);
             }
         }

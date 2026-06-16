@@ -8,7 +8,7 @@ fn appending_empty_bit_string_is_noop() {
 
     bits.push_bit_string(&rhs);
 
-    assert_eq!(bits.len(), 4);
+    assert_eq!(bits.bit_len(), 4);
     assert_eq!(bits.to_string(), "1010");
 }
 
@@ -19,7 +19,7 @@ fn appends_to_empty_bit_string() {
 
     bits.push_bit_string(&rhs);
 
-    assert_eq!(bits.len(), 6);
+    assert_eq!(bits.bit_len(), 6);
     assert_eq!(bits.to_string(), "101001");
 }
 
@@ -30,7 +30,7 @@ fn appends_non_empty_bit_strings() {
 
     bits.push_bit_string(&rhs);
 
-    assert_eq!(bits.len(), 7);
+    assert_eq!(bits.bit_len(), 7);
     assert_eq!(bits.to_string(), "1010011");
 }
 
@@ -44,7 +44,7 @@ fn appends_when_lhs_ends_before_word_boundary() {
 
     bits.push_bit_string(&rhs);
 
-    assert_eq!(bits.len(), 65);
+    assert_eq!(bits.bit_len(), 65);
     assert_eq!(bits.get(0), Some(true));
     assert_eq!(bits.get(61), Some(false));
     assert_eq!(bits.get(62), Some(true));
@@ -60,7 +60,7 @@ fn appends_when_lhs_is_word_aligned() {
 
     bits.push_bit_string(&rhs);
 
-    assert_eq!(bits.len(), 66);
+    assert_eq!(bits.bit_len(), 66);
     assert_eq!(bits.get(0), Some(true));
     assert_eq!(bits.get(63), Some(true));
     assert_eq!(bits.get(64), Some(false));
@@ -79,7 +79,7 @@ fn appends_rhs_spanning_multiple_words() {
 
     bits.push_bit_string(&rhs);
 
-    assert_eq!(bits.len(), 132);
+    assert_eq!(bits.bit_len(), 132);
     assert_eq!(bits.get(0), Some(true));
     assert_eq!(bits.get(1), Some(false));
 

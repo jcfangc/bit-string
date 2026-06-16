@@ -24,7 +24,7 @@ fn shifting_empty_bit_string_keeps_it_empty() {
 
     let out = bits.shr(3);
 
-    assert_eq!(out.len(), 0);
+    assert_eq!(out.bit_len(), 0);
     assert!(out.is_empty());
 }
 
@@ -50,9 +50,9 @@ fn shifts_bits_right_and_fills_high_bits_with_zero() {
 fn shifting_by_len_returns_all_zeros() {
     let bits = BitString::try_from("101001").unwrap();
 
-    let result = bits.shr(bits.len());
+    let result = bits.shr(bits.bit_len());
 
-    assert_eq!(result.len(), bits.len());
+    assert_eq!(result.bit_len(), bits.bit_len());
     assert_eq!(result.to_string(), "000000");
     assert_eq!(result.count_ones(), 0);
 }
@@ -61,9 +61,9 @@ fn shifting_by_len_returns_all_zeros() {
 fn shifting_beyond_len_returns_all_zeros() {
     let bits = BitString::try_from("101001").unwrap();
 
-    let result = bits.shr(bits.len() + 1);
+    let result = bits.shr(bits.bit_len() + 1);
 
-    assert_eq!(result.len(), bits.len());
+    assert_eq!(result.bit_len(), bits.bit_len());
     assert_eq!(result.to_string(), "000000");
     assert_eq!(result.count_ones(), 0);
 }
@@ -78,7 +78,7 @@ fn works_across_bit_boundary() {
 
     let result = bits.shr(1);
 
-    assert_eq!(result.len(), 130);
+    assert_eq!(result.bit_len(), 130);
     assert_eq!(result.count_ones(), 4);
 
     assert_eq!(result.get(0), Some(false));
@@ -100,7 +100,7 @@ fn works_across_word_boundary() {
 
     let result = bits.shr(64);
 
-    assert_eq!(result.len(), 130);
+    assert_eq!(result.bit_len(), 130);
     assert_eq!(result.count_ones(), 3);
 
     assert_eq!(result.get(0), Some(true));
@@ -121,7 +121,7 @@ fn works_across_word_and_bit_boundary() {
 
     let result = bits.shr(65);
 
-    assert_eq!(result.len(), 130);
+    assert_eq!(result.bit_len(), 130);
     assert_eq!(result.count_ones(), 2);
 
     assert_eq!(result.get(0), Some(true));
@@ -138,7 +138,7 @@ fn masks_unused_bits_in_partial_last_word() {
 
     let result = bits.shr(1);
 
-    assert_eq!(result.len(), 65);
+    assert_eq!(result.bit_len(), 65);
     assert_eq!(result.count_ones(), 64);
     assert_eq!(result.get(63), Some(true));
     assert_eq!(result.get(64), Some(false));
@@ -173,8 +173,8 @@ fn shift_variants_match_across_word_boundary() {
 #[test]
 fn shift_variants_match_when_shift_clears_all_bits() {
     let bits = BitString::try_from("101001").unwrap();
-    let expected = BitString::zeros(bits.len());
+    let expected = BitString::zeros(bits.bit_len());
 
-    assert_shr_variants(&bits, bits.len(), &expected);
-    assert_shr_variants(&bits, bits.len() + 1, &expected);
+    assert_shr_variants(&bits, bits.bit_len(), &expected);
+    assert_shr_variants(&bits, bits.bit_len() + 1, &expected);
 }

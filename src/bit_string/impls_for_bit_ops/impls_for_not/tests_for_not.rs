@@ -59,7 +59,7 @@ fn works_across_word_boundaries_and_masks_unused_bits() {
 
     let result = input.not();
 
-    assert_eq!(result.len(), 130);
+    assert_eq!(result.bit_len(), 130);
     assert_eq!(result.count_ones(), 125);
 
     assert_eq!(result.get(0), Some(false));

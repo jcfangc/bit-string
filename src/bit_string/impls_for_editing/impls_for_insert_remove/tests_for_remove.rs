@@ -8,7 +8,7 @@ fn removes_first_bit() {
     let removed = bits.remove(0);
 
     assert!(removed);
-    assert_eq!(bits.len(), 4);
+    assert_eq!(bits.bit_len(), 4);
     assert_eq!(bits.to_string(), "0101");
 }
 
@@ -19,7 +19,7 @@ fn removes_middle_bit() {
     let removed = bits.remove(2);
 
     assert!(!removed);
-    assert_eq!(bits.len(), 4);
+    assert_eq!(bits.bit_len(), 4);
     assert_eq!(bits.to_string(), "1001");
 }
 
@@ -30,7 +30,7 @@ fn removes_last_bit() {
     let removed = bits.remove(4);
 
     assert!(removed);
-    assert_eq!(bits.len(), 4);
+    assert_eq!(bits.bit_len(), 4);
     assert_eq!(bits.to_string(), "1010");
     assert_eq!(bits.get(4), None);
 }
@@ -42,7 +42,7 @@ fn removes_only_bit() {
     let removed = bits.remove(0);
 
     assert!(removed);
-    assert_eq!(bits.len(), 0);
+    assert_eq!(bits.bit_len(), 0);
     assert!(bits.is_empty());
     assert_eq!(bits.to_string(), "");
 }
@@ -60,7 +60,7 @@ fn removes_across_word_boundary() {
     let removed = bits.remove(63);
 
     assert!(removed);
-    assert_eq!(bits.len(), 129);
+    assert_eq!(bits.bit_len(), 129);
 
     assert_eq!(bits.get(62), Some(true));
     assert_eq!(bits.get(63), Some(true)); // old 64

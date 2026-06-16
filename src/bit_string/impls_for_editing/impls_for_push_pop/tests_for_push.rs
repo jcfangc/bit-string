@@ -7,7 +7,7 @@ fn pushes_true_to_empty_bit_string() {
 
     bits.push(true);
 
-    assert_eq!(bits.len(), 1);
+    assert_eq!(bits.bit_len(), 1);
     assert_eq!(bits.get(0), Some(true));
     assert_eq!(bits.to_string(), "1");
 }
@@ -18,7 +18,7 @@ fn pushes_false_to_empty_bit_string() {
 
     bits.push(false);
 
-    assert_eq!(bits.len(), 1);
+    assert_eq!(bits.bit_len(), 1);
     assert_eq!(bits.get(0), Some(false));
     assert_eq!(bits.to_string(), "0");
 }
@@ -30,7 +30,7 @@ fn appends_bits_without_changing_existing_prefix() {
     bits.push(false);
     bits.push(true);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.to_string(), "10101");
 }
 
@@ -42,7 +42,7 @@ fn pushes_across_word_boundary() {
     bits.push(false);
     bits.push(true);
 
-    assert_eq!(bits.len(), 66);
+    assert_eq!(bits.bit_len(), 66);
 
     assert_eq!(bits.get(62), Some(false));
     assert_eq!(bits.get(63), Some(true));
@@ -57,7 +57,7 @@ fn pushing_false_preserves_count_ones() {
 
     bits.push(false);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.count_ones(), 3);
     assert_eq!(bits.count_zeros(), 2);
     assert_eq!(bits.to_string(), "10110");
@@ -69,7 +69,7 @@ fn pushing_true_increments_count_ones() {
 
     bits.push(true);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.count_ones(), 4);
     assert_eq!(bits.count_zeros(), 1);
     assert_eq!(bits.to_string(), "10111");

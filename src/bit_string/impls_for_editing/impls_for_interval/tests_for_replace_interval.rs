@@ -15,7 +15,7 @@ fn replaces_interval_with_same_length_bits() {
 
     bits.replace_interval(iv(2, 6), &replacement);
 
-    assert_eq!(bits.len(), 8);
+    assert_eq!(bits.bit_len(), 8);
     assert_eq!(bits.to_string(), "00101000");
 }
 
@@ -26,7 +26,7 @@ fn replaces_interval_with_shorter_bits() {
 
     bits.replace_interval(iv(2, 6), &replacement);
 
-    assert_eq!(bits.len(), 6);
+    assert_eq!(bits.bit_len(), 6);
     assert_eq!(bits.to_string(), "001000");
 }
 
@@ -37,7 +37,7 @@ fn replaces_interval_with_longer_bits() {
 
     bits.replace_interval(iv(2, 4), &replacement);
 
-    assert_eq!(bits.len(), 9);
+    assert_eq!(bits.bit_len(), 9);
     assert_eq!(bits.to_string(), "001010100");
 }
 
@@ -48,7 +48,7 @@ fn replaces_interval_with_empty_bits() {
 
     bits.replace_interval(iv(2, 6), &replacement);
 
-    assert_eq!(bits.len(), 4);
+    assert_eq!(bits.bit_len(), 4);
     assert_eq!(bits.to_string(), "0000");
 }
 
@@ -59,7 +59,7 @@ fn replaces_interval_at_start() {
 
     bits.replace_interval(iv(0, 3), &replacement);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.to_string(), "00000");
 }
 
@@ -70,7 +70,7 @@ fn replaces_interval_at_end() {
 
     bits.replace_interval(iv(3, 6), &replacement);
 
-    assert_eq!(bits.len(), 5);
+    assert_eq!(bits.bit_len(), 5);
     assert_eq!(bits.to_string(), "00010");
 }
 
@@ -88,7 +88,7 @@ fn replaces_across_word_boundary() {
 
     bits.replace_interval(iv(63, 65), &replacement);
 
-    assert_eq!(bits.len(), 130);
+    assert_eq!(bits.bit_len(), 130);
 
     assert_eq!(bits.get(62), Some(true));
     assert_eq!(bits.get(63), Some(false)); // replacement 0

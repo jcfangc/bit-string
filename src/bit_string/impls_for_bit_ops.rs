@@ -13,12 +13,12 @@ use super::*;
 impl BitString {
     #[inline]
     fn require_same_len(&self, rhs: &Self) -> Result<(), BitStringLenMismatch> {
-        if self.len == rhs.len {
+        if self.bit_len == rhs.bit_len {
             Ok(())
         } else {
             Err(BitStringLenMismatch {
-                lhs_len: self.len,
-                rhs_len: rhs.len,
+                lhs_len: self.bit_len,
+                rhs_len: rhs.bit_len,
             })
         }
     }

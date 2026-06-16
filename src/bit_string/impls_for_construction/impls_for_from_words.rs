@@ -16,7 +16,10 @@ impl BitString {
         let mut bits = words.to_vec();
         Bits::mask_unused(&mut bits, len);
 
-        Some(Self { bits, len })
+        Some(Self {
+            words: bits,
+            bit_len: len,
+        })
     }
 }
 

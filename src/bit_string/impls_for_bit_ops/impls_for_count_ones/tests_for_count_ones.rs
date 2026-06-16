@@ -65,7 +65,7 @@ fn count_changes_after_set() {
 fn count_ones_ignores_unused_tail_bits() {
     let bits = BitString::ones(65).not_into();
 
-    assert_eq!(bits.len(), 65);
+    assert_eq!(bits.bit_len(), 65);
     assert_eq!(bits.count_ones(), 0);
     assert_eq!(bits.count_zeros(), 65);
 }
@@ -74,7 +74,7 @@ fn count_ones_ignores_unused_tail_bits() {
 fn ignores_unused_bits_in_last_word() {
     let bits = BitString::try_from("101001101").unwrap();
 
-    assert_eq!(bits.len(), 9);
+    assert_eq!(bits.bit_len(), 9);
     assert_eq!(bits.count_ones(), 5);
     assert_eq!(bits.count_zeros(), 4);
 }

@@ -42,9 +42,9 @@ fn slices_suffix_interval() {
 fn slices_entire_bit_string() {
     let bits = BitString::try_from("101001").unwrap();
 
-    let sliced = bits.slice(iv(0, bits.len()));
+    let sliced = bits.slice(iv(0, bits.bit_len()));
 
-    assert_eq!(sliced.len(), bits.len());
+    assert_eq!(sliced.bit_len(), bits.bit_len());
     assert_eq!(sliced.to_string(), "101001");
     assert_eq!(bits.to_string(), "101001");
 }
@@ -61,7 +61,7 @@ fn slices_across_word_boundary() {
 
     let sliced = bits.slice(iv(63, 66));
 
-    assert_eq!(sliced.len(), 3);
+    assert_eq!(sliced.bit_len(), 3);
     assert_eq!(sliced.to_string(), "111");
 }
 
@@ -96,7 +96,7 @@ fn slices_single_bit_interval() {
 
     let sliced = bits.slice(iv(2, 3));
 
-    assert_eq!(sliced.len(), 1);
+    assert_eq!(sliced.bit_len(), 1);
     assert_eq!(sliced.to_string(), "1");
 }
 
