@@ -18,8 +18,19 @@ impl BitString {
         let new_len = old_len
             .checked_add(rhs.len)
             .expect("bit string length overflow");
+        let new_words = Bits::word_len(new_len);
 
-        let mut bits = Bits::zero_words(Bits::word_len(new_len));
+        // In-place fast path: grow into existing spare capacity.
+        if self.bits.capacity() >= new_words {
+            self.bits.resize(new_words, 0);
+            Bits::copy(&rhs.bits, 0, &mut self.bits, old_len, rhs.len);
+            self.len = new_len;
+            Bits::mask_unused(&mut self.bits, self.len);
+            return;
+        }
+
+        // Slow path: reallocate.
+        let mut bits = Bits::zero_words(new_words);
 
         Bits::copy(&self.bits, 0, &mut bits, 0, self.len);
         Bits::copy(&rhs.bits, 0, &mut bits, old_len, rhs.len);
