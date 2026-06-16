@@ -267,6 +267,33 @@ impl Bits {
             carry = overflow;
         }
     }
+
+    /// Clears `len` bits in `words` starting at `bit_start`.
+    ///
+    /// `len` must be > 0.
+    #[inline]
+    pub(crate) fn clear_bits(words: &mut [u64], start: usize, len: usize) {
+        debug_assert!(len > 0);
+        let end = start + len;
+        let first = start / WORD_BITS;
+        let last = end.saturating_sub(1) / WORD_BITS;
+
+        if first == last {
+            let mask = Self::low_mask(len) << (start % WORD_BITS);
+            words[first] &= !mask;
+        } else {
+            words[first] &= Self::low_mask(start % WORD_BITS);
+            for w in (first + 1)..last {
+                words[w] = 0;
+            }
+            let end_rem = end % WORD_BITS;
+            if end_rem != 0 {
+                words[last] &= !Self::low_mask(end_rem);
+            } else {
+                words[last] = 0;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
