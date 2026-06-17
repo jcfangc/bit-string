@@ -24,7 +24,8 @@ impl BitString {
         if self.words.capacity() >= new_words {
             self.words.resize(new_words, 0);
             rhs.words
-                .copy_bits_to(0, &mut self.words, old_len, rhs.bit_len);
+                .copy_from(0, rhs.bit_len)
+                .paste_to(&mut self.words, old_len);
             self.bit_len = new_len;
             self.words.mask_unused_bits(self.bit_len);
             return;
@@ -33,8 +34,10 @@ impl BitString {
         // Slow path: reallocate.
         let mut bits = zero_words(new_words);
 
-        self.words.copy_bits_to(0, &mut bits, 0, self.bit_len);
-        rhs.words.copy_bits_to(0, &mut bits, old_len, rhs.bit_len);
+        self.words.copy_from(0, self.bit_len).paste_to(&mut bits, 0);
+        rhs.words
+            .copy_from(0, rhs.bit_len)
+            .paste_to(&mut bits, old_len);
 
         self.words = bits;
         self.bit_len = new_len;
@@ -64,10 +67,13 @@ impl BitString {
 
         let mut bits = zero_words(word_len(new_len));
 
-        self.words.copy_bits_to(0, &mut bits, 0, index);
-        rhs.words.copy_bits_to(0, &mut bits, index, rhs.bit_len);
+        self.words.copy_from(0, index).paste_to(&mut bits, 0);
+        rhs.words
+            .copy_from(0, rhs.bit_len)
+            .paste_to(&mut bits, index);
         self.words
-            .copy_bits_to(index, &mut bits, index + rhs.bit_len, self.bit_len - index);
+            .copy_from(index, self.bit_len - index)
+            .paste_to(&mut bits, index + rhs.bit_len);
 
         self.words = bits;
         self.bit_len = new_len;
@@ -84,7 +90,7 @@ impl BitString {
         let rhs_len = self.bit_len - at;
         let mut rhs_bits = zero_words(word_len(rhs_len));
 
-        self.words.copy_bits_to(at, &mut rhs_bits, 0, rhs_len);
+        self.words.copy_from(at, rhs_len).paste_to(&mut rhs_bits, 0);
         self.truncate(at);
 
         Self {

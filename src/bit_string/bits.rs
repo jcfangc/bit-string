@@ -56,6 +56,53 @@ pub(crate) fn assert_interval_in_bounds(interval: UsizeCO, len: usize) {
 }
 
 // ---------------------------------------------------------------------------
+// CopyFrom — zero-cost curried copy: source snapshot + deferred paste
+// ---------------------------------------------------------------------------
+
+pub(crate) struct CopyFrom<'a> {
+    src: &'a [u64],
+    src_start: usize,
+    len: usize,
+    aligned: bool, // src_start % WORD_BITS == 0
+}
+
+impl CopyFrom<'_> {
+    /// Paste the previously captured source bits into `dst` at `dst_start`.
+    ///
+    /// Fast path when both source and destination are word-aligned; otherwise
+    /// falls back to a chunk-by-chunk read/write loop.
+    #[inline]
+    pub(crate) fn paste_to(&self, dst: &mut [u64], dst_start: usize) {
+        if self.aligned && dst_start.is_multiple_of(WORD_BITS) {
+            let src_word = self.src_start / WORD_BITS;
+            let dst_word = dst_start / WORD_BITS;
+            let full_words = self.len / WORD_BITS;
+
+            if full_words > 0 {
+                dst[dst_word..dst_word + full_words]
+                    .copy_from_slice(&self.src[src_word..src_word + full_words]);
+            }
+
+            let remainder_bits = self.len % WORD_BITS;
+            if remainder_bits > 0 {
+                let offset = full_words * WORD_BITS;
+                let chunk = self.src.read_word_at(self.src_start + offset);
+                dst.write_word_at(dst_start + offset, chunk, remainder_bits);
+            }
+            return;
+        }
+
+        let mut done = 0usize;
+        while done < self.len {
+            let take = (self.len - done).min(WORD_BITS);
+            let chunk = self.src.read_word_at(self.src_start + done);
+            dst.write_word_at(dst_start + done, chunk, take);
+            done += take;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Bits trait — extends [u64] with bit-level operations
 // ---------------------------------------------------------------------------
 
@@ -65,7 +112,7 @@ pub(crate) trait Bits {
     fn set_bit_at(&mut self, index: usize, value: bool);
     fn read_word_at(&self, bit_start: usize) -> u64;
     fn write_word_at(&mut self, bit_start: usize, value: u64, len: usize);
-    fn copy_bits_to(&self, src_start: usize, dst: &mut [u64], dst_start: usize, len: usize);
+    fn copy_from(&self, start: usize, len: usize) -> CopyFrom<'_>;
     fn clear_bits_at(&mut self, start: usize, len: usize);
     fn shift_right_in_place(&mut self, start: usize, count: usize);
     fn shift_left_in_place(&mut self, start: usize, count: usize);
@@ -124,37 +171,15 @@ impl Bits for [u64] {
         }
     }
 
-    /// Copies `len` bits from `self` (starting at `src_start`) to `dst`
-    /// (starting at `dst_start`).
+    /// Capture `len` bits from `self` at `start` to be pasted later via
+    /// [`CopyFrom::paste_to`].
     #[inline]
-    fn copy_bits_to(&self, src_start: usize, dst: &mut [u64], dst_start: usize, len: usize) {
-        if src_start.is_multiple_of(WORD_BITS) && dst_start.is_multiple_of(WORD_BITS) {
-            let src_word = src_start / WORD_BITS;
-            let dst_word = dst_start / WORD_BITS;
-            let full_words = len / WORD_BITS;
-
-            if full_words > 0 {
-                dst[dst_word..dst_word + full_words]
-                    .copy_from_slice(&self[src_word..src_word + full_words]);
-            }
-
-            let remainder_bits = len % WORD_BITS;
-            if remainder_bits > 0 {
-                let offset = full_words * WORD_BITS;
-                let chunk = self.read_word_at(src_start + offset);
-                dst.write_word_at(dst_start + offset, chunk, remainder_bits);
-            }
-
-            return;
-        }
-
-        let mut done = 0usize;
-
-        while done < len {
-            let take = (len - done).min(WORD_BITS);
-            let chunk = self.read_word_at(src_start + done);
-            dst.write_word_at(dst_start + done, chunk, take);
-            done += take;
+    fn copy_from(&self, start: usize, len: usize) -> CopyFrom<'_> {
+        CopyFrom {
+            src: self,
+            src_start: start,
+            len,
+            aligned: start.is_multiple_of(WORD_BITS),
         }
     }
 
