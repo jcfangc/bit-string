@@ -35,10 +35,10 @@ impl BitString {
         // Word count changed — allocate a fresh buffer.
         let mut bits = zero_words(new_words);
 
-        self.words.copy_from(0, index).paste_to(&mut bits, 0);
+        self.words.copy_bits(0, index).paste_to(&mut bits, 0);
         bits.set_bit_at(index, value);
         self.words
-            .copy_from(index, self.bit_len - index)
+            .copy_bits(index, self.bit_len - index)
             .paste_to(&mut bits, index + 1);
 
         self.words = bits;
@@ -69,9 +69,9 @@ impl BitString {
         // Word count changed — allocate a fresh buffer.
         let mut bits = zero_words(new_words);
 
-        self.words.copy_from(0, index).paste_to(&mut bits, 0);
+        self.words.copy_bits(0, index).paste_to(&mut bits, 0);
         self.words
-            .copy_from(index + 1, self.bit_len - index - 1)
+            .copy_bits(index + 1, self.bit_len - index - 1)
             .paste_to(&mut bits, index);
 
         self.words = bits;

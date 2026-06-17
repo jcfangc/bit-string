@@ -59,14 +59,14 @@ pub(crate) fn assert_interval_in_bounds(interval: UsizeCO, len: usize) {
 // CopyFrom — zero-cost curried copy: source snapshot + deferred paste
 // ---------------------------------------------------------------------------
 
-pub(crate) struct CopyFrom<'a> {
+pub(crate) struct BitsCopied<'a> {
     src: &'a [u64],
     src_start: usize,
     len: usize,
     aligned: bool, // src_start % WORD_BITS == 0
 }
 
-impl CopyFrom<'_> {
+impl BitsCopied<'_> {
     /// Paste the previously captured source bits into `dst` at `dst_start`.
     ///
     /// Fast path when both source and destination are word-aligned; otherwise
@@ -112,7 +112,7 @@ pub(crate) trait Bits {
     fn set_bit_at(&mut self, index: usize, value: bool);
     fn read_word_at(&self, bit_start: usize) -> u64;
     fn write_word_at(&mut self, bit_start: usize, value: u64, len: usize);
-    fn copy_from(&self, start: usize, len: usize) -> CopyFrom<'_>;
+    fn copy_bits(&self, start: usize, len: usize) -> BitsCopied<'_>;
     fn clear_bits_at(&mut self, start: usize, len: usize);
     fn shift_right_in_place(&mut self, start: usize, count: usize);
     fn shift_left_in_place(&mut self, start: usize, count: usize);
@@ -174,8 +174,8 @@ impl Bits for [u64] {
     /// Capture `len` bits from `self` at `start` to be pasted later via
     /// [`CopyFrom::paste_to`].
     #[inline]
-    fn copy_from(&self, start: usize, len: usize) -> CopyFrom<'_> {
-        CopyFrom {
+    fn copy_bits(&self, start: usize, len: usize) -> BitsCopied<'_> {
+        BitsCopied {
             src: self,
             src_start: start,
             len,

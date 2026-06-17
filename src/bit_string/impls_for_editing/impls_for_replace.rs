@@ -27,12 +27,12 @@ fn replace_interval_core(
         .expect("bit string length overflow");
 
     let mut dst = zero_words(word_len(new_len));
-    src.copy_from(0, start).paste_to(&mut dst, 0);
+    src.copy_bits(0, start).paste_to(&mut dst, 0);
     replacement
         .words
-        .copy_from(0, repl_len)
+        .copy_bits(0, repl_len)
         .paste_to(&mut dst, start);
-    src.copy_from(end, tail_len)
+    src.copy_bits(end, tail_len)
         .paste_to(&mut dst, start + repl_len);
 
     BitString {
@@ -67,7 +67,7 @@ impl BitString {
                 self.words.clear_bits_at(start, replacement.bit_len);
                 replacement
                     .words
-                    .copy_from(0, replacement.bit_len)
+                    .copy_bits(0, replacement.bit_len)
                     .paste_to(&mut self.words, start);
             }
             return;
@@ -91,7 +91,7 @@ impl BitString {
                 self.words.clear_bits_at(start, replacement.bit_len);
                 replacement
                     .words
-                    .copy_from(0, replacement.bit_len)
+                    .copy_bits(0, replacement.bit_len)
                     .paste_to(&mut self.words, start);
             }
             return self;

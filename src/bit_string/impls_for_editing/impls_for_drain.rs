@@ -27,10 +27,10 @@ impl BitString {
 
         let mut dst = zero_words(word_len(new_len));
         self.words
-            .copy_from(0, clamped.start())
+            .copy_bits(0, clamped.start())
             .paste_to(&mut dst, 0);
         self.words
-            .copy_from(clamped.end_excl(), tail_len)
+            .copy_bits(clamped.end_excl(), tail_len)
             .paste_to(&mut dst, clamped.start());
         (dst, new_len)
     }

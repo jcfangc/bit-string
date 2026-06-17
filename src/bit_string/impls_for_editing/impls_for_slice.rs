@@ -12,7 +12,7 @@ impl BitString {
         let len = interval.len();
 
         let mut bits = zero_words(word_len(len));
-        self.words.copy_from(start, len).paste_to(&mut bits, 0);
+        self.words.copy_bits(start, len).paste_to(&mut bits, 0);
 
         Self {
             words: bits,
