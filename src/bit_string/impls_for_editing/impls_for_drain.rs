@@ -1,6 +1,6 @@
 use int_interval::UsizeCO;
 
-use crate::bit_string::bits::Bits;
+use crate::bit_string::bits::*;
 
 use super::*;
 
@@ -26,15 +26,10 @@ impl BitString {
         let tail_len = self.bit_len - clamped.end_excl();
         let new_len = self.bit_len - removed_len;
 
-        let mut dst = Bits::zero_words(Bits::word_len(new_len));
-        Bits::copy(&self.words, 0, &mut dst, 0, clamped.start());
-        Bits::copy(
-            &self.words,
-            clamped.end_excl(),
-            &mut dst,
-            clamped.start(),
-            tail_len,
-        );
+        let mut dst = zero_words(word_len(new_len));
+        self.words.copy_bits_to(0, &mut dst, 0, clamped.start());
+        self.words
+            .copy_bits_to(clamped.end_excl(), &mut dst, clamped.start(), tail_len);
 
         BitString {
             words: dst,
@@ -78,36 +73,31 @@ impl BitString {
             let mut offset = 0usize;
             while offset < tail_len {
                 let take = WORD_BITS.min(tail_len - offset);
-                let chunk = Bits::read_a_word_at(&self.words, end + offset);
-                Bits::clear_bits(&mut self.words, start + offset, take);
-                Bits::write_a_word_at(&mut self.words, start + offset, chunk, take);
+                let chunk = self.words.read_word_at(end + offset);
+                self.words.clear_bits_at(start + offset, take);
+                self.words.write_word_at(start + offset, chunk, take);
                 offset += take;
             }
 
             // Truncate the word array to the new length, shrink if overallocated,
             // then mask the unused bits in the last word.
             let new_len = self.bit_len - removed_len;
-            let new_words = Bits::word_len(new_len);
+            let new_words = word_len(new_len);
             self.words.truncate(new_words);
             if self.words.capacity() > new_words * 2 {
                 self.words.shrink_to(new_words);
             }
-            Bits::mask_unused(&mut self.words, new_len);
+            self.words.mask_unused_bits(new_len);
             self.bit_len = new_len;
             return;
         }
 
         // Fallback: allocate fresh buffer and swap.
         let new_len = self.bit_len - removed_len;
-        let mut dst = Bits::zero_words(Bits::word_len(new_len));
-        Bits::copy(&self.words, 0, &mut dst, 0, clamped.start());
-        Bits::copy(
-            &self.words,
-            clamped.end_excl(),
-            &mut dst,
-            clamped.start(),
-            tail_len,
-        );
+        let mut dst = zero_words(word_len(new_len));
+        self.words.copy_bits_to(0, &mut dst, 0, clamped.start());
+        self.words
+            .copy_bits_to(clamped.end_excl(), &mut dst, clamped.start(), tail_len);
         self.words = dst;
         self.bit_len = new_len;
     }
@@ -148,36 +138,31 @@ impl BitString {
             let mut offset = 0usize;
             while offset < tail_len {
                 let take = WORD_BITS.min(tail_len - offset);
-                let chunk = Bits::read_a_word_at(&self.words, end + offset);
-                Bits::clear_bits(&mut self.words, start + offset, take);
-                Bits::write_a_word_at(&mut self.words, start + offset, chunk, take);
+                let chunk = self.words.read_word_at(end + offset);
+                self.words.clear_bits_at(start + offset, take);
+                self.words.write_word_at(start + offset, chunk, take);
                 offset += take;
             }
 
             // Truncate the word array to the new length, shrink if overallocated,
             // then mask the unused bits in the last word.
             let new_len = self.bit_len - removed_len;
-            let new_words = Bits::word_len(new_len);
+            let new_words = word_len(new_len);
             self.words.truncate(new_words);
             if self.words.capacity() > new_words * 2 {
                 self.words.shrink_to(new_words);
             }
-            Bits::mask_unused(&mut self.words, new_len);
+            self.words.mask_unused_bits(new_len);
             self.bit_len = new_len;
             return self;
         }
 
         // Fallback: allocate fresh buffer.
         let new_len = self.bit_len - removed_len;
-        let mut dst = Bits::zero_words(Bits::word_len(new_len));
-        Bits::copy(&self.words, 0, &mut dst, 0, clamped.start());
-        Bits::copy(
-            &self.words,
-            clamped.end_excl(),
-            &mut dst,
-            clamped.start(),
-            tail_len,
-        );
+        let mut dst = zero_words(word_len(new_len));
+        self.words.copy_bits_to(0, &mut dst, 0, clamped.start());
+        self.words
+            .copy_bits_to(clamped.end_excl(), &mut dst, clamped.start(), tail_len);
         BitString {
             words: dst,
             bit_len: new_len,

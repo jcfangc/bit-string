@@ -1,4 +1,4 @@
-use crate::bit_string::bits::Bits;
+use crate::bit_string::bits::*;
 
 use super::*;
 
@@ -17,7 +17,7 @@ impl BitString {
 
         self.bit_len = len;
 
-        let words = Bits::word_len(len);
+        let words = word_len(len);
         if words < self.words.len() {
             self.words.truncate(words);
             // Lazy shrink: only reclaim memory when capacity exceeds 2× needed.
@@ -26,7 +26,7 @@ impl BitString {
             }
         }
 
-        Bits::mask_unused(&mut self.words, len);
+        self.words.mask_unused_bits(len);
     }
 
     pub fn clear(&mut self) {

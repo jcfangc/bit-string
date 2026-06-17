@@ -1,4 +1,4 @@
-use crate::bit_string::bits::Bits;
+use crate::bit_string::bits::*;
 
 use super::*;
 
@@ -8,8 +8,8 @@ impl BitString {
             return None;
         }
 
-        let old = Bits::read_a_bit_at(&self.words, index);
-        Bits::set_a_bit_at(&mut self.words, index, value);
+        let old = self.words.read_bit_at(index);
+        self.words.set_bit_at(index, value);
         Some(old)
     }
 
@@ -20,7 +20,7 @@ impl BitString {
     /// masked out.
     #[inline]
     pub fn set_chunk(&mut self, bit_start: usize, value: u64, len: usize) {
-        let value = value & Bits::low_mask(len);
+        let value = value & low_mask(len);
         let word = bit_start / WORD_BITS;
         let shift = bit_start % WORD_BITS;
 

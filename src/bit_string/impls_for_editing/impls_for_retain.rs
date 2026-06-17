@@ -1,4 +1,4 @@
-use crate::bit_string::bits::Bits;
+use crate::bit_string::bits::*;
 
 use super::*;
 
@@ -10,10 +10,10 @@ impl BitString {
         let mut write = 0usize;
 
         for read in 0..self.bit_len {
-            let value = Bits::read_a_bit_at(&self.words, read);
+            let value = self.words.read_bit_at(read);
 
             if f(value) {
-                Bits::set_a_bit_at(&mut self.words, write, value);
+                self.words.set_bit_at(write, value);
                 write += 1;
             }
         }

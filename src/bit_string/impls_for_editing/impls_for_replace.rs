@@ -1,6 +1,6 @@
 use int_interval::UsizeCO;
 
-use crate::bit_string::bits::Bits;
+use crate::bit_string::bits::*;
 
 use super::*;
 
@@ -26,10 +26,10 @@ fn replace_interval_core(
         .and_then(|n| n.checked_add(tail_len))
         .expect("bit string length overflow");
 
-    let mut dst = Bits::zero_words(Bits::word_len(new_len));
-    Bits::copy(src, 0, &mut dst, 0, start);
-    Bits::copy(&replacement.words, 0, &mut dst, start, repl_len);
-    Bits::copy(src, end, &mut dst, start + repl_len, tail_len);
+    let mut dst = zero_words(word_len(new_len));
+    src.copy_bits_to(0, &mut dst, 0, start);
+    replacement.words.copy_bits_to(0, &mut dst, start, repl_len);
+    src.copy_bits_to(end, &mut dst, start + repl_len, tail_len);
 
     BitString {
         words: dst,
@@ -60,14 +60,10 @@ impl BitString {
         // Fast path: equal length — overwrite in-place.
         if replacement.bit_len == end - start {
             if replacement.bit_len > 0 {
-                Bits::clear_bits(&mut self.words, start, replacement.bit_len);
-                Bits::copy(
-                    &replacement.words,
-                    0,
-                    &mut self.words,
-                    start,
-                    replacement.bit_len,
-                );
+                self.words.clear_bits_at(start, replacement.bit_len);
+                replacement
+                    .words
+                    .copy_bits_to(0, &mut self.words, start, replacement.bit_len);
             }
             return;
         }
@@ -87,14 +83,10 @@ impl BitString {
         // Fast path: equal length — modify in-place, return self.
         if replacement.bit_len == end - start {
             if replacement.bit_len > 0 {
-                Bits::clear_bits(&mut self.words, start, replacement.bit_len);
-                Bits::copy(
-                    &replacement.words,
-                    0,
-                    &mut self.words,
-                    start,
-                    replacement.bit_len,
-                );
+                self.words.clear_bits_at(start, replacement.bit_len);
+                replacement
+                    .words
+                    .copy_bits_to(0, &mut self.words, start, replacement.bit_len);
             }
             return self;
         }

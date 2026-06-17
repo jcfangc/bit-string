@@ -1,4 +1,4 @@
-use crate::bit_string::bits::Bits;
+use crate::bit_string::bits::*;
 
 use super::*;
 
@@ -8,7 +8,7 @@ impl BitString {
             .bit_len
             .checked_add(1)
             .expect("bit string length overflow");
-        let new_words = Bits::word_len(new_len);
+        let new_words = word_len(new_len);
 
         // Vec::resize grows amortized O(1) — it only reallocates when
         // crossing a capacity boundary, using Vec's doubling strategy.
@@ -17,7 +17,7 @@ impl BitString {
         }
 
         if value {
-            Bits::set_a_bit_at(&mut self.words, self.bit_len, true);
+            self.words.set_bit_at(self.bit_len, true);
         }
 
         self.bit_len = new_len;
@@ -25,12 +25,12 @@ impl BitString {
 
     pub fn pop(&mut self) -> Option<bool> {
         let index = self.bit_len.checked_sub(1)?;
-        let value = Bits::read_a_bit_at(&self.words, index);
+        let value = self.words.read_bit_at(index);
 
-        Bits::set_a_bit_at(&mut self.words, index, false);
+        self.words.set_bit_at(index, false);
         self.bit_len = index;
 
-        let words = Bits::word_len(self.bit_len);
+        let words = word_len(self.bit_len);
         if words < self.words.len() {
             self.words.truncate(words);
             // Lazy shrink: only reclaim memory when capacity exceeds 2× needed.
@@ -38,7 +38,7 @@ impl BitString {
                 self.words.shrink_to(words);
             }
         } else {
-            Bits::mask_unused(&mut self.words, self.bit_len);
+            self.words.mask_unused_bits(self.bit_len);
         }
 
         Some(value)

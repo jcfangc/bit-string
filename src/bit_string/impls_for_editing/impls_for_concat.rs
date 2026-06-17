@@ -1,4 +1,4 @@
-use crate::bit_string::bits::Bits;
+use crate::bit_string::bits::*;
 
 use super::*;
 
@@ -18,22 +18,23 @@ impl BitString {
         let new_len = old_len
             .checked_add(rhs.bit_len)
             .expect("bit string length overflow");
-        let new_words = Bits::word_len(new_len);
+        let new_words = word_len(new_len);
 
         // In-place fast path: grow into existing spare capacity.
         if self.words.capacity() >= new_words {
             self.words.resize(new_words, 0);
-            Bits::copy(&rhs.words, 0, &mut self.words, old_len, rhs.bit_len);
+            rhs.words
+                .copy_bits_to(0, &mut self.words, old_len, rhs.bit_len);
             self.bit_len = new_len;
-            Bits::mask_unused(&mut self.words, self.bit_len);
+            self.words.mask_unused_bits(self.bit_len);
             return;
         }
 
         // Slow path: reallocate.
-        let mut bits = Bits::zero_words(new_words);
+        let mut bits = zero_words(new_words);
 
-        Bits::copy(&self.words, 0, &mut bits, 0, self.bit_len);
-        Bits::copy(&rhs.words, 0, &mut bits, old_len, rhs.bit_len);
+        self.words.copy_bits_to(0, &mut bits, 0, self.bit_len);
+        rhs.words.copy_bits_to(0, &mut bits, old_len, rhs.bit_len);
 
         self.words = bits;
         self.bit_len = new_len;
@@ -61,17 +62,12 @@ impl BitString {
             .checked_add(rhs.bit_len)
             .expect("bit string length overflow");
 
-        let mut bits = Bits::zero_words(Bits::word_len(new_len));
+        let mut bits = zero_words(word_len(new_len));
 
-        Bits::copy(&self.words, 0, &mut bits, 0, index);
-        Bits::copy(&rhs.words, 0, &mut bits, index, rhs.bit_len);
-        Bits::copy(
-            &self.words,
-            index,
-            &mut bits,
-            index + rhs.bit_len,
-            self.bit_len - index,
-        );
+        self.words.copy_bits_to(0, &mut bits, 0, index);
+        rhs.words.copy_bits_to(0, &mut bits, index, rhs.bit_len);
+        self.words
+            .copy_bits_to(index, &mut bits, index + rhs.bit_len, self.bit_len - index);
 
         self.words = bits;
         self.bit_len = new_len;
@@ -86,9 +82,9 @@ impl BitString {
         );
 
         let rhs_len = self.bit_len - at;
-        let mut rhs_bits = Bits::zero_words(Bits::word_len(rhs_len));
+        let mut rhs_bits = zero_words(word_len(rhs_len));
 
-        Bits::copy(&self.words, at, &mut rhs_bits, 0, rhs_len);
+        self.words.copy_bits_to(at, &mut rhs_bits, 0, rhs_len);
         self.truncate(at);
 
         Self {

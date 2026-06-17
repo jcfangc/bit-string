@@ -1,8 +1,8 @@
-use super::Bits;
+use super::*;
 
 #[test]
 fn returns_empty_box_for_zero_words() {
-    let bits = Bits::zero_words(0);
+    let bits = zero_words(0);
 
     assert!(bits.is_empty());
 }
@@ -12,7 +12,7 @@ fn returns_requested_number_of_words() {
     let cases = [1, 2, 7, 64, 65];
 
     for words in cases {
-        let bits = Bits::zero_words(words);
+        let bits = zero_words(words);
 
         assert_eq!(bits.len(), words, "words={words}");
     }
@@ -23,7 +23,7 @@ fn initializes_all_words_to_zero() {
     let cases = [1, 2, 7, 64, 65];
 
     for words in cases {
-        let bits = Bits::zero_words(words);
+        let bits = zero_words(words);
 
         assert!(
             bits.iter().all(|&word| word == 0),

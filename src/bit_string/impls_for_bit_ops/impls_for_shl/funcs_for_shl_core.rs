@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 
 use crate::WORD_BITS;
 
-use crate::bit_string::bits::Bits;
+use crate::bit_string::bits::*;
 
 #[inline]
 pub(super) fn owned(src: &[u64], bit_len: usize, amount: usize) -> Vec<u64> {
@@ -20,7 +20,7 @@ pub(super) fn owned(src: &[u64], bit_len: usize, amount: usize) -> Vec<u64> {
         out.set_len(word_len);
     }
 
-    Bits::mask_unused(&mut out, bit_len);
+    out.mask_unused_bits(bit_len);
     out
 }
 
@@ -39,7 +39,7 @@ pub(super) fn assign(bits: &mut [u64], bit_len: usize, amount: usize) {
         dispatch(ptr, ptr.cast_const(), word_len, amount);
     }
 
-    Bits::mask_unused(bits, bit_len);
+    bits.mask_unused_bits(bit_len);
 }
 
 /// Writes `src << amount` into `dst`.

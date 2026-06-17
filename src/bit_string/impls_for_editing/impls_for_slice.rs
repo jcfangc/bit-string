@@ -1,18 +1,18 @@
 use int_interval::UsizeCO;
 
-use crate::bit_string::bits::Bits;
+use crate::bit_string::bits::*;
 
 use super::*;
 
 impl BitString {
     pub fn slice(&self, interval: UsizeCO) -> Self {
-        Bits::assert_interval_in_bounds(interval, self.bit_len);
+        assert_interval_in_bounds(interval, self.bit_len);
 
         let start = interval.start();
         let len = interval.len();
 
-        let mut bits = Bits::zero_words(Bits::word_len(len));
-        Bits::copy(&self.words, start, &mut bits, 0, len);
+        let mut bits = zero_words(word_len(len));
+        self.words.copy_bits_to(start, &mut bits, 0, len);
 
         Self {
             words: bits,

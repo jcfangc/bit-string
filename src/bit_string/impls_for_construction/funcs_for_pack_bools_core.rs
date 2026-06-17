@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::bit_string::bits::Bits;
+use crate::bit_string::bits::*;
 
 /// Pack `bit_len` LSBs from `src` into a `Vec<u64>`.
 ///
@@ -9,7 +9,7 @@ use crate::bit_string::bits::Bits;
 /// of word `i / 64`.
 #[inline]
 pub(super) fn bools_core(src: *const u8, bit_len: usize) -> Vec<u64> {
-    let word_len = Bits::word_len(bit_len);
+    let word_len = word_len(bit_len);
     let mut out = Vec::<u64>::with_capacity(word_len);
 
     // SAFETY:
@@ -21,7 +21,7 @@ pub(super) fn bools_core(src: *const u8, bit_len: usize) -> Vec<u64> {
         out.set_len(word_len);
     }
 
-    Bits::mask_unused(&mut out, bit_len);
+    out.mask_unused_bits(bit_len);
     out
 }
 

@@ -1,41 +1,41 @@
-use super::Bits;
+use super::*;
 use crate::WORD_BITS;
 
 #[test]
 fn reads_low_bits_within_first_word() {
     let bits = [0b1010u64];
 
-    assert!(!Bits::read_a_bit_at(&bits, 0));
-    assert!(Bits::read_a_bit_at(&bits, 1));
-    assert!(!Bits::read_a_bit_at(&bits, 2));
-    assert!(Bits::read_a_bit_at(&bits, 3));
+    assert!(!bits.read_bit_at(0));
+    assert!(bits.read_bit_at(1));
+    assert!(!bits.read_bit_at(2));
+    assert!(bits.read_bit_at(3));
 }
 
 #[test]
 fn reads_high_bits_within_first_word() {
     let bits = [1u64 << (WORD_BITS - 1)];
 
-    assert!(!Bits::read_a_bit_at(&bits, WORD_BITS - 2));
-    assert!(Bits::read_a_bit_at(&bits, WORD_BITS - 1));
+    assert!(!bits.read_bit_at(WORD_BITS - 2));
+    assert!(bits.read_bit_at(WORD_BITS - 1));
 }
 
 #[test]
 fn reads_bits_across_word_boundary() {
     let bits = [1u64 << (WORD_BITS - 1), 0b101u64];
 
-    assert!(Bits::read_a_bit_at(&bits, WORD_BITS - 1));
-    assert!(Bits::read_a_bit_at(&bits, WORD_BITS));
-    assert!(!Bits::read_a_bit_at(&bits, WORD_BITS + 1));
-    assert!(Bits::read_a_bit_at(&bits, WORD_BITS + 2));
+    assert!(bits.read_bit_at(WORD_BITS - 1));
+    assert!(bits.read_bit_at(WORD_BITS));
+    assert!(!bits.read_bit_at(WORD_BITS + 1));
+    assert!(bits.read_bit_at(WORD_BITS + 2));
 }
 
 #[test]
 fn reads_from_later_words() {
     let bits = [0, 0, 1u64 << 7];
 
-    assert!(!Bits::read_a_bit_at(&bits, WORD_BITS * 2 + 6));
-    assert!(Bits::read_a_bit_at(&bits, WORD_BITS * 2 + 7));
-    assert!(!Bits::read_a_bit_at(&bits, WORD_BITS * 2 + 8));
+    assert!(!bits.read_bit_at(WORD_BITS * 2 + 6));
+    assert!(bits.read_bit_at(WORD_BITS * 2 + 7));
+    assert!(!bits.read_bit_at(WORD_BITS * 2 + 8));
 }
 
 #[test]
@@ -53,6 +53,6 @@ fn works_for_sparse_endpoint_cases() {
     ];
 
     for (index, expected) in cases {
-        assert_eq!(Bits::read_a_bit_at(&bits, index), expected, "index={index}");
+        assert_eq!(bits.read_bit_at(index), expected, "index={index}");
     }
 }
