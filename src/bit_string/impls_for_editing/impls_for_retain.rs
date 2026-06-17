@@ -10,10 +10,10 @@ impl BitString {
         let mut write = 0usize;
 
         for read in 0..self.bit_len {
-            let value = Bits::bit_at(&self.words, read);
+            let value = Bits::read_a_bit_at(&self.words, read);
 
             if f(value) {
-                Bits::set_bit(&mut self.words, write, value);
+                Bits::set_a_bit_at(&mut self.words, write, value);
                 write += 1;
             }
         }

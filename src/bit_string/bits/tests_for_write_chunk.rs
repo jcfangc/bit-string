@@ -5,7 +5,7 @@ use crate::WORD_BITS;
 fn writes_aligned_chunk_into_single_word() {
     let mut dst = [0u64; 2];
 
-    Bits::write_chunk(&mut dst, 0, 0b1011, 4);
+    Bits::write_a_word_at(&mut dst, 0, 0b1011, 4);
 
     assert_eq!(dst[0], 0b1011);
     assert_eq!(dst[1], 0);
@@ -15,7 +15,7 @@ fn writes_aligned_chunk_into_single_word() {
 fn masks_value_to_requested_len() {
     let mut dst = [0u64; 1];
 
-    Bits::write_chunk(&mut dst, 4, u64::MAX, 3);
+    Bits::write_a_word_at(&mut dst, 4, u64::MAX, 3);
 
     assert_eq!(dst[0], 0b111 << 4);
 }
@@ -24,7 +24,7 @@ fn masks_value_to_requested_len() {
 fn writes_unaligned_chunk_inside_single_word() {
     let mut dst = [0u64; 1];
 
-    Bits::write_chunk(&mut dst, 5, 0b10101, 5);
+    Bits::write_a_word_at(&mut dst, 5, 0b10101, 5);
 
     assert_eq!(dst[0], 0b10101 << 5);
 }
@@ -33,7 +33,7 @@ fn writes_unaligned_chunk_inside_single_word() {
 fn writes_chunk_across_word_boundary() {
     let mut dst = [0u64; 2];
 
-    Bits::write_chunk(&mut dst, WORD_BITS - 2, 0b1011, 4);
+    Bits::write_a_word_at(&mut dst, WORD_BITS - 2, 0b1011, 4);
 
     assert_eq!(dst[0], 0b11u64 << (WORD_BITS - 2));
     assert_eq!(dst[1], 0b10);
@@ -43,7 +43,7 @@ fn writes_chunk_across_word_boundary() {
 fn does_not_write_past_dst_when_crossing_boundary_without_next_word() {
     let mut dst = [0u64; 1];
 
-    Bits::write_chunk(&mut dst, WORD_BITS - 2, 0b1011, 4);
+    Bits::write_a_word_at(&mut dst, WORD_BITS - 2, 0b1011, 4);
 
     assert_eq!(dst[0], 0b11u64 << (WORD_BITS - 2));
 }
@@ -52,7 +52,7 @@ fn does_not_write_past_dst_when_crossing_boundary_without_next_word() {
 fn ors_into_existing_bits_instead_of_overwriting() {
     let mut dst = [0b1000u64];
 
-    Bits::write_chunk(&mut dst, 0, 0b0011, 2);
+    Bits::write_a_word_at(&mut dst, 0, 0b0011, 2);
 
     assert_eq!(dst[0], 0b1011);
 }
@@ -61,7 +61,7 @@ fn ors_into_existing_bits_instead_of_overwriting() {
 fn zero_len_writes_nothing() {
     let mut dst = [0b1010u64];
 
-    Bits::write_chunk(&mut dst, 1, u64::MAX, 0);
+    Bits::write_a_word_at(&mut dst, 1, u64::MAX, 0);
 
     assert_eq!(dst[0], 0b1010);
 }
@@ -70,7 +70,7 @@ fn zero_len_writes_nothing() {
 fn full_word_len_preserves_all_value_bits() {
     let mut dst = [0u64; 1];
 
-    Bits::write_chunk(&mut dst, 0, u64::MAX, WORD_BITS);
+    Bits::write_a_word_at(&mut dst, 0, u64::MAX, WORD_BITS);
 
     assert_eq!(dst[0], u64::MAX);
 }

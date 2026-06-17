@@ -144,10 +144,69 @@ fn assign_removed_and_remaining_are_independent() {
 }
 
 #[test]
-#[should_panic(expected = "bit string interval out of bounds")]
-fn assign_panics_when_interval_end_exceeds_len() {
+fn assign_clamps_interval_end_to_len() {
     let mut bits = BitString::try_from("101").unwrap();
+    // interval [1, 4) clamps to [1, 3)
     bits.drain_interval_assign(iv(1, 4));
+    assert_eq!(bits.to_string(), "1");
+    assert_eq!(bits.bit_len(), 1);
+}
+
+#[test]
+fn assign_clamps_interval_start_to_len() {
+    let mut bits = BitString::try_from("101").unwrap();
+    // interval [5, 10) clamps to [3, 3) — empty, no-op
+    bits.drain_interval_assign(iv(5, 10));
+    assert_eq!(bits.to_string(), "101");
+    assert_eq!(bits.bit_len(), 3);
+}
+
+#[test]
+fn borrowing_clamps_interval_to_bounds() {
+    let bits = BitString::try_from("101001").unwrap();
+    // interval [2, 10) clamps to [2, 6)
+    let result = bits.drain_interval(iv(2, 10));
+    assert_eq!(bits.to_string(), "101001"); // original unchanged
+    assert_eq!(result.to_string(), "10");
+    assert_eq!(result.bit_len(), 2);
+}
+
+#[test]
+fn borrowing_clamps_empty_for_out_of_bounds_interval() {
+    let bits = BitString::try_from("101").unwrap();
+    // interval [4, 7) clamps to [3, 3) — empty
+    let result = bits.drain_interval(iv(4, 7));
+    assert_eq!(result.to_string(), "101");
+    assert_eq!(result.bit_len(), 3);
+    // Should be a clone, not the same allocation
+    assert_eq!(bits.to_string(), "101");
+}
+
+#[test]
+fn into_clamps_interval_and_reuses_self() {
+    let bits = BitString::try_from("110011").unwrap();
+    // interval [1, 8) clamps to [1, 6)
+    let result = bits.drain_interval_into(iv(1, 8));
+    assert_eq!(result.to_string(), "1");
+    assert_eq!(result.bit_len(), 1);
+}
+
+#[test]
+fn into_clamps_to_empty_returns_self() {
+    let bits = BitString::try_from("101").unwrap();
+    // interval [10, 20) clamps to [3, 3) — empty
+    let result = bits.drain_interval_into(iv(10, 20));
+    assert_eq!(result.to_string(), "101");
+    assert_eq!(result.bit_len(), 3);
+}
+
+#[test]
+fn assign_clamps_end_beyond_len_partial_overlap() {
+    let mut bits = BitString::try_from("110011").unwrap();
+    // interval [3, 10) clamps to [3, 6)
+    bits.drain_interval_assign(iv(3, 10));
+    assert_eq!(bits.to_string(), "110");
+    assert_eq!(bits.bit_len(), 3);
 }
 
 // ---------------------------------------------------------------------------

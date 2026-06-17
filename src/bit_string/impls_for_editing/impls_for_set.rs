@@ -8,8 +8,8 @@ impl BitString {
             return None;
         }
 
-        let old = Bits::bit_at(&self.words, index);
-        Bits::set_bit(&mut self.words, index, value);
+        let old = Bits::read_a_bit_at(&self.words, index);
+        Bits::set_a_bit_at(&mut self.words, index, value);
         Some(old)
     }
 

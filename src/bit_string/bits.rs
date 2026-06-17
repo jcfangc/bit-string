@@ -42,12 +42,12 @@ impl Bits {
     }
 
     #[inline]
-    pub(crate) fn bit_at(bits: &[u64], index: usize) -> bool {
+    pub(crate) fn read_a_bit_at(bits: &[u64], index: usize) -> bool {
         bits[index / WORD_BITS] & (1u64 << (index % WORD_BITS)) != 0
     }
 
     #[inline]
-    pub(crate) fn set_bit(bits: &mut [u64], index: usize, value: bool) {
+    pub(crate) fn set_a_bit_at(bits: &mut [u64], index: usize, value: bool) {
         let word = index / WORD_BITS;
         let mask = 1u64 << (index % WORD_BITS);
 
@@ -68,7 +68,7 @@ impl Bits {
     }
 
     #[inline]
-    pub(crate) fn read_chunk(src: &[u64], bit_start: usize) -> u64 {
+    pub(crate) fn read_a_word_at(src: &[u64], bit_start: usize) -> u64 {
         let word = bit_start / WORD_BITS;
         let shift = bit_start % WORD_BITS;
 
@@ -83,7 +83,7 @@ impl Bits {
     }
 
     #[inline]
-    pub(crate) fn write_chunk(dst: &mut [u64], bit_start: usize, value: u64, len: usize) {
+    pub(crate) fn write_a_word_at(dst: &mut [u64], bit_start: usize, value: u64, len: usize) {
         let value = value & Self::low_mask(len);
         let word = bit_start / WORD_BITS;
         let shift = bit_start % WORD_BITS;
@@ -124,8 +124,8 @@ impl Bits {
             let remainder_bits = len % WORD_BITS;
             if remainder_bits > 0 {
                 let offset = full_words * WORD_BITS;
-                let chunk = Self::read_chunk(src, src_start + offset);
-                Self::write_chunk(dst, dst_start + offset, chunk, remainder_bits);
+                let chunk = Self::read_a_word_at(src, src_start + offset);
+                Self::write_a_word_at(dst, dst_start + offset, chunk, remainder_bits);
             }
 
             return;
@@ -136,8 +136,8 @@ impl Bits {
 
         while done < len {
             let take = (len - done).min(WORD_BITS);
-            let chunk = Self::read_chunk(src, src_start + done);
-            Self::write_chunk(dst, dst_start + done, chunk, take);
+            let chunk = Self::read_a_word_at(src, src_start + done);
+            Self::write_a_word_at(dst, dst_start + done, chunk, take);
             done += take;
         }
     }

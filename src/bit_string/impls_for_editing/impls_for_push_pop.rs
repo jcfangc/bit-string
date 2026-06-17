@@ -17,7 +17,7 @@ impl BitString {
         }
 
         if value {
-            Bits::set_bit(&mut self.words, self.bit_len, true);
+            Bits::set_a_bit_at(&mut self.words, self.bit_len, true);
         }
 
         self.bit_len = new_len;
@@ -25,9 +25,9 @@ impl BitString {
 
     pub fn pop(&mut self) -> Option<bool> {
         let index = self.bit_len.checked_sub(1)?;
-        let value = Bits::bit_at(&self.words, index);
+        let value = Bits::read_a_bit_at(&self.words, index);
 
-        Bits::set_bit(&mut self.words, index, false);
+        Bits::set_a_bit_at(&mut self.words, index, false);
         self.bit_len = index;
 
         let words = Bits::word_len(self.bit_len);

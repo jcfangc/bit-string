@@ -27,7 +27,7 @@ impl BitString {
             // Ensure the last word is present (Vec::len == new_words already).
             self.words.resize(new_words, 0);
             Bits::shift_right_in_place(&mut self.words, index, self.bit_len - index);
-            Bits::set_bit(&mut self.words, index, value);
+            Bits::set_a_bit_at(&mut self.words, index, value);
             self.bit_len = new_len;
             return;
         }
@@ -36,7 +36,7 @@ impl BitString {
         let mut bits = Bits::zero_words(new_words);
 
         Bits::copy(&self.words, 0, &mut bits, 0, index);
-        Bits::set_bit(&mut bits, index, value);
+        Bits::set_a_bit_at(&mut bits, index, value);
         Bits::copy(
             &self.words,
             index,
@@ -57,7 +57,7 @@ impl BitString {
             self.bit_len
         );
 
-        let value = Bits::bit_at(&self.words, index);
+        let value = Bits::read_a_bit_at(&self.words, index);
         let new_len = self.bit_len - 1;
         let new_words = Bits::word_len(new_len);
 
