@@ -13,6 +13,7 @@ exclude = ["/benches"]
 
 [dependencies]
 int-interval = "0.9.6"
+witnessed = "0.8.0"
 
 [lib]
 doctest = false

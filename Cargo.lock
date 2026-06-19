@@ -45,6 +45,7 @@ dependencies = [
  "bitvec_simd",
  "codspeed-divan-compat",
  "int-interval",
+ "witnessed",
 ]
 
 [[package]]
@@ -652,6 +653,12 @@ checksum = "0592e1c9d151f854e6fd382574c3a0855250e1d9b2f99d9281c6e6391af352f1"
 dependencies = [
  "memchr",
 ]
+
+[[package]]
+name = "witnessed"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60dfef5521792043abeb0b4328f39f4f17652a512d634e02bd9374ad214ec5c5"
 
 [[package]]
 name = "zmij"

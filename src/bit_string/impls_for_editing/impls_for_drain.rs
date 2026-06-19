@@ -1,8 +1,18 @@
 use int_interval::UsizeCO;
+use witnessed::{WitnessExt, Witnessed};
 
 use crate::bit_string::bits::*;
 
 use super::*;
+
+// ---------------------------------------------------------------------------
+// Witness type
+// ---------------------------------------------------------------------------
+
+/// Witness: the clamped interval qualifies for word-level in-place shifting.
+/// Specifically, `clamped.len() >= WORD_BITS` (avoiding word-internal aliasing)
+/// and `clamped.end_excl() < bit_len` (non-empty tail after the gap).
+struct Shiftable;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,12 +47,11 @@ impl BitString {
 
     /// In-place shift-left of the tail after removing `clamped`.
     ///
-    /// Precondition: `clamped.len() >= WORD_BITS` and the tail is non-empty
-    /// (gap between src and dst ≥ 1 word, so read/write never alias within
-    /// the same u64).
-    fn drain_shift_in_place(&mut self, clamped: UsizeCO) {
-        debug_assert!(clamped.len() >= WORD_BITS);
-
+    /// `clamped` carries a [`Shiftable`] witness proving that the gap is at
+    /// least one word and the tail is non-empty, so read and write operations
+    /// never alias within the same `u64`.
+    fn drain_shift_in_place(&mut self, clamped: Witnessed<UsizeCO, Shiftable>) {
+        let clamped = clamped.into_inner();
         let end = clamped.end_excl();
         let start = clamped.start();
         let tail_len = self.bit_len - end;
@@ -64,6 +73,20 @@ impl BitString {
         }
         self.words.mask_unused_bits(new_len);
         self.bit_len = new_len;
+    }
+
+    /// Try to witness that `clamped` qualifies for word-level in-place
+    /// shifting, returning a [`Witnessed`] interval on success.
+    #[inline]
+    fn try_witness_shiftable(&self, clamped: UsizeCO) -> Result<Witnessed<UsizeCO, Shiftable>, ()> {
+        let bit_len = self.bit_len;
+        clamped.witness().by(|c| {
+            if c.len() >= WORD_BITS && c.end_excl() < bit_len {
+                Ok(Shiftable)
+            } else {
+                Err(())
+            }
+        })
     }
 }
 
@@ -96,10 +119,12 @@ impl BitString {
         let Some(clamped) = self.clamp_drain_interval(interval) else {
             return;
         };
-        if clamped.len() >= WORD_BITS && clamped.end_excl() < self.bit_len {
-            self.drain_shift_in_place(clamped);
+
+        if let Ok(witnessed) = self.try_witness_shiftable(clamped) {
+            self.drain_shift_in_place(witnessed);
             return;
         }
+
         let (words, bit_len) = self.drain_allocate(clamped);
         self.words = words;
         self.bit_len = bit_len;
@@ -115,10 +140,12 @@ impl BitString {
         let Some(clamped) = self.clamp_drain_interval(interval) else {
             return self;
         };
-        if clamped.len() >= WORD_BITS && clamped.end_excl() < self.bit_len {
-            self.drain_shift_in_place(clamped);
+
+        if let Ok(witnessed) = self.try_witness_shiftable(clamped) {
+            self.drain_shift_in_place(witnessed);
             return self;
         }
+
         let (words, bit_len) = self.drain_allocate(clamped);
         BitString { words, bit_len }
     }

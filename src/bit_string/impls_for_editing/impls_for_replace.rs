@@ -1,8 +1,17 @@
 use int_interval::UsizeCO;
+use witnessed::{WitnessExt, Witnessed};
 
 use crate::bit_string::bits::*;
 
 use super::*;
+
+// ---------------------------------------------------------------------------
+// Witness type
+// ---------------------------------------------------------------------------
+
+/// Witness: the replacement bit-length equals the clamped interval length,
+/// so the replace operation is length-preserving.
+struct EqualLen;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -20,9 +29,6 @@ impl BitString {
 
     /// Allocate a new buffer with the pre-clamped interval replaced by
     /// `replacement`.
-    ///
-    /// `start` and `end` must be pre-clamped via
-    /// [`clamp_replace_interval`](Self::clamp_replace_interval).
     #[inline]
     fn replace_allocate(&self, start: usize, end: usize, replacement: &Self) -> BitString {
         let repl_len = replacement.bit_len;
@@ -48,14 +54,18 @@ impl BitString {
         }
     }
 
-    /// In-place overwrite: clear `start..start+replacement.bit_len()` then copy
-    /// `replacement` into the cleared region.
+    /// In-place overwrite.
     ///
-    /// Caller guarantees `replacement.bit_len() == (end - start)` — i.e. the
-    /// replacement length equals the clamped interval length, so the bit string
-    /// length does not change.
+    /// `start` carries an [`EqualLen`] witness proving that
+    /// `replacement.bit_len() == end - start`, so the bit string length does
+    /// not change.
     #[inline]
-    fn replace_equal_length_in_place(&mut self, start: usize, replacement: &Self) {
+    fn replace_equal_length_in_place(
+        &mut self,
+        start: Witnessed<usize, EqualLen>,
+        replacement: &Self,
+    ) {
+        let start = start.into_inner();
         let repl_len = replacement.bit_len;
         if repl_len == 0 {
             return;
@@ -65,6 +75,23 @@ impl BitString {
             .words
             .copy_bits(0, repl_len)
             .paste_to(&mut self.words, start);
+    }
+
+    /// Try to witness that `replacement.bit_len() == end - start`, returning a
+    /// [`Witnessed`] start position if the lengths match.
+    #[inline]
+    fn try_witness_equal_len(
+        start: usize,
+        end: usize,
+        replacement: &Self,
+    ) -> Result<Witnessed<usize, EqualLen>, ()> {
+        start.witness().by(|&s| {
+            if replacement.bit_len == end - s {
+                Ok(EqualLen)
+            } else {
+                Err(())
+            }
+        })
     }
 
     /// Compute the clamped `(start, end)` range for the
@@ -98,8 +125,8 @@ impl BitString {
     pub fn replace_interval_assign(&mut self, interval: UsizeCO, replacement: &Self) {
         let (start, end) = self.clamp_replace_interval(interval);
 
-        if replacement.bit_len == end - start {
-            self.replace_equal_length_in_place(start, replacement);
+        if let Ok(witnessed_start) = Self::try_witness_equal_len(start, end, replacement) {
+            self.replace_equal_length_in_place(witnessed_start, replacement);
             return;
         }
 
@@ -114,8 +141,8 @@ impl BitString {
     pub fn replace_interval_into(mut self, interval: UsizeCO, replacement: &Self) -> Self {
         let (start, end) = self.clamp_replace_interval(interval);
 
-        if replacement.bit_len == end - start {
-            self.replace_equal_length_in_place(start, replacement);
+        if let Ok(witnessed_start) = Self::try_witness_equal_len(start, end, replacement) {
+            self.replace_equal_length_in_place(witnessed_start, replacement);
             return self;
         }
 
