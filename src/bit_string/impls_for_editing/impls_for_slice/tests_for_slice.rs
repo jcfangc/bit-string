@@ -101,9 +101,11 @@ fn slices_single_bit_interval() {
 }
 
 #[test]
-#[should_panic(expected = "bit string interval out of bounds")]
-fn panics_when_interval_end_exceeds_len() {
+fn clamps_interval_when_end_exceeds_len() {
     let bits = BitString::try_from("101").unwrap();
 
-    bits.slice(iv(1, 4));
+    let sliced = bits.slice(iv(1, 4));
+
+    assert_eq!(sliced.bit_len(), 2);
+    assert_eq!(sliced.to_string(), "01");
 }
