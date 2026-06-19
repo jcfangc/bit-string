@@ -70,9 +70,11 @@ fn truncate_preserves_prefix_only() {
 }
 
 #[test]
-#[should_panic(expected = "cannot truncate bit string")]
-fn panics_when_truncating_to_larger_len() {
+fn noops_when_truncating_to_larger_len() {
     let mut bits = BitString::try_from("101").unwrap();
 
     bits.truncate(4);
+
+    assert_eq!(bits.bit_len(), 3);
+    assert_eq!(bits.to_string(), "101");
 }

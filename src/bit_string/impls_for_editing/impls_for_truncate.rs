@@ -4,12 +4,7 @@ use super::*;
 
 impl BitString {
     pub fn truncate(&mut self, len: usize) {
-        assert!(
-            len <= self.bit_len,
-            "cannot truncate bit string from len {} to larger len {}",
-            self.bit_len,
-            len
-        );
+        let len = len.min(self.bit_len);
 
         if len == self.bit_len {
             return;
