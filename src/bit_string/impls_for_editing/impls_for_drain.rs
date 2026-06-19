@@ -67,10 +67,7 @@ impl BitString {
 
         let new_len = self.bit_len - clamped.len();
         let new_words = word_len(new_len);
-        self.words.truncate(new_words);
-        if self.words.capacity() > new_words * 2 {
-            self.words.shrink_to(new_words);
-        }
+        self.truncate_words(new_words);
         self.words.mask_unused_bits(new_len);
         self.bit_len = new_len;
     }

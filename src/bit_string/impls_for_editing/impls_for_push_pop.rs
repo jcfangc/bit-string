@@ -32,11 +32,7 @@ impl BitString {
 
         let words = word_len(self.bit_len);
         if words < self.words.len() {
-            self.words.truncate(words);
-            // Lazy shrink: only reclaim memory when capacity exceeds 2× needed.
-            if self.words.capacity() > words * 2 {
-                self.words.shrink_to(words);
-            }
+            self.truncate_words(words);
         } else {
             self.words.mask_unused_bits(self.bit_len);
         }
