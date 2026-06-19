@@ -3,6 +3,11 @@ use crate::bit_string::bits::*;
 use super::*;
 
 impl BitString {
+    /// Appends the bits of `rhs` to `self`.
+    ///
+    /// When `self` has spare capacity the operation is performed in-place
+    /// without allocation.
+    #[inline]
     pub fn push_bit_string(&mut self, rhs: &Self) {
         if rhs.bit_len == 0 {
             return;
@@ -43,6 +48,13 @@ impl BitString {
         self.bit_len = new_len;
     }
 
+    /// Inserts the bits of `rhs` at `index`, shifting the tail right.
+    ///
+    /// `index` is clamped to `[0, self.bit_len()]` — an out-of-bounds index
+    /// inserts at the end (equivalent to [`push_bit_string`](Self::push_bit_string)).
+    ///
+    /// When spare capacity is available and `rhs.bit_len() >= 64`, the tail is
+    /// shifted in-place without allocation.
     pub fn insert_bit_string(&mut self, index: usize, rhs: &Self) {
         let index = index.min(self.bit_len);
 
@@ -106,6 +118,11 @@ impl BitString {
         self.bit_len = new_len;
     }
 
+    /// Splits `self` at `at`, returning the tail as a new [`BitString`].
+    ///
+    /// `at` is clamped to `[0, self.bit_len()]` — an out-of-bounds index
+    /// returns an empty bit string and leaves `self` unchanged.
+    #[inline]
     pub fn split_off(&mut self, at: usize) -> Self {
         let at = at.min(self.bit_len);
 

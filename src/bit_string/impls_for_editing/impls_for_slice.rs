@@ -5,6 +5,14 @@ use crate::bit_string::bits::*;
 use super::*;
 
 impl BitString {
+    /// Returns a new [`BitString`] containing the bits in `interval`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `interval` is not fully within `[0, self.bit_len()]`.
+    /// For a panics-free variant, use [`drain_interval`](Self::drain_interval)
+    /// which clamps the interval.
+    #[inline]
     pub fn slice(&self, interval: UsizeCO) -> Self {
         assert_interval_in_bounds(interval, self.bit_len);
 
@@ -20,6 +28,12 @@ impl BitString {
         }
     }
 
+    /// Returns a new [`BitString`] containing bits from `start` to the end.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `start > self.bit_len()`.
+    #[inline]
     pub fn slice_from(&self, start: usize) -> Self {
         assert!(
             start <= self.bit_len,
@@ -38,6 +52,12 @@ impl BitString {
         self.slice(interval)
     }
 
+    /// Returns a new [`BitString`] containing bits from the start to `end`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `end > self.bit_len()`.
+    #[inline]
     pub fn slice_until(&self, end: usize) -> Self {
         assert!(
             end <= self.bit_len,

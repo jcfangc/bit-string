@@ -3,6 +3,12 @@ use crate::bit_string::bits::*;
 use super::*;
 
 impl BitString {
+    /// Retains only the bits for which `f(bit)` returns `true`.
+    ///
+    /// Bits are processed in order and written back contiguously, preserving
+    /// the relative order of retained bits.  Operates bit-by-bit.
+    ///
+    /// `f` may be [`FnMut`] — the predicate is allowed to carry mutable state.
     pub fn retain<F>(&mut self, mut f: F)
     where
         F: FnMut(bool) -> bool,

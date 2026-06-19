@@ -3,6 +3,9 @@ use crate::bit_string::bits::*;
 use super::*;
 
 impl BitString {
+    /// Sets the bit at `index` to `value`, returning the previous bit.
+    ///
+    /// Returns `None` (without modifying `self`) when `index >= self.bit_len()`.
     pub fn set(&mut self, index: usize, value: bool) -> Option<bool> {
         if index >= self.bit_len {
             return None;

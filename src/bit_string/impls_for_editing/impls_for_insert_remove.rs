@@ -3,6 +3,10 @@ use crate::bit_string::bits::*;
 use super::*;
 
 impl BitString {
+    /// Inserts a single bit at `index`, shifting the tail right.
+    ///
+    /// `index` is clamped to `[0, self.bit_len()]` — an out-of-bounds index
+    /// pushes at the end.
     pub fn insert(&mut self, index: usize, value: bool) {
         let index = index.min(self.bit_len);
 
@@ -40,6 +44,9 @@ impl BitString {
         self.bit_len = new_len;
     }
 
+    /// Removes the bit at `index`, shifting the tail left.
+    ///
+    /// Returns `false` (without modifying `self`) when `index >= self.bit_len()`.
     pub fn remove(&mut self, index: usize) -> bool {
         if index >= self.bit_len {
             return false;

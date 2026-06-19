@@ -3,6 +3,10 @@ use crate::bit_string::bits::*;
 use super::*;
 
 impl BitString {
+    /// Truncates `self` to `len` bits, discarding the tail.
+    ///
+    /// `len` is clamped to `self.bit_len()` — a larger value is a no-op.
+    #[inline]
     pub fn truncate(&mut self, len: usize) {
         let len = len.min(self.bit_len);
 
@@ -20,6 +24,8 @@ impl BitString {
         self.words.mask_unused_bits(len);
     }
 
+    /// Clears all bits, resetting `self` to an empty bit string.
+    #[inline]
     pub fn clear(&mut self) {
         self.truncate_words(0);
         self.bit_len = 0;

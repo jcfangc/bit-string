@@ -3,6 +3,10 @@ use crate::bit_string::bits::*;
 use super::*;
 
 impl BitString {
+    /// Appends a single bit to the end.
+    ///
+    /// Panics if the bit string length would overflow `usize`.
+    #[inline]
     pub fn push(&mut self, value: bool) {
         let new_len = self
             .bit_len
@@ -23,6 +27,7 @@ impl BitString {
         self.bit_len = new_len;
     }
 
+    /// Removes and returns the last bit, or `None` if the bit string is empty.
     pub fn pop(&mut self) -> Option<bool> {
         let index = self.bit_len.checked_sub(1)?;
         let value = self.words.read_bit_at(index);
