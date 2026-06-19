@@ -192,11 +192,13 @@ impl Bits for [u64] {
         }
     }
 
+    /// Indexes into `self[word]` and tests the target bit with a mask.
     #[inline]
     fn read_bit_at(&self, index: usize) -> bool {
         self[index / WORD_BITS] & (1u64 << (index % WORD_BITS)) != 0
     }
 
+    /// Computes the word index and bit mask, then sets or clears the target bit.
     #[inline]
     fn set_bit_at(&mut self, index: usize, value: bool) {
         let word = index / WORD_BITS;
@@ -209,6 +211,9 @@ impl Bits for [u64] {
         }
     }
 
+    /// Reads the low word at `bit_start / WORD_BITS`, shifted down by the
+    /// intra-word offset. When the read crosses a word boundary the high part
+    /// is stitched in from the next word.
     #[inline]
     fn read_word_at(&self, bit_start: usize) -> u64 {
         let word = bit_start / WORD_BITS;
@@ -224,6 +229,9 @@ impl Bits for [u64] {
         }
     }
 
+    /// Masks `value` down to `len` bits via [`low_mask`], then ORs it into
+    /// `self` at `bit_start`. When the write crosses a word boundary the high
+    /// part spills into the next word.
     #[inline]
     fn write_word_at(&mut self, bit_start: usize, value: u64, len: usize) {
         let value = value & low_mask(len);
@@ -249,6 +257,11 @@ impl Bits for [u64] {
         }
     }
 
+    /// Walks each word in `[start, start + count + 1)`, extracts the affected
+    /// range, shifts it left by one (toward higher indices), and ORs the
+    /// carry from the previous word into the low side. The vacated low bit
+    /// in the range is zero-filled and the high bit that falls off becomes
+    /// the carry to the next word.
     #[inline]
     fn shift_right_in_place(&mut self, start: usize, count: usize) {
         if count == 0 {
@@ -293,6 +306,11 @@ impl Bits for [u64] {
         }
     }
 
+    /// Walks each word in `[start - 1, start + count)` in reverse, extracts the
+    /// affected range, shifts it right by one (toward lower indices), and ORs
+    /// the carry from the previous word into the high side. The vacated high
+    /// bit in the range is zero-filled and the low bit that falls off becomes
+    /// the carry to the previous word.
     #[inline]
     fn shift_left_in_place(&mut self, start: usize, count: usize) {
         if count == 0 {
