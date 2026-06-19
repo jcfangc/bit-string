@@ -39,3 +39,10 @@ fn mask_contains_exactly_requested_number_of_low_ones() {
         }
     }
 }
+
+#[test]
+fn clamps_to_max_for_excess_bits() {
+    assert_eq!(low_mask(WORD_BITS + 1), u64::MAX);
+    assert_eq!(low_mask(128), u64::MAX);
+    assert_eq!(low_mask(usize::MAX), u64::MAX);
+}

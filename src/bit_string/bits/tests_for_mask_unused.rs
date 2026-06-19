@@ -47,10 +47,20 @@ fn preserves_low_bits_and_clears_unused_high_bits() {
 }
 
 #[test]
-fn len_zero_with_non_empty_words_uses_full_mask() {
+fn len_zero_clears_all_words() {
     let mut bits = [0xdead_beef_dead_beef];
 
     bits.mask_unused_bits(0);
 
-    assert_eq!(bits, [0xdead_beef_dead_beef]);
+    assert_eq!(bits, [0]);
+}
+
+#[test]
+fn zeros_surplus_words_beyond_used_range() {
+    let mut bits = [u64::MAX, u64::MAX, u64::MAX, u64::MAX];
+
+    bits.mask_unused_bits(WORD_BITS + 3);
+    // word_len(67) = 2 used words; words[2] and words[3] should be zeroed
+
+    assert_eq!(bits, [u64::MAX, 0b111, 0, 0]);
 }

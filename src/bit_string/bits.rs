@@ -6,6 +6,22 @@ use crate::WORD_BITS;
 // Free functions (pure math / constructors, no [u64] receiver)
 // ---------------------------------------------------------------------------
 
+/// Returns the mask for the last word of a bit string of total length `len`.
+///
+/// The number of valid bits in the last word is `len % WORD_BITS`. When that
+/// remainder is zero the last word is full and `u64::MAX` is returned;
+/// otherwise only the low `len % WORD_BITS` bits are set.
+///
+/// # Examples
+///
+/// ```
+/// use bit_string::WORD_BITS;
+/// use bit_string::bit_string::bits::last_word_mask;
+///
+/// assert_eq!(last_word_mask(64), u64::MAX);            // one full word
+/// assert_eq!(last_word_mask(65), 0b1);                  // 1 bit in the second word
+/// assert_eq!(last_word_mask(128), u64::MAX);            // two full words
+/// ```
 #[inline]
 pub(crate) fn last_word_mask(len: usize) -> u64 {
     let rem = len % WORD_BITS;
@@ -16,11 +32,13 @@ pub(crate) fn last_word_mask(len: usize) -> u64 {
     }
 }
 
+/// Returns the number of `u64` words needed to store `bit_len` bits.
 #[inline]
 pub(crate) fn word_len(bit_len: usize) -> usize {
     bit_len / WORD_BITS + usize::from(bit_len % WORD_BITS != 0)
 }
 
+/// Allocates a zero-initialized `Vec<u64>` of `words` capacity and length.
 #[inline]
 pub(crate) fn zero_words(words: usize) -> Vec<u64> {
     let mut bits = Vec::with_capacity(words);
@@ -28,15 +46,17 @@ pub(crate) fn zero_words(words: usize) -> Vec<u64> {
     bits
 }
 
+/// Truncates `bits` to the first `words` words, returning a new `Vec<u64>`.
 #[inline]
 #[allow(dead_code)]
 pub(crate) fn shrink_words(bits: &[u64], words: usize) -> Vec<u64> {
     bits[..words].to_vec()
 }
 
+/// Returns `u64::MAX` when `bits >= WORD_BITS`, otherwise the low `bits` ones.
 #[inline]
 pub(crate) fn low_mask(bits: usize) -> u64 {
-    if bits == WORD_BITS {
+    if bits >= WORD_BITS {
         u64::MAX
     } else {
         (1u64 << bits) - 1
@@ -94,22 +114,80 @@ impl BitsCopied<'_> {
 // Bits trait — extends [u64] with bit-level operations
 // ---------------------------------------------------------------------------
 
+/// Bit-level operations on `[u64]` backing storage.
+///
+/// All bit indices are logical positions in the flat bit string (not word
+/// indices). Word boundaries are handled transparently — callers work with
+/// logical bit positions and the trait translates them to word-level accesses.
 pub(crate) trait Bits {
+    /// Zeros words beyond `word_len(len)` and masks the last used word.
+    ///
+    /// `len` is the **total** bit-string length. Words whose bits are entirely
+    /// beyond `len` are zeroed in full. When the last used word is partially
+    /// filled (`len % WORD_BITS != 0`) only the low remainder bits are
+    /// preserved. When `len` is zero all words are cleared.
     fn mask_unused_bits(&mut self, len: usize);
+
+    /// Reads a single bit at `index`, returning `true` for 1 and `false` for 0.
     fn read_bit_at(&self, index: usize) -> bool;
+
+    /// Sets the bit at `index` to `value` (`true` = 1, `false` = 0).
     fn set_bit_at(&mut self, index: usize, value: bool);
+
+    /// Reads up to `WORD_BITS` (64) bits starting at `bit_start`.
+    ///
+    /// When `bit_start` is word-aligned the result comes from a single word.
+    /// Otherwise it spans two consecutive words, shifting and combining them.
+    /// Bits past the end of `self` are silently treated as zero.
     fn read_word_at(&self, bit_start: usize) -> u64;
+
+    /// Writes the low `len` bits of `value` into `self` starting at `bit_start`.
+    ///
+    /// Existing bits in the destination range are preserved (the write uses
+    /// bitwise OR). `len` is clamped to `WORD_BITS` via [`low_mask`]; callers
+    /// must ensure `len <= WORD_BITS`. When `bit_start` is not word-aligned
+    /// the value is split across two consecutive words.
     fn write_word_at(&mut self, bit_start: usize, value: u64, len: usize);
+
+    /// Captures a snapshot of `len` bits starting at `start` for deferred
+    /// paste via [`BitsCopied::paste_to`].
     fn copy_bits(&self, start: usize, len: usize) -> BitsCopied<'_>;
+
+    /// Clears `len` bits starting at `start`. `len` must be > 0.
+    ///
+    /// When the range fits within a single word only the affected bits are
+    /// cleared. For multi-word ranges interior words are zeroed entirely and
+    /// the two edge words are partially cleared.
     fn clear_bits_at(&mut self, start: usize, len: usize);
+
+    /// Shifts bits in `[start, start + count)` one position to the right
+    /// (toward higher indices), inserting space at `start`.
+    ///
+    /// The vacated bit at `start` is zero-filled. The bit that was at
+    /// `start + count - 1` moves to `start + count`. `count` must be > 0.
     fn shift_right_in_place(&mut self, start: usize, count: usize);
+
+    /// Shifts bits in `[start, start + count)` one position to the left
+    /// (toward lower indices), closing the gap at `start`.
+    ///
+    /// The bit that was at `start` is dropped. The vacated bit at
+    /// `start + count - 1` is zero-filled. `count` must be > 0.
     fn shift_left_in_place(&mut self, start: usize, count: usize);
 }
 
 impl Bits for [u64] {
     #[inline]
+    /// Masks the last used word with [`last_word_mask(len)`](last_word_mask),
+    /// and zeros any words beyond `word_len(len)`.
+    ///
+    /// When `self` already contains exactly `word_len(len)` words only the
+    /// last word is touched; any surplus words are cleared entirely.
     fn mask_unused_bits(&mut self, len: usize) {
-        if let Some(last) = self.last_mut() {
+        let used = word_len(len);
+        for w in used..self.len() {
+            self[w] = 0;
+        }
+        if let Some(last) = self.get_mut(used.wrapping_sub(1)) {
             *last &= last_word_mask(len);
         }
     }
