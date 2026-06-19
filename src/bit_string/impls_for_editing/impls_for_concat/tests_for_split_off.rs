@@ -91,9 +91,13 @@ fn split_result_is_independent_from_original() {
 }
 
 #[test]
-#[should_panic(expected = "bit string split index out of bounds")]
-fn panics_when_index_is_greater_than_len() {
+fn returns_empty_when_index_gt_len() {
     let mut bits = BitString::try_from("101").unwrap();
 
-    bits.split_off(4);
+    let rhs = bits.split_off(4);
+
+    assert_eq!(bits.bit_len(), 3);
+    assert_eq!(bits.to_string(), "101");
+    assert_eq!(rhs.bit_len(), 0);
+    assert_eq!(rhs.to_string(), "");
 }

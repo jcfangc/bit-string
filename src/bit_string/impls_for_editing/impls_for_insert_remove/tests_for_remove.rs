@@ -83,17 +83,22 @@ fn remove_preserves_counts_after_shift() {
 }
 
 #[test]
-#[should_panic(expected = "bit string remove index out of bounds")]
-fn panics_when_removing_at_len() {
+fn returns_false_when_removing_at_len() {
     let mut bits = BitString::try_from("101").unwrap();
 
-    bits.remove(3);
+    let removed = bits.remove(3);
+
+    assert!(!removed);
+    assert_eq!(bits.bit_len(), 3);
+    assert_eq!(bits.to_string(), "101");
 }
 
 #[test]
-#[should_panic(expected = "bit string remove index out of bounds")]
-fn panics_when_removing_from_empty() {
+fn returns_false_when_removing_from_empty() {
     let mut bits = BitString::new();
 
-    bits.remove(0);
+    let removed = bits.remove(0);
+
+    assert!(!removed);
+    assert_eq!(bits.bit_len(), 0);
 }

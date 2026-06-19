@@ -4,12 +4,7 @@ use super::*;
 
 impl BitString {
     pub fn insert(&mut self, index: usize, value: bool) {
-        assert!(
-            index <= self.bit_len,
-            "bit string insert index out of bounds: index={}, len={}",
-            index,
-            self.bit_len
-        );
+        let index = index.min(self.bit_len);
 
         if index == self.bit_len {
             self.push(value);
@@ -46,12 +41,9 @@ impl BitString {
     }
 
     pub fn remove(&mut self, index: usize) -> bool {
-        assert!(
-            index < self.bit_len,
-            "bit string remove index out of bounds: index={}, len={}",
-            index,
-            self.bit_len
-        );
+        if index >= self.bit_len {
+            return false;
+        }
 
         let value = self.words.read_bit_at(index);
         let new_len = self.bit_len - 1;

@@ -94,9 +94,11 @@ fn inserts_true_at_word_boundary() {
 }
 
 #[test]
-#[should_panic(expected = "bit string insert index out of bounds")]
-fn panics_when_index_is_greater_than_len() {
+fn inserts_at_clamped_index_when_index_gt_len() {
     let mut bits = BitString::try_from("101").unwrap();
 
     bits.insert(4, true);
+
+    assert_eq!(bits.bit_len(), 4);
+    assert_eq!(bits.to_string(), "1011");
 }

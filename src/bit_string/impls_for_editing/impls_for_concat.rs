@@ -44,12 +44,7 @@ impl BitString {
     }
 
     pub fn insert_bit_string(&mut self, index: usize, rhs: &Self) {
-        assert!(
-            index <= self.bit_len,
-            "bit string insert index out of bounds: index={}, len={}",
-            index,
-            self.bit_len
-        );
+        let index = index.min(self.bit_len);
 
         if rhs.bit_len == 0 {
             return;
@@ -112,12 +107,7 @@ impl BitString {
     }
 
     pub fn split_off(&mut self, at: usize) -> Self {
-        assert!(
-            at <= self.bit_len,
-            "bit string split index out of bounds: index={}, len={}",
-            at,
-            self.bit_len
-        );
+        let at = at.min(self.bit_len);
 
         let rhs_len = self.bit_len - at;
         let mut rhs_bits = zero_words(word_len(rhs_len));

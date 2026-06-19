@@ -92,10 +92,12 @@ fn insert_bit_string_updates_counts() {
 }
 
 #[test]
-#[should_panic(expected = "bit string insert index out of bounds")]
-fn panics_when_inserting_past_len() {
+fn inserts_at_clamped_index_when_index_past_len() {
     let mut bits = BitString::try_from("101").unwrap();
     let rhs = BitString::try_from("1").unwrap();
 
     bits.insert_bit_string(4, &rhs);
+
+    assert_eq!(bits.bit_len(), 4);
+    assert_eq!(bits.to_string(), "1011");
 }
