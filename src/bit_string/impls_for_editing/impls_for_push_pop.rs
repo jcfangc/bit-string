@@ -33,6 +33,9 @@ impl BitString {
         let words = word_len(self.bit_len);
         if words < self.words.len() {
             self.truncate_words(words);
+            // No mask: when pop crosses a word boundary, the new bit_len is
+            // always a multiple of WORD_BITS (k×64), so mask_unused_bits is
+            // a no-op (last_word_mask returns u64::MAX).
         } else {
             self.words.mask_unused_bits(self.bit_len);
         }
