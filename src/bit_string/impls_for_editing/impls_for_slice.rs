@@ -5,6 +5,19 @@ use crate::bit_string::bits::*;
 use super::*;
 
 impl BitString {
+    /// Core: copy `len` bits from `start` into a new [`BitString`].
+    ///
+    /// Caller guarantees `len > 0` and `start + len <= self.bit_len()`.
+    #[inline]
+    fn slice_core(&self, start: usize, len: usize) -> Self {
+        let mut bits = zero_words(word_len(len));
+        self.words.copy_bits(start, len).paste_to(&mut bits, 0);
+        Self {
+            words: bits,
+            bit_len: len,
+        }
+    }
+
     /// Returns a new [`BitString`] containing the bits in `interval`.
     ///
     /// The interval is clamped to `[0, self.bit_len()]`.  An interval that lies
@@ -17,14 +30,7 @@ impl BitString {
         if len == 0 {
             return Self::new();
         }
-
-        let mut bits = zero_words(word_len(len));
-        self.words.copy_bits(start, len).paste_to(&mut bits, 0);
-
-        Self {
-            words: bits,
-            bit_len: len,
-        }
+        self.slice_core(start, len)
     }
 
     /// Returns a new [`BitString`] containing bits from `start` to the end.
@@ -34,18 +40,10 @@ impl BitString {
     #[inline]
     pub fn slice_from(&self, start: usize) -> Self {
         let start = start.min(self.bit_len);
-        let len = self.bit_len - start;
-        if len == 0 {
+        if start == self.bit_len {
             return Self::new();
         }
-
-        let mut bits = zero_words(word_len(len));
-        self.words.copy_bits(start, len).paste_to(&mut bits, 0);
-
-        Self {
-            words: bits,
-            bit_len: len,
-        }
+        self.slice_core(start, self.bit_len - start)
     }
 
     /// Returns a new [`BitString`] containing bits from the start to `end`.
@@ -58,14 +56,7 @@ impl BitString {
         if end == 0 {
             return Self::new();
         }
-
-        let mut bits = zero_words(word_len(end));
-        self.words.copy_bits(0, end).paste_to(&mut bits, 0);
-
-        Self {
-            words: bits,
-            bit_len: end,
-        }
+        self.slice_core(0, end)
     }
 }
 

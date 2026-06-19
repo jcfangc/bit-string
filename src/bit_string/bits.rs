@@ -1,5 +1,4 @@
 use alloc::vec::Vec;
-use int_interval::UsizeCO;
 
 use crate::WORD_BITS;
 
@@ -42,17 +41,6 @@ pub(crate) fn low_mask(bits: usize) -> u64 {
     } else {
         (1u64 << bits) - 1
     }
-}
-
-#[inline]
-pub(crate) fn assert_interval_in_bounds(interval: UsizeCO, len: usize) {
-    assert!(
-        interval.end_excl() <= len,
-        "bit string interval out of bounds: {}..{}, len={}",
-        interval.start(),
-        interval.end_excl(),
-        len
-    );
 }
 
 // ---------------------------------------------------------------------------
@@ -298,8 +286,6 @@ impl Bits for [u64] {
     }
 }
 
-#[cfg(test)]
-mod tests_for_assert_interval_in_bounds;
 #[cfg(test)]
 mod tests_for_bit_at;
 #[cfg(test)]
