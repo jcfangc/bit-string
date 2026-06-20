@@ -1,5 +1,3 @@
-use crate::funcs_for_bits::*;
-
 use super::*;
 
 mod funcs_for_find_core;
@@ -7,7 +5,25 @@ mod funcs_for_find_core;
 impl BitString {
     #[inline]
     pub fn contains(&self, needle: &Self) -> bool {
-        self.find(needle).is_some()
+        if needle.bit_len == 0 {
+            return true;
+        }
+        if needle.bit_len > self.bit_len {
+            return false;
+        }
+
+        let needle_words = needle.as_words();
+        let needle_first = needle_words[0];
+        let needle_mask = low_mask(needle.bit_len.min(WORD_BITS));
+        let last_start = self.bit_len - needle.bit_len;
+
+        funcs_for_contains_core::contains_first_word(
+            &self.words,
+            needle_first,
+            needle_mask,
+            last_start,
+            &mut |pos| bits_equal_at(self, pos, needle),
+        )
     }
 
     pub fn find(&self, needle: &Self) -> Option<usize> {

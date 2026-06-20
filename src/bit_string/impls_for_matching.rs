@@ -33,6 +33,7 @@ fn bits_equal_at(haystack: &BitString, offset: usize, needle: &BitString) -> boo
     true
 }
 
+mod funcs_for_contains_core;
 mod impls_for_find;
 mod impls_for_matches_at;
 mod impls_for_strip;
