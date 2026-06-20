@@ -3,6 +3,7 @@ use crate::funcs_for_bits::low_mask;
 
 use super::*;
 
+mod funcs_for_ends_with_core;
 mod funcs_for_starts_with_core;
 
 impl BitString {
@@ -57,7 +58,7 @@ impl BitString {
         let pw = suffix.as_words();
         let full_words = suffix.bit_len / WORD_BITS;
 
-        if !funcs_for_starts_with_core::ends_with_words(sw, pw, full_words, shift) {
+        if !funcs_for_ends_with_core::ends_with_words(sw, pw, full_words, shift) {
             return false;
         }
 
