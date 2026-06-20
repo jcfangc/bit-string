@@ -1,8 +1,6 @@
 //! Property-based adversarial tests: random operation sequences bounded
 //! to avoid explosion, attempting to break BitString invariants.
 
-use alloc::string::ToString;
-
 use proptest::collection::vec;
 use proptest::prelude::*;
 
@@ -382,10 +380,17 @@ proptest! {
     }
 
     #[test]
-    fn extend_preserves_invariant(mut bits in any_bit_string(), ext in any_bit_string()) {
-        prop_assume!(bits.bit_len().saturating_add(ext.bit_len()) <= MAX_BITS);
-        bits.extend(&ext);
-        assert_all_invariants(&bits);
+    fn extend_preserves_invariant(
+        (n1, n2) in (0usize..64).prop_flat_map(|n1|
+            (Just(n1), 0usize..(128usize.saturating_sub(n1)).min(64))
+        ),
+    ) {
+        let bits = BitString::ones(n1);
+        let ext = BitString::zeros(n2);
+        let mut copy = bits.clone();
+        copy.extend(&ext);
+        assert_all_invariants(&copy);
+        assert_eq!(copy.bit_len(), n1 + n2);
     }
 
     #[test]

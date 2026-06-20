@@ -87,3 +87,19 @@ harness = false
 [[bench]]
 name = "matching_strip_prefix"
 harness = false
+
+[[bench]]
+name = "editing_truncate"
+harness = false
+
+[[bench]]
+name = "editing_pop"
+harness = false
+
+[[bench]]
+name = "editing_drain_assign"
+harness = false
+
+[[bench]]
+name = "bit_ops_shl_assign"
+harness = false
