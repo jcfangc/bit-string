@@ -147,9 +147,6 @@ mod sse2 {
             let mut s = WORD_BITS;
             while s > 0 {
                 s -= 2;
-                if base + s + 1 > last_start {
-                    continue;
-                }
 
                 let win0 = if s == 0 {
                     w0
@@ -231,9 +228,6 @@ mod avx2 {
             let mut s = WORD_BITS;
             while s > 0 {
                 s -= 4;
-                if base + s + 3 > last_start {
-                    continue;
-                }
 
                 let end = WORD_BITS.min(s + 4);
                 let mut wins = [0u64; 4];
@@ -307,9 +301,6 @@ mod neon {
             let mut s = WORD_BITS;
             while s > 0 {
                 s -= 2;
-                if base + s + 1 > last_start {
-                    continue;
-                }
 
                 let end = WORD_BITS.min(s + 2);
                 let mut wins = [0u64; 2];
@@ -344,3 +335,6 @@ mod neon {
         None
     }
 }
+
+#[cfg(test)]
+mod tests_for_backend_equivalence;

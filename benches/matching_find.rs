@@ -92,12 +92,62 @@ fn find_len_65536_miss_string(bencher: Bencher) {
     bench_string(bencher, miss_case(65_536));
 }
 
+// ── rfind — same cases as find for comparison ──
+
+#[divan::bench(name = "rfind/len_65536/front/bit_string")]
+fn rfind_len_65536_front_bit_string(bencher: Bencher) {
+    bench_rfind_bit_string(bencher, make_case(65_536, 0));
+}
+
+#[divan::bench(name = "rfind/len_65536/front/string")]
+fn rfind_len_65536_front_string(bencher: Bencher) {
+    bench_rfind_string(bencher, make_case(65_536, 0));
+}
+
+#[divan::bench(name = "rfind/len_65536/middle/bit_string")]
+fn rfind_len_65536_middle_bit_string(bencher: Bencher) {
+    bench_rfind_bit_string(bencher, middle_case(65_536));
+}
+
+#[divan::bench(name = "rfind/len_65536/middle/string")]
+fn rfind_len_65536_middle_string(bencher: Bencher) {
+    bench_rfind_string(bencher, middle_case(65_536));
+}
+
+#[divan::bench(name = "rfind/len_65536/end/bit_string")]
+fn rfind_len_65536_end_bit_string(bencher: Bencher) {
+    bench_rfind_bit_string(bencher, end_case(65_536));
+}
+
+#[divan::bench(name = "rfind/len_65536/end/string")]
+fn rfind_len_65536_end_string(bencher: Bencher) {
+    bench_rfind_string(bencher, end_case(65_536));
+}
+
+#[divan::bench(name = "rfind/len_65536/miss/bit_string")]
+fn rfind_len_65536_miss_bit_string(bencher: Bencher) {
+    bench_rfind_bit_string(bencher, miss_case(65_536));
+}
+
+#[divan::bench(name = "rfind/len_65536/miss/string")]
+fn rfind_len_65536_miss_string(bencher: Bencher) {
+    bench_rfind_string(bencher, miss_case(65_536));
+}
+
 fn bench_bit_string(bencher: Bencher, case: NeedleCase) {
     bencher.bench(|| black_box(&case.haystack_bits).find(black_box(&case.needle_bits)));
 }
 
+fn bench_rfind_bit_string(bencher: Bencher, case: NeedleCase) {
+    bencher.bench(|| black_box(&case.haystack_bits).rfind(black_box(&case.needle_bits)));
+}
+
 fn bench_string(bencher: Bencher, case: NeedleCase) {
     bencher.bench(|| black_box(&case.haystack_string).find(black_box(&case.needle_string)));
+}
+
+fn bench_rfind_string(bencher: Bencher, case: NeedleCase) {
+    bencher.bench(|| black_box(&case.haystack_string).rfind(black_box(&case.needle_string)));
 }
 
 fn middle_case(len: usize) -> NeedleCase {
