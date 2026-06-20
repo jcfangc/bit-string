@@ -81,7 +81,7 @@ fn bench_bit_string(bencher: Bencher, len: usize, shape: ReplaceShape) {
     let interval = iv(start, old_len);
 
     bencher.bench(|| {
-        let mut bits = black_box(input.clone());
+        let bits = black_box(input.clone());
         bits.replace_interval(black_box(interval), black_box(&replacement));
         black_box(bits)
     });

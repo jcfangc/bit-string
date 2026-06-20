@@ -1,15 +1,16 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::vec::Vec;
 
-use crate::bit_string::bits::Bits;
+use crate::bit_string::traits::*;
+use crate::word_len;
 
-/// Pack `bit_len` ASCII '0'/'1' bytes from `src` into a `Box<[u64]>`.
+/// Pack `bit_len` ASCII '0'/'1' bytes from `src` into a `Vec<u64>`.
 ///
 /// Returns `Err((index, byte))` on the first invalid character.
 /// Bits are packed in little-endian order: byte `i` becomes bit `i % 64`
 /// of word `i / 64`.
 #[inline]
-pub(super) fn str_core(src: *const u8, bit_len: usize) -> Result<Box<[u64]>, (usize, u8)> {
-    let word_len = Bits::word_len(bit_len);
+pub(super) fn str_core(src: *const u8, bit_len: usize) -> Result<Vec<u64>, (usize, u8)> {
+    let word_len = word_len(bit_len);
     let mut out = Vec::<u64>::with_capacity(word_len);
 
     // SAFETY:
@@ -27,8 +28,8 @@ pub(super) fn str_core(src: *const u8, bit_len: usize) -> Result<Box<[u64]>, (us
     // every slot in `0..word_len`.
     unsafe { out.set_len(word_len) };
 
-    Bits::mask_unused(&mut out, bit_len);
-    Ok(out.into_boxed_slice())
+    out.mask_unused_bits(bit_len);
+    Ok(out)
 }
 
 /// Validates and packs `bit_len` ASCII '0'/'1' bytes.

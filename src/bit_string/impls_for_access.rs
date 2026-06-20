@@ -4,19 +4,19 @@ use super::*;
 
 impl BitString {
     #[inline]
-    pub fn len(&self) -> usize {
-        self.len
+    pub fn bit_len(&self) -> usize {
+        self.bit_len
     }
 
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.bit_len == 0
     }
 
     #[inline]
     pub fn get(&self, index: usize) -> Option<bool> {
-        (index < self.len).then(|| {
-            let word = self.bits[index / 64];
+        (index < self.bit_len).then(|| {
+            let word = self.words[index / 64];
             let mask = 1u64 << (index % 64);
             word & mask != 0
         })
@@ -31,7 +31,7 @@ impl BitString {
 
     #[inline]
     pub fn all(&self) -> bool {
-        self.count_ones() == self.len
+        self.count_ones() == self.bit_len
     }
 
     #[inline]
@@ -52,7 +52,7 @@ impl BitString {
     /// Unused high bits in the last word are guaranteed to be zero.
     #[inline]
     pub fn as_words(&self) -> &[u64] {
-        &self.bits
+        &self.words
     }
 
     #[inline]
@@ -69,19 +69,21 @@ impl BitString {
         let word = bit_start / WORD_BITS;
         let shift = bit_start % WORD_BITS;
 
-        let lo = self.bits.get(word).copied().unwrap_or(0) >> shift;
+        let lo = self.words.get(word).copied().unwrap_or(0) >> shift;
 
         if shift == 0 {
             lo
         } else {
-            let hi = self.bits.get(word + 1).copied().unwrap_or(0);
+            let hi = self.words.get(word + 1).copied().unwrap_or(0);
             lo | (hi << (WORD_BITS - shift))
         }
     }
 
     #[inline]
     pub fn last(&self) -> Option<bool> {
-        self.len.checked_sub(1).and_then(|index| self.get(index))
+        self.bit_len
+            .checked_sub(1)
+            .and_then(|index| self.get(index))
     }
 
     #[inline]

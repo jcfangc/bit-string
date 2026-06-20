@@ -23,8 +23,8 @@ fn returns_bits_by_index() {
 fn returns_none_at_len_and_beyond() {
     let bits = BitString::try_from("101001").unwrap();
 
-    assert_eq!(bits.get(bits.len()), None);
-    assert_eq!(bits.get(bits.len() + 1), None);
+    assert_eq!(bits.get(bits.bit_len()), None);
+    assert_eq!(bits.get(bits.bit_len() + 1), None);
 }
 
 #[test]

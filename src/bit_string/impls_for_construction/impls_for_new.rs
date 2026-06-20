@@ -1,12 +1,11 @@
 use super::*;
-use alloc::vec::Vec;
 
 impl BitString {
     #[inline]
     pub fn new() -> Self {
         Self {
-            bits: Vec::new().into_boxed_slice(),
-            len: 0,
+            words: Vec::new(),
+            bit_len: 0,
         }
     }
 }

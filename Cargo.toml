@@ -8,11 +8,12 @@ repository = "https://github.com/jcfangc/bit-string"
 license = "MIT OR Apache-2.0"
 keywords = ["bitstring", "bits", "bitset", "sequence"]
 categories = ["data-structures", "no-std"]
-exclude = ["/benches"]
+exclude = ["/benches", "/src/**/tests_for_*"]
 
 
 [dependencies]
 int-interval = "0.9.6"
+witnessed = "0.8.0"
 
 [lib]
 doctest = false
@@ -20,6 +21,7 @@ doctest = false
 [dev-dependencies]
 bitvec_simd = "0.20.5"
 divan = { package = "codspeed-divan-compat", version = "4.7.0" }
+proptest = "1.11.0"
 
 
 [[bench]]
@@ -84,4 +86,16 @@ harness = false
 
 [[bench]]
 name = "matching_strip_prefix"
+harness = false
+
+[[bench]]
+name = "editing_truncate"
+harness = false
+
+[[bench]]
+name = "editing_pop"
+harness = false
+
+[[bench]]
+name = "bit_ops_shl_assign"
 harness = false

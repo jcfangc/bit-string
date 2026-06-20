@@ -81,7 +81,7 @@ fn works_across_word_boundaries() {
 
     let stripped = bits.strip_suffix(&suffix).unwrap();
 
-    assert_eq!(stripped.len(), 63);
+    assert_eq!(stripped.bit_len(), 63);
     assert_eq!(stripped.get(0), Some(true));
     assert_eq!(stripped.get(62), Some(false));
 }
