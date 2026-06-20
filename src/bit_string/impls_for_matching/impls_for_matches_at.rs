@@ -52,30 +52,31 @@ impl BitString {
 
         let start = self.bit_len - suffix.bit_len;
         let shift = start % WORD_BITS;
+        let base_word = start / WORD_BITS;
+        let sw: &[u64] = &self.words[base_word..];
+        let pw = suffix.as_words();
+        let full_words = suffix.bit_len / WORD_BITS;
 
-        if shift == 0 {
-            // Word-aligned — same fast path as starts_with.
-            let sw: &[u64] = &self.words[start / WORD_BITS..];
-            let pw = suffix.as_words();
-            let full_words = suffix.bit_len / WORD_BITS;
+        if !funcs_for_starts_with_core::ends_with_words(sw, pw, full_words, shift) {
+            return false;
+        }
 
-            if !funcs_for_starts_with_core::starts_with_words(sw, pw, full_words) {
+        let rem = suffix.bit_len % WORD_BITS;
+        if rem > 0 {
+            let mask = low_mask(rem);
+            let h = if shift == 0 {
+                sw[full_words]
+            } else {
+                let w0 = sw[full_words];
+                let w1 = sw.get(full_words + 1).copied().unwrap_or(0);
+                (w0 >> shift) | (w1 << (WORD_BITS - shift))
+            };
+            if (h & mask) != (pw[full_words] & mask) {
                 return false;
             }
-
-            let rem = suffix.bit_len % WORD_BITS;
-            if rem > 0 {
-                let mask = low_mask(rem);
-                if (sw[full_words] & mask) != (pw[full_words] & mask) {
-                    return false;
-                }
-            }
-
-            true
-        } else {
-            // Unaligned — fall back to the generic comparison.
-            self.matches_at(start, suffix)
         }
+
+        true
     }
 }
 
