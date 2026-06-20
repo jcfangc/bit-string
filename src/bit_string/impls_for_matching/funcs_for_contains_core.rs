@@ -1,9 +1,12 @@
-//! SIMD first-word pre-filter for `contains`.
+//! SIMD first-word pre-filter for `contains`, `find`, and `rfind`.
 //!
-//! Uses **shift-outer, word-inner** ordering because `contains` only
-//! needs a yes/no answer — order doesn't matter.  This lets us process
-//! LANES haystack words in parallel within each shift, maximizing SIMD
-//! throughput.
+//! Returns `Some(pos)` for the first candidate whose 64-bit window
+//! matches the needle's first word AND `verify(pos)` succeeds.
+//!
+//! Uses **shift-outer, word-inner** ordering, processing LANES haystack
+//! words in parallel per shift.  This ordering does **not** guarantee
+//! the returned position is the earliest match — `find` must use a
+//! binary-search driver or a word-outer scan for correct ordering.
 
 use crate::SMALL_WORDS;
 use crate::WORD_BITS;
