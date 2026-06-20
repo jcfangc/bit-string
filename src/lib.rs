@@ -2,9 +2,10 @@
 
 extern crate alloc;
 
-pub(crate) const WORD_BITS: usize = u64::BITS as usize;
+mod consts_for_bits;
+mod funcs_for_bits;
 
-pub(crate) mod funcs_for_bits;
+pub(crate) use consts_for_bits::*;
 pub(crate) use funcs_for_bits::*;
 
 mod bit_string;

@@ -4,8 +4,8 @@
 //! comparing a sliding 64-bit window against the needle's first word.
 //! Windows that match are then verified with a full `bits_equal_at` call.
 
+use crate::SMALL_WORDS;
 use crate::WORD_BITS;
-use crate::funcs_for_bits::SMALL_WORDS;
 
 // ---------------------------------------------------------------------------
 // Entry point — dispatches to the best available backend

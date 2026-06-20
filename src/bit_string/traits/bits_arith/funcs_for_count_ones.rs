@@ -1,5 +1,5 @@
+use crate::SMALL_WORDS;
 use crate::WORD_BITS;
-use crate::funcs_for_bits::SMALL_WORDS;
 
 #[inline]
 pub(super) fn count_ones(bits: &[u64], bit_len: usize) -> usize {
