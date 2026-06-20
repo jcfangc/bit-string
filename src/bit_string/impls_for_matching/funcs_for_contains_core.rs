@@ -23,7 +23,7 @@ use crate::funcs_for_bits::low_mask;
 /// **shift-outer, word-inner** ordering — does **not** guarantee the
 /// returned position is the earliest match.
 #[inline]
-pub(super) fn find_first_candidate<F>(
+pub(super) fn find_any_candidate<F>(
     haystack: &[u64],
     haystack_bit_len: usize,
     needle_words: &[u64],
@@ -56,7 +56,7 @@ where
     ))]
     {
         unsafe {
-            return avx2::find_first(
+            return avx2::find_any(
                 haystack,
                 needle_first,
                 needle_mask,
@@ -74,7 +74,7 @@ where
     ))]
     {
         unsafe {
-            return sse2::find_first(
+            return sse2::find_any(
                 haystack,
                 needle_first,
                 needle_mask,
@@ -88,7 +88,7 @@ where
     #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
     {
         unsafe {
-            return neon::find_first(
+            return neon::find_any(
                 haystack,
                 needle_first,
                 needle_mask,
@@ -174,7 +174,7 @@ mod sse2 {
     /// window for the current shift, and compares against the broadcast
     /// needle word.  `movemask` extracts match lanes.
     #[target_feature(enable = "sse2")]
-    pub(super) unsafe fn find_first<F>(
+    pub(super) unsafe fn find_any<F>(
         haystack: &[u64],
         needle_first: u64,
         needle_mask: u64,
@@ -276,7 +276,7 @@ mod avx2 {
 
     /// AVX2 backend: same as SSE2 but with 4-lane (256-bit) vectors.
     #[target_feature(enable = "avx2")]
-    pub(super) unsafe fn find_first<F>(
+    pub(super) unsafe fn find_any<F>(
         haystack: &[u64],
         needle_first: u64,
         needle_mask: u64,
@@ -368,7 +368,7 @@ mod neon {
     /// NEON backend: 2-lane comparison for aarch64.  Unaligned windows
     /// fall back to scalar per-position computation.
     #[target_feature(enable = "neon")]
-    pub(super) unsafe fn find_first<F>(
+    pub(super) unsafe fn find_any<F>(
         haystack: &[u64],
         needle_first: u64,
         needle_mask: u64,

@@ -14,7 +14,7 @@ impl BitString {
             return false;
         }
 
-        funcs_for_contains_core::find_first_candidate(
+        funcs_for_contains_core::find_any_candidate(
             &self.words,
             self.bit_len,
             needle.as_words(),
