@@ -2,13 +2,10 @@
 //! against brute-force, implicitly validating whichever SIMD backend is
 //! active (SSE2, AVX2, or NEON) against the scalar oracle.
 
-use alloc::vec::Vec;
-
 use proptest::collection::vec;
 use proptest::prelude::*;
 
 use crate::BitString;
-use crate::WORD_BITS;
 
 use super::super::bits_equal_at;
 
