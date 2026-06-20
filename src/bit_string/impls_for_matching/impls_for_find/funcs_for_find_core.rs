@@ -154,7 +154,6 @@ mod sse2 {
                 } else {
                     (w0 >> (s + 1)) | (w1 << (WORD_BITS - (s + 1)))
                 };
-                let windows = _mm_set1_epi64x(win0 as i64);
                 let windows = unsafe { _mm_loadu_si128([win0, win1].as_ptr().cast::<__m128i>()) };
                 let m = _mm_and_si128(windows, mask);
                 let c = unsafe { _mm_cmpeq_epi64(m, needle) };
