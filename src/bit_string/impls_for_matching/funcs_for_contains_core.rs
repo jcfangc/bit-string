@@ -12,26 +12,22 @@ use crate::WORD_BITS;
 // Entry point
 // ---------------------------------------------------------------------------
 
-/// Returns `true` if any 64-bit window in `haystack` matches
+/// Returns `Some(pos)` if any 64-bit window in `haystack` matches
 /// `needle_first` (after masking) AND `verify(pos)` succeeds.
 ///
 /// Only positions `pos ∈ [0, last_start]` are considered.  Words beyond
 /// `last_start / WORD_BITS + 1` are ignored.
 ///
-/// Uses **shift-outer, word-inner** ordering: for each bit offset
-/// (shift), all qualifying word pairs are scanned.  Within a shift,
-/// the SIMD backends process `LANES` words in parallel.  This ordering
-/// does **not** guarantee that the first match found is the earliest
-/// position — use [`find_first_word`](super::funcs_for_find_core::find_first_word)
-/// when position order matters.
+/// Uses **shift-outer, word-inner** ordering — does **not** guarantee the
+/// returned position is the earliest match.
 #[inline]
-pub(super) fn contains_first_word<F>(
+pub(super) fn find_first_candidate<F>(
     haystack: &[u64],
     needle_first: u64,
     needle_mask: u64,
     last_start: usize,
     verify: &mut F,
-) -> bool
+) -> Option<usize>
 where
     F: FnMut(usize) -> bool,
 {
@@ -55,7 +51,7 @@ where
     ))]
     {
         unsafe {
-            return avx2::contains(
+            return avx2::find_first(
                 haystack,
                 needle_first,
                 needle_mask,
@@ -73,7 +69,7 @@ where
     ))]
     {
         unsafe {
-            return sse2::contains(
+            return sse2::find_first(
                 haystack,
                 needle_first,
                 needle_mask,
@@ -87,7 +83,7 @@ where
     #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
     {
         unsafe {
-            return neon::contains(
+            return neon::find_first(
                 haystack,
                 needle_first,
                 needle_mask,
@@ -122,7 +118,7 @@ fn scalar<F>(
     last_start: usize,
     word_limit: usize,
     verify: &mut F,
-) -> bool
+) -> Option<usize>
 where
     F: FnMut(usize) -> bool,
 {
@@ -140,11 +136,11 @@ where
                 (w0 >> shift) | (w1 << (WORD_BITS - shift))
             };
             if (window & needle_mask) == needle_first && verify(pos) {
-                return true;
+                return Some(pos);
             }
         }
     }
-    false
+    None
 }
 
 // ---------------------------------------------------------------------------
@@ -173,14 +169,14 @@ mod sse2 {
     /// window for the current shift, and compares against the broadcast
     /// needle word.  `movemask` extracts match lanes.
     #[target_feature(enable = "sse2")]
-    pub(super) unsafe fn contains<F>(
+    pub(super) unsafe fn find_first<F>(
         haystack: &[u64],
         needle_first: u64,
         needle_mask: u64,
         last_start: usize,
         word_limit: usize,
         verify: &mut F,
-    ) -> bool
+    ) -> Option<usize>
     where
         F: FnMut(usize) -> bool,
     {
@@ -214,20 +210,19 @@ mod sse2 {
                 if hits & 0xff != 0 {
                     let pos = i * WORD_BITS + shift;
                     if pos <= last_start && verify(pos) {
-                        return true;
+                        return Some(pos);
                     }
                 }
                 if hits & 0xff00 != 0 {
                     let pos = (i + 1) * WORD_BITS + shift;
                     if pos <= last_start && verify(pos) {
-                        return true;
+                        return Some(pos);
                     }
                 }
 
                 i += LANES;
             }
 
-            // Tail
             for j in i..word_limit {
                 let pos = j * WORD_BITS + shift;
                 if pos > last_start {
@@ -241,12 +236,12 @@ mod sse2 {
                     (w0 >> shift) | (w1 << (WORD_BITS - shift))
                 };
                 if (window & needle_mask) == needle_first && verify(pos) {
-                    return true;
+                    return Some(pos);
                 }
             }
         }
 
-        false
+        None
     }
 }
 
@@ -276,14 +271,14 @@ mod avx2 {
 
     /// AVX2 backend: same as SSE2 but with 4-lane (256-bit) vectors.
     #[target_feature(enable = "avx2")]
-    pub(super) unsafe fn contains<F>(
+    pub(super) unsafe fn find_first<F>(
         haystack: &[u64],
         needle_first: u64,
         needle_mask: u64,
         last_start: usize,
         word_limit: usize,
         verify: &mut F,
-    ) -> bool
+    ) -> Option<usize>
     where
         F: FnMut(usize) -> bool,
     {
@@ -319,7 +314,7 @@ mod avx2 {
                         if hits & (1 << k) != 0 {
                             let pos = (i + k) * WORD_BITS + shift;
                             if pos <= last_start && verify(pos) {
-                                return true;
+                                return Some(pos);
                             }
                         }
                     }
@@ -328,7 +323,6 @@ mod avx2 {
                 i += LANES;
             }
 
-            // Tail
             for j in i..word_limit {
                 let pos = j * WORD_BITS + shift;
                 if pos > last_start {
@@ -342,12 +336,12 @@ mod avx2 {
                     (w0 >> shift) | (w1 << (WORD_BITS - shift))
                 };
                 if (window & needle_mask) == needle_first && verify(pos) {
-                    return true;
+                    return Some(pos);
                 }
             }
         }
 
-        false
+        None
     }
 }
 
@@ -369,14 +363,14 @@ mod neon {
     /// NEON backend: 2-lane comparison for aarch64.  Unaligned windows
     /// fall back to scalar per-position computation.
     #[target_feature(enable = "neon")]
-    pub(super) unsafe fn contains<F>(
+    pub(super) unsafe fn find_first<F>(
         haystack: &[u64],
         needle_first: u64,
         needle_mask: u64,
         last_start: usize,
         word_limit: usize,
         verify: &mut F,
-    ) -> bool
+    ) -> Option<usize>
     where
         F: FnMut(usize) -> bool,
     {
@@ -397,17 +391,16 @@ mod neon {
                     if unsafe { vgetq_lane_u64(cmp, 0) } != 0 {
                         let pos = i * WORD_BITS + shift;
                         if pos <= last_start && verify(pos) {
-                            return true;
+                            return Some(pos);
                         }
                     }
                     if unsafe { vgetq_lane_u64(cmp, 1) } != 0 {
                         let pos = (i + 1) * WORD_BITS + shift;
                         if pos <= last_start && verify(pos) {
-                            return true;
+                            return Some(pos);
                         }
                     }
                 } else {
-                    // Unaligned: scalar per position.
                     for k in 0..LANES {
                         let pos = (i + k) * WORD_BITS + shift;
                         if pos > last_start {
@@ -417,7 +410,7 @@ mod neon {
                         let w1 = haystack.get(i + k + 1).copied().unwrap_or(0);
                         let window = (w0 >> shift) | (w1 << (WORD_BITS - shift));
                         if (window & needle_mask) == needle_first && verify(pos) {
-                            return true;
+                            return Some(pos);
                         }
                     }
                 }
@@ -425,7 +418,6 @@ mod neon {
                 i += LANES;
             }
 
-            // Tail
             for j in i..word_limit {
                 let pos = j * WORD_BITS + shift;
                 if pos > last_start {
@@ -439,11 +431,11 @@ mod neon {
                     (w0 >> shift) | (w1 << (WORD_BITS - shift))
                 };
                 if (window & needle_mask) == needle_first && verify(pos) {
-                    return true;
+                    return Some(pos);
                 }
             }
         }
 
-        false
+        None
     }
 }
