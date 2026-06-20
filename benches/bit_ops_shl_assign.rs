@@ -6,45 +6,45 @@ fn main() {
 }
 
 // Shift by 1 bit (bit-level shift, no word-level shortcut).
-#[divan::bench(name = "shl/len_4096_by_1/owned")]
+#[divan::bench(name = "shl_assign/len_4096_by_1/owned")]
 fn shl_len_4096_by_1_owned(bencher: Bencher) {
     bench_shl(bencher, 4096, 1);
 }
 
-#[divan::bench(name = "shl/len_4096_by_1/assign")]
+#[divan::bench(name = "shl_assign/len_4096_by_1/assign")]
 fn shl_len_4096_by_1_assign(bencher: Bencher) {
     bench_shl_assign(bencher, 4096, 1);
 }
 
 // Shift by 64 bits (word-level shift, the fast path).
-#[divan::bench(name = "shl/len_4096_by_64/owned")]
+#[divan::bench(name = "shl_assign/len_4096_by_64/owned")]
 fn shl_len_4096_by_64_owned(bencher: Bencher) {
     bench_shl(bencher, 4096, 64);
 }
 
-#[divan::bench(name = "shl/len_4096_by_64/assign")]
+#[divan::bench(name = "shl_assign/len_4096_by_64/assign")]
 fn shl_len_4096_by_64_assign(bencher: Bencher) {
     bench_shl_assign(bencher, 4096, 64);
 }
 
 // Shift large array by 1 — worst-case for SIMD (cascading carries).
-#[divan::bench(name = "shl/len_65536_by_1/owned")]
+#[divan::bench(name = "shl_assign/len_65536_by_1/owned")]
 fn shl_len_65536_by_1_owned(bencher: Bencher) {
     bench_shl(bencher, 65_536, 1);
 }
 
-#[divan::bench(name = "shl/len_65536_by_1/assign")]
+#[divan::bench(name = "shl_assign/len_65536_by_1/assign")]
 fn shl_len_65536_by_1_assign(bencher: Bencher) {
     bench_shl_assign(bencher, 65_536, 1);
 }
 
 // Shift by a mixed amount (both word and bit shift components).
-#[divan::bench(name = "shl/len_65536_by_17/owned")]
+#[divan::bench(name = "shl_assign/len_65536_by_17/owned")]
 fn shl_len_65536_by_17_owned(bencher: Bencher) {
     bench_shl(bencher, 65_536, 17);
 }
 
-#[divan::bench(name = "shl/len_65536_by_17/assign")]
+#[divan::bench(name = "shl_assign/len_65536_by_17/assign")]
 fn shl_len_65536_by_17_assign(bencher: Bencher) {
     bench_shl_assign(bencher, 65_536, 17);
 }

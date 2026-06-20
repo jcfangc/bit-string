@@ -169,6 +169,9 @@ mod sse2 {
 #[cfg(target_arch = "aarch64")]
 mod neon {
     use crate::WORD_BITS;
+    use core::arch::aarch64::{
+        vceqq_u64, vdupq_n_s64, vgetq_lane_u64, vld1q_u64, vorrq_u64, vshlq_u64,
+    };
 
     #[target_feature(enable = "neon")]
     pub(super) unsafe fn eq_words_unaligned(
@@ -177,17 +180,40 @@ mod neon {
         len: usize,
         shift: usize,
     ) -> bool {
+        // SAFETY: `shift` is in [1, WORD_BITS); the caller guarantees this
+        // via the `shift == 0` fast-path in the entry point.
+        // Both shift vectors fit in i64:
+        //   shift ∈ [1, 63]  →  -shift ∈ [-63, -1]
+        //   WORD_BITS - shift ∈ [1, 63]
+        let neg_shift = unsafe { vdupq_n_s64(-(shift as i64)) };
+        let pos_shift = unsafe { vdupq_n_s64((WORD_BITS - shift) as i64) };
+
+        // Process 2 lanes (128 bits) per iteration.
         let mut i = 0;
         while i + 2 <= len {
-            for k in 0..2 {
-                let w0 = sw[i + k];
-                let w1 = sw[i + k + 1];
-                if ((w0 >> shift) | (w1 << (WORD_BITS - shift))) != pw[i + k] {
-                    return false;
-                }
+            // Load [sw[i], sw[i+1]] and [sw[i+1], sw[i+2]].
+            let w0 = unsafe { vld1q_u64(sw.as_ptr().add(i)) };
+            let w1 = unsafe { vld1q_u64(sw.as_ptr().add(i + 1)) };
+
+            // Build the shifted 64-bit window for each lane:
+            //   window[k] = (sw[i+k] >> shift) | (sw[i+k+1] << (64 - shift))
+            // vshlq_u64 with a negative shift amount performs a logical right shift.
+            let lo = unsafe { vshlq_u64(w0, neg_shift) };
+            let hi = unsafe { vshlq_u64(w1, pos_shift) };
+            let window = unsafe { vorrq_u64(lo, hi) };
+
+            let expected = unsafe { vld1q_u64(pw.as_ptr().add(i)) };
+            let cmp = unsafe { vceqq_u64(window, expected) };
+
+            // Each lane is all-ones on equality → vgetq_lane_u64 returns u64::MAX.
+            if unsafe { vgetq_lane_u64(cmp, 0) } == 0 || unsafe { vgetq_lane_u64(cmp, 1) } == 0 {
+                return false;
             }
+
             i += 2;
         }
+
+        // Scalar tail for the last word (when len is odd).
         while i < len {
             let w0 = sw[i];
             let w1 = sw[i + 1];
@@ -196,6 +222,7 @@ mod neon {
             }
             i += 1;
         }
+
         true
     }
 }
