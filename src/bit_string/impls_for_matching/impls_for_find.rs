@@ -2,6 +2,7 @@ use crate::funcs_for_bits::*;
 
 use super::*;
 
+mod funcs_for_contains_core;
 mod funcs_for_find_core;
 
 impl BitString {
