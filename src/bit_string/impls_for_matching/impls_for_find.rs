@@ -33,7 +33,16 @@ impl BitString {
         if needle.bit_len > self.bit_len {
             return None;
         }
-        if self.words.len() >= SMALL_WORDS && !self.contains(needle) {
+        if self.words.len() >= SMALL_WORDS
+            && !funcs_for_contains_core::find_any_candidate(
+                &self.words,
+                self.bit_len,
+                needle.as_words(),
+                needle.bit_len,
+                &mut |pos| bits_equal_at(self, pos, needle),
+            )
+            .is_some()
+        {
             return None;
         }
 
@@ -53,7 +62,16 @@ impl BitString {
         if needle.bit_len > self.bit_len {
             return None;
         }
-        if self.words.len() >= SMALL_WORDS && !self.contains(needle) {
+        if self.words.len() >= SMALL_WORDS
+            && !funcs_for_contains_core::find_any_candidate(
+                &self.words,
+                self.bit_len,
+                needle.as_words(),
+                needle.bit_len,
+                &mut |pos| bits_equal_at(self, pos, needle),
+            )
+            .is_some()
+        {
             return None;
         }
 
