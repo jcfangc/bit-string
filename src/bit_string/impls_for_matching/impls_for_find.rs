@@ -1,3 +1,5 @@
+use crate::SMALL_WORDS;
+
 use super::*;
 
 mod funcs_for_contains_core;
@@ -28,7 +30,10 @@ impl BitString {
         if needle.bit_len == 0 {
             return Some(0);
         }
-        if !self.contains(needle) {
+        if needle.bit_len > self.bit_len {
+            return None;
+        }
+        if self.words.len() >= SMALL_WORDS && !self.contains(needle) {
             return None;
         }
 
@@ -45,7 +50,10 @@ impl BitString {
         if needle.bit_len == 0 {
             return Some(self.bit_len);
         }
-        if !self.contains(needle) {
+        if needle.bit_len > self.bit_len {
+            return None;
+        }
+        if self.words.len() >= SMALL_WORDS && !self.contains(needle) {
             return None;
         }
 
