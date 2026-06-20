@@ -7,6 +7,13 @@ mod funcs_for_ends_with_core;
 mod funcs_for_starts_with_core;
 
 impl BitString {
+    /// Returns `true` if `pattern` matches the bits starting at `index`.
+    ///
+    /// For word-aligned offsets (`index % WORD_BITS == 0`) this delegates
+    /// to the same SIMD word-equality backend used by [`starts_with`].
+    /// For unaligned offsets it uses the shifted-window SIMD backend
+    /// from [`ends_with`].
+    #[inline]
     pub fn matches_at(&self, index: usize, pattern: &Self) -> bool {
         if index > self.bit_len {
             return false;
@@ -16,9 +23,44 @@ impl BitString {
             return false;
         }
 
-        bits_equal_at(self, index, pattern)
+        let shift = index % WORD_BITS;
+        let base_word = index / WORD_BITS;
+        let sw: &[u64] = &self.words[base_word..];
+        let pw = pattern.as_words();
+        let full_words = pattern.bit_len / WORD_BITS;
+
+        if shift == 0 {
+            if !funcs_for_starts_with_core::starts_with_words(sw, pw, full_words) {
+                return false;
+            }
+        } else {
+            if !funcs_for_ends_with_core::ends_with_words(sw, pw, full_words, shift) {
+                return false;
+            }
+        }
+
+        let rem = pattern.bit_len % WORD_BITS;
+        if rem > 0 {
+            let mask = low_mask(rem);
+            let h = if shift == 0 {
+                sw[full_words]
+            } else {
+                let w0 = sw[full_words];
+                let w1 = sw.get(full_words + 1).copied().unwrap_or(0);
+                (w0 >> shift) | (w1 << (WORD_BITS - shift))
+            };
+            if (h & mask) != (pw[full_words] & mask) {
+                return false;
+            }
+        }
+
+        true
     }
 
+    /// Returns `true` if `prefix` is a prefix of `self`.
+    ///
+    /// This is equivalent to [`matches_at`]`(0, prefix)` but optimized for
+    /// the word-aligned position-0 case.
     #[inline]
     pub fn starts_with(&self, prefix: &Self) -> bool {
         if prefix.bit_len > self.bit_len {
@@ -45,6 +87,7 @@ impl BitString {
         true
     }
 
+    /// Returns `true` if `suffix` is a suffix of `self`.
     #[inline]
     pub fn ends_with(&self, suffix: &Self) -> bool {
         if suffix.bit_len > self.bit_len {
