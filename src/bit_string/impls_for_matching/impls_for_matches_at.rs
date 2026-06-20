@@ -46,7 +46,36 @@ impl BitString {
 
     #[inline]
     pub fn ends_with(&self, suffix: &Self) -> bool {
-        suffix.bit_len <= self.bit_len && self.matches_at(self.bit_len - suffix.bit_len, suffix)
+        if suffix.bit_len > self.bit_len {
+            return false;
+        }
+
+        let start = self.bit_len - suffix.bit_len;
+        let shift = start % WORD_BITS;
+
+        if shift == 0 {
+            // Word-aligned — same fast path as starts_with.
+            let sw: &[u64] = &self.words[start / WORD_BITS..];
+            let pw = suffix.as_words();
+            let full_words = suffix.bit_len / WORD_BITS;
+
+            if !funcs_for_starts_with_core::starts_with_words(sw, pw, full_words) {
+                return false;
+            }
+
+            let rem = suffix.bit_len % WORD_BITS;
+            if rem > 0 {
+                let mask = low_mask(rem);
+                if (sw[full_words] & mask) != (pw[full_words] & mask) {
+                    return false;
+                }
+            }
+
+            true
+        } else {
+            // Unaligned — fall back to the generic comparison.
+            self.matches_at(start, suffix)
+        }
     }
 }
 
