@@ -89,6 +89,10 @@ name = "matching_strip_prefix"
 harness = false
 
 [[bench]]
+name = "matching_rfind"
+harness = false
+
+[[bench]]
 name = "editing_truncate"
 harness = false
 
