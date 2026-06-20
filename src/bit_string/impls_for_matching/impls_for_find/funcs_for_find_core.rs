@@ -1,17 +1,15 @@
 //! SIMD first-word pre-filter for `find`.
 //!
-//! For each bit offset (shift) in 0..64 we scan the haystack word-by-word,
-//! comparing a sliding 64-bit window against the needle's first word.
-//! Windows that match are then verified with a full `bits_equal_at` call.
+//! Scanning order is **word-outer, shift-inner** so positions are visited
+//! in increasing order and `find` returns the earliest match.
 
 use crate::SMALL_WORDS;
 use crate::WORD_BITS;
 
 // ---------------------------------------------------------------------------
-// Entry point — dispatches to the best available backend
+// Entry point
 // ---------------------------------------------------------------------------
 
-/// Returns the position of the first verified match, or `None`.
 #[inline]
 pub(super) fn find_first_word<F>(
     haystack: &[u64],
@@ -24,12 +22,10 @@ pub(super) fn find_first_word<F>(
 where
     F: FnMut(usize) -> bool,
 {
-    // For tiny haystacks, scalar beats SIMD setup overhead.
     if haystack.len() < SMALL_WORDS {
         return scalar_find(haystack, needle_first, needle_mask, last_start, verify);
     }
 
-    // SIMD dispatch: each backend returns Some(pos) on a verified match.
     #[cfg(all(
         any(target_arch = "x86", target_arch = "x86_64"),
         target_feature = "avx2"
@@ -59,12 +55,11 @@ where
     }
 
     #[allow(unused)]
-    // Fallback: scalar
     scalar_find(haystack, needle_first, needle_mask, last_start, verify)
 }
 
 // ---------------------------------------------------------------------------
-// Scalar fallback
+// Scalar
 // ---------------------------------------------------------------------------
 
 fn scalar_find<F>(
@@ -77,17 +72,17 @@ fn scalar_find<F>(
 where
     F: FnMut(usize) -> bool,
 {
-    for shift in 0..WORD_BITS {
-        for i in 0..haystack.len() {
+    for i in 0..haystack.len() {
+        let w0 = haystack[i];
+        let w1 = haystack.get(i + 1).copied().unwrap_or(0);
+        for shift in 0..WORD_BITS {
             let pos = i * WORD_BITS + shift;
             if pos > last_start {
                 break;
             }
             let window = if shift == 0 {
-                haystack[i]
+                w0
             } else {
-                let w0 = haystack[i];
-                let w1 = haystack.get(i + 1).copied().unwrap_or(0);
                 (w0 >> shift) | (w1 << (WORD_BITS - shift))
             };
             if (window & needle_mask) == needle_first && verify(pos) {
@@ -99,7 +94,7 @@ where
 }
 
 // ---------------------------------------------------------------------------
-// SSE2 backend (2 lanes)
+// SSE2 — same loop as scalar but checks 2 consecutive shifts at once
 // ---------------------------------------------------------------------------
 
 #[allow(unused)]
@@ -109,16 +104,14 @@ mod sse2 {
 
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
-        __m128i, _mm_and_si128, _mm_cmpeq_epi64, _mm_loadu_si128, _mm_movemask_epi8, _mm_or_si128,
-        _mm_set1_epi64x, _mm_sll_epi64, _mm_srl_epi64,
+        __m128i, _mm_and_si128, _mm_cmpeq_epi64, _mm_loadu_si128, _mm_movemask_epi8,
+        _mm_set1_epi64x,
     };
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::{
-        __m128i, _mm_and_si128, _mm_cmpeq_epi64, _mm_loadu_si128, _mm_movemask_epi8, _mm_or_si128,
-        _mm_set1_epi64x, _mm_sll_epi64, _mm_srl_epi64,
+        __m128i, _mm_and_si128, _mm_cmpeq_epi64, _mm_loadu_si128, _mm_movemask_epi8,
+        _mm_set1_epi64x,
     };
-
-    const LANES: usize = 2;
 
     #[target_feature(enable = "sse2")]
     pub(super) unsafe fn find<F>(
@@ -133,65 +126,51 @@ mod sse2 {
     {
         let needle = _mm_set1_epi64x(needle_first as i64);
         let mask = _mm_set1_epi64x(needle_mask as i64);
-        let chunk_end = haystack.len().saturating_sub(1);
 
-        for shift in 0..WORD_BITS {
-            let mut i = 0;
-            while i < chunk_end {
-                let pos0 = i * WORD_BITS + shift;
-                if pos0 > last_start {
+        for i in 0..haystack.len() {
+            let base = i * WORD_BITS;
+            if base > last_start {
+                break;
+            }
+            let w0 = haystack[i];
+            let w1 = haystack.get(i + 1).copied().unwrap_or(0);
+
+            let mut s = 0;
+            while s < WORD_BITS {
+                if base + s > last_start {
                     break;
                 }
-
-                let window = if shift == 0 {
-                    unsafe { _mm_loadu_si128(haystack.as_ptr().add(i).cast::<__m128i>()) }
+                // Build two consecutive windows manually, pack into __m128i.
+                let win0 = if s == 0 {
+                    w0
                 } else {
-                    let src = haystack.as_ptr();
-                    let w01 = unsafe { _mm_loadu_si128(src.add(i).cast::<__m128i>()) };
-                    let w12 = unsafe { _mm_loadu_si128(src.add(i + 1).cast::<__m128i>()) };
-                    let count_lo = _mm_set1_epi64x(shift as i64);
-                    let count_hi = _mm_set1_epi64x((WORD_BITS - shift) as i64);
-                    let lo = _mm_srl_epi64(w01, count_lo);
-                    let hi = _mm_sll_epi64(w12, count_hi);
-                    _mm_or_si128(lo, hi)
+                    (w0 >> s) | (w1 << (WORD_BITS - s))
                 };
-
-                let masked = _mm_and_si128(window, mask);
-                let cmp = unsafe { _mm_cmpeq_epi64(masked, needle) };
-                let hits = _mm_movemask_epi8(cmp) as u32;
+                let win1 = if s + 1 >= WORD_BITS {
+                    0
+                } else {
+                    (w0 >> (s + 1)) | (w1 << (WORD_BITS - (s + 1)))
+                };
+                let windows = _mm_set1_epi64x(win0 as i64);
+                let windows = _mm_loadu_si128([win0, win1].as_ptr().cast::<__m128i>());
+                let m = _mm_and_si128(windows, mask);
+                let c = _mm_cmpeq_epi64(m, needle);
+                let hits = _mm_movemask_epi8(c) as u32;
 
                 if hits & 0xff != 0 {
-                    let pos = i * WORD_BITS + shift;
+                    let pos = base + s;
                     if pos <= last_start && verify(pos) {
                         return Some(pos);
                     }
                 }
                 if hits & 0xff00 != 0 {
-                    let pos = (i + 1) * WORD_BITS + shift;
+                    let pos = base + s + 1;
                     if pos <= last_start && verify(pos) {
                         return Some(pos);
                     }
                 }
 
-                i += LANES;
-            }
-
-            // Tail
-            for j in i..haystack.len() {
-                let pos = j * WORD_BITS + shift;
-                if pos > last_start {
-                    break;
-                }
-                let window = if shift == 0 {
-                    haystack[j]
-                } else {
-                    let w0 = haystack[j];
-                    let w1 = haystack.get(j + 1).copied().unwrap_or(0);
-                    (w0 >> shift) | (w1 << (WORD_BITS - shift))
-                };
-                if (window & needle_mask) == needle_first && verify(pos) {
-                    return Some(pos);
-                }
+                s += 2;
             }
         }
 
@@ -200,7 +179,7 @@ mod sse2 {
 }
 
 // ---------------------------------------------------------------------------
-// AVX2 backend (4 lanes)
+// AVX2 — checks 4 consecutive shifts at once
 // ---------------------------------------------------------------------------
 
 #[allow(unused)]
@@ -210,18 +189,14 @@ mod avx2 {
 
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
-        __m128i, __m256i, _mm_set1_epi64x, _mm256_and_si256, _mm256_cmpeq_epi64,
-        _mm256_loadu_si256, _mm256_movemask_pd, _mm256_or_si256, _mm256_set1_epi64x,
-        _mm256_sll_epi64, _mm256_srl_epi64,
+        __m256i, _mm256_and_si256, _mm256_cmpeq_epi64, _mm256_loadu_si256, _mm256_movemask_pd,
+        _mm256_set1_epi64x,
     };
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::{
-        __m128i, __m256i, _mm_set1_epi64x, _mm256_and_si256, _mm256_cmpeq_epi64,
-        _mm256_loadu_si256, _mm256_movemask_pd, _mm256_or_si256, _mm256_set1_epi64x,
-        _mm256_sll_epi64, _mm256_srl_epi64,
+        __m256i, _mm256_and_si256, _mm256_cmpeq_epi64, _mm256_loadu_si256, _mm256_movemask_pd,
+        _mm256_set1_epi64x,
     };
-
-    const LANES: usize = 4;
 
     #[target_feature(enable = "avx2")]
     pub(super) unsafe fn find<F>(
@@ -236,37 +211,38 @@ mod avx2 {
     {
         let needle = _mm256_set1_epi64x(needle_first as i64);
         let mask = _mm256_set1_epi64x(needle_mask as i64);
-        let chunk_end = haystack.len().saturating_sub(1);
 
-        for shift in 0..WORD_BITS {
-            let mut i = 0;
-            while i + LANES <= chunk_end {
-                let pos0 = i * WORD_BITS + shift;
-                if pos0 > last_start {
+        for i in 0..haystack.len() {
+            let base = i * WORD_BITS;
+            if base > last_start {
+                break;
+            }
+            let w0 = haystack[i];
+            let w1 = haystack.get(i + 1).copied().unwrap_or(0);
+
+            let mut s = 0;
+            while s < WORD_BITS {
+                if base + s > last_start {
                     break;
                 }
-
-                let window = if shift == 0 {
-                    unsafe { _mm256_loadu_si256(haystack.as_ptr().add(i).cast::<__m256i>()) }
-                } else {
-                    let src = haystack.as_ptr();
-                    let w0 = unsafe { _mm256_loadu_si256(src.add(i).cast::<__m256i>()) };
-                    let w1 = unsafe { _mm256_loadu_si256(src.add(i + 1).cast::<__m256i>()) };
-                    let count_lo = _mm_set1_epi64x(shift as i64);
-                    let count_hi = _mm_set1_epi64x((WORD_BITS - shift) as i64);
-                    let lo = _mm256_srl_epi64(w0, count_lo);
-                    let hi = _mm256_sll_epi64(w1, count_hi);
-                    _mm256_or_si256(lo, hi)
-                };
-
-                let masked = _mm256_and_si256(window, mask);
-                let cmp = _mm256_cmpeq_epi64(masked, needle);
-                let hits = _mm256_movemask_pd(unsafe { core::mem::transmute(cmp) }) as u32;
-
+                let end = WORD_BITS.min(s + 4);
+                let mut wins = [0u64; 4];
+                for k in 0..(end - s) {
+                    let shift = s + k;
+                    wins[k] = if shift == 0 {
+                        w0
+                    } else {
+                        (w0 >> shift) | (w1 << (WORD_BITS - shift))
+                    };
+                }
+                let windows = _mm256_loadu_si256(wins.as_ptr().cast::<__m256i>());
+                let m = _mm256_and_si256(windows, mask);
+                let c = _mm256_cmpeq_epi64(m, needle);
+                let hits = _mm256_movemask_pd(core::mem::transmute(c)) as u32;
                 if hits != 0 {
-                    for k in 0..LANES {
+                    for k in 0..(end - s) {
                         if hits & (1 << k) != 0 {
-                            let pos = (i + k) * WORD_BITS + shift;
+                            let pos = base + s + k;
                             if pos <= last_start && verify(pos) {
                                 return Some(pos);
                             }
@@ -274,25 +250,7 @@ mod avx2 {
                     }
                 }
 
-                i += LANES;
-            }
-
-            // Tail
-            for j in i..haystack.len() {
-                let pos = j * WORD_BITS + shift;
-                if pos > last_start {
-                    break;
-                }
-                let window = if shift == 0 {
-                    haystack[j]
-                } else {
-                    let w0 = haystack[j];
-                    let w1 = haystack.get(j + 1).copied().unwrap_or(0);
-                    (w0 >> shift) | (w1 << (WORD_BITS - shift))
-                };
-                if (window & needle_mask) == needle_first && verify(pos) {
-                    return Some(pos);
-                }
+                s += 4;
             }
         }
 
@@ -301,9 +259,10 @@ mod avx2 {
 }
 
 // ---------------------------------------------------------------------------
-// NEON backend (2 lanes, aarch64)
+// NEON
 // ---------------------------------------------------------------------------
 
+#[allow(unused)]
 #[cfg(target_arch = "aarch64")]
 mod neon {
     use super::*;
@@ -311,8 +270,6 @@ mod neon {
     use core::arch::aarch64::{
         uint64x2_t, vandq_u64, vceqq_u64, vdupq_n_u64, vgetq_lane_u64, vld1q_u64,
     };
-
-    const LANES: usize = 2;
 
     #[target_feature(enable = "neon")]
     pub(super) unsafe fn find<F>(
@@ -327,72 +284,53 @@ mod neon {
     {
         let needle = vdupq_n_u64(needle_first);
         let mask = vdupq_n_u64(needle_mask);
-        let chunk_end = haystack.len().saturating_sub(1);
 
-        for shift in 0..WORD_BITS {
-            let mut i = 0;
-            while i < chunk_end {
-                let pos0 = i * WORD_BITS + shift;
-                if pos0 > last_start {
-                    break;
-                }
-
-                if shift == 0 {
-                    // Word-aligned: SIMD compare 2 lanes.
-                    let window = vld1q_u64(haystack.as_ptr().add(i));
-                    let masked = vandq_u64(window, mask);
-                    let cmp = vceqq_u64(masked, needle);
-
-                    if vgetq_lane_u64(cmp, 0) != 0 {
-                        let pos = i * WORD_BITS + shift;
-                        if pos <= last_start && verify(pos) {
-                            return Some(pos);
-                        }
-                    }
-                    if vgetq_lane_u64(cmp, 1) != 0 {
-                        let pos = (i + 1) * WORD_BITS + shift;
-                        if pos <= last_start && verify(pos) {
-                            return Some(pos);
-                        }
-                    }
-                } else {
-                    // Unaligned: scalar path per position.
-                    for k in 0..LANES {
-                        let pos = (i + k) * WORD_BITS + shift;
-                        if pos > last_start {
-                            break;
-                        }
-                        let w0 = haystack[i + k];
-                        let w1 = haystack.get(i + k + 1).copied().unwrap_or(0);
-                        let window = (w0 >> shift) | (w1 << (WORD_BITS - shift));
-                        if (window & needle_mask) == needle_first && verify(pos) {
-                            return Some(pos);
-                        }
-                    }
-                }
-
-                i += LANES;
+        for i in 0..haystack.len() {
+            let base = i * WORD_BITS;
+            if base > last_start {
+                break;
             }
+            let w0 = haystack[i];
+            let w1 = haystack.get(i + 1).copied().unwrap_or(0);
 
-            // Tail
-            for j in i..haystack.len() {
-                let pos = j * WORD_BITS + shift;
-                if pos > last_start {
+            let mut s = 0;
+            while s < WORD_BITS {
+                if base + s > last_start {
                     break;
                 }
-                let window = if shift == 0 {
-                    haystack[j]
-                } else {
-                    let w0 = haystack[j];
-                    let w1 = haystack.get(j + 1).copied().unwrap_or(0);
-                    (w0 >> shift) | (w1 << (WORD_BITS - shift))
-                };
-                if (window & needle_mask) == needle_first && verify(pos) {
-                    return Some(pos);
+                let end = WORD_BITS.min(s + 2);
+                let mut wins = [0u64; 2];
+                for k in 0..(end - s) {
+                    let shift = s + k;
+                    wins[k] = if shift == 0 {
+                        w0
+                    } else {
+                        (w0 >> shift) | (w1 << (WORD_BITS - shift))
+                    };
                 }
+                let windows = vld1q_u64(wins.as_ptr());
+                let m = vandq_u64(windows, mask);
+                let c = vceqq_u64(m, needle);
+                if vgetq_lane_u64(c, 0) != 0 {
+                    let pos = base + s;
+                    if pos <= last_start && verify(pos) {
+                        return Some(pos);
+                    }
+                }
+                if vgetq_lane_u64(c, 1) != 0 && s + 1 < end {
+                    let pos = base + s + 1;
+                    if pos <= last_start && verify(pos) {
+                        return Some(pos);
+                    }
+                }
+
+                s += 2;
             }
         }
 
         None
     }
 }
+
+#[cfg(test)]
+mod tests_for_backend_equivalence;
