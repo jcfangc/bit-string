@@ -1,5 +1,3 @@
-use crate::bit_string::traits::*;
-
 use super::*;
 
 impl BitString {

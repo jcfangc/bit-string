@@ -152,9 +152,9 @@ mod sse2 {
                     (w0 >> (s + 1)) | (w1 << (WORD_BITS - (s + 1)))
                 };
                 let windows = _mm_set1_epi64x(win0 as i64);
-                let windows = _mm_loadu_si128([win0, win1].as_ptr().cast::<__m128i>());
+                let windows = unsafe { _mm_loadu_si128([win0, win1].as_ptr().cast::<__m128i>()) };
                 let m = _mm_and_si128(windows, mask);
-                let c = _mm_cmpeq_epi64(m, needle);
+                let c = unsafe { _mm_cmpeq_epi64(m, needle) };
                 let hits = _mm_movemask_epi8(c) as u32;
 
                 if hits & 0xff != 0 {
@@ -235,10 +235,10 @@ mod avx2 {
                         (w0 >> shift) | (w1 << (WORD_BITS - shift))
                     };
                 }
-                let windows = _mm256_loadu_si256(wins.as_ptr().cast::<__m256i>());
+                let windows = unsafe { _mm256_loadu_si256(wins.as_ptr().cast::<__m256i>()) };
                 let m = _mm256_and_si256(windows, mask);
                 let c = _mm256_cmpeq_epi64(m, needle);
-                let hits = _mm256_movemask_pd(core::mem::transmute(c)) as u32;
+                let hits = unsafe { _mm256_movemask_pd(core::mem::transmute(c)) } as u32;
                 if hits != 0 {
                     for k in 0..(end - s) {
                         if hits & (1 << k) != 0 {
