@@ -85,6 +85,10 @@ name = "matching_find"
 harness = false
 
 [[bench]]
+name = "matching_starts_with"
+harness = false
+
+[[bench]]
 name = "matching_strip_prefix"
 harness = false
 
