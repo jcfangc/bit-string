@@ -73,8 +73,12 @@ fn scalar<F>(
 where
     F: FnMut(usize) -> bool,
 {
+    // Only scan words that can contain a window starting at ≤ last_start.
+    let max_word = last_start / WORD_BITS;
+    let word_limit = (max_word + 1).min(haystack.len());
+
     for shift in 0..WORD_BITS {
-        for i in 0..haystack.len() {
+        for i in 0..word_limit {
             let pos = i * WORD_BITS + shift;
             if pos > last_start {
                 break;
@@ -129,11 +133,12 @@ mod sse2 {
     {
         let needle = unsafe { _mm_set1_epi64x(needle_first as i64) };
         let mask = unsafe { _mm_set1_epi64x(needle_mask as i64) };
-        let chunk_end = haystack.len().saturating_sub(1);
+        let max_word = last_start / WORD_BITS;
+        let word_limit = (max_word + 1).min(haystack.len());
 
         for shift in 0..WORD_BITS {
             let mut i = 0;
-            while i < chunk_end {
+            while i + LANES <= word_limit {
                 if i * WORD_BITS + shift > last_start {
                     break;
                 }
@@ -172,7 +177,7 @@ mod sse2 {
             }
 
             // Tail
-            for j in i..haystack.len() {
+            for j in i..word_limit {
                 let pos = j * WORD_BITS + shift;
                 if pos > last_start {
                     break;
@@ -231,11 +236,12 @@ mod avx2 {
     {
         let needle = unsafe { _mm256_set1_epi64x(needle_first as i64) };
         let mask = unsafe { _mm256_set1_epi64x(needle_mask as i64) };
-        let chunk_end = haystack.len().saturating_sub(1);
+        let max_word = last_start / WORD_BITS;
+        let word_limit = (max_word + 1).min(haystack.len());
 
         for shift in 0..WORD_BITS {
             let mut i = 0;
-            while i + LANES <= chunk_end {
+            while i + LANES <= word_limit {
                 if i * WORD_BITS + shift > last_start {
                     break;
                 }
@@ -272,7 +278,7 @@ mod avx2 {
             }
 
             // Tail
-            for j in i..haystack.len() {
+            for j in i..word_limit {
                 let pos = j * WORD_BITS + shift;
                 if pos > last_start {
                     break;
@@ -322,11 +328,12 @@ mod neon {
     {
         let needle = unsafe { vdupq_n_u64(needle_first) };
         let mask = unsafe { vdupq_n_u64(needle_mask) };
-        let chunk_end = haystack.len().saturating_sub(1);
+        let max_word = last_start / WORD_BITS;
+        let word_limit = (max_word + 1).min(haystack.len());
 
         for shift in 0..WORD_BITS {
             let mut i = 0;
-            while i < chunk_end {
+            while i < word_limit {
                 if i * WORD_BITS + shift > last_start {
                     break;
                 }
@@ -367,7 +374,7 @@ mod neon {
             }
 
             // Tail
-            for j in i..haystack.len() {
+            for j in i..word_limit {
                 let pos = j * WORD_BITS + shift;
                 if pos > last_start {
                     break;
