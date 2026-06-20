@@ -10,7 +10,7 @@ pub struct BitString {
 
 pub mod errors;
 mod impls_for_access;
-mod impls_for_bit_ops;
+mod impls_for_bit_arith;
 mod impls_for_construction;
 mod impls_for_editing;
 mod impls_for_fmt;
