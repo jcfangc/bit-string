@@ -14,16 +14,11 @@ impl BitString {
             return false;
         }
 
-        let needle_words = needle.as_words();
-        let needle_first = needle_words[0];
-        let needle_mask = low_mask(needle.bit_len.min(WORD_BITS));
-        let last_start = self.bit_len - needle.bit_len;
-
         funcs_for_contains_core::find_first_candidate(
             &self.words,
-            needle_first,
-            needle_mask,
-            last_start,
+            self.bit_len,
+            needle.as_words(),
+            needle.bit_len,
             &mut |pos| bits_equal_at(self, pos, needle),
         )
         .is_some()

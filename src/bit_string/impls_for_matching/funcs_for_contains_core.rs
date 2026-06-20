@@ -7,30 +7,32 @@
 
 use crate::SMALL_WORDS;
 use crate::WORD_BITS;
+use crate::funcs_for_bits::low_mask;
 
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
-/// Returns `Some(pos)` if any 64-bit window in `haystack` matches
-/// `needle_first` (after masking) AND `verify(pos)` succeeds.
+/// Returns `Some(pos)` if any 64-bit window in `haystack[0..word_limit]`
+/// matches the first word of `needle_words` AND `verify(pos)` succeeds.
 ///
-/// Only positions `pos ∈ [0, last_start]` are considered.  Words beyond
-/// `last_start / WORD_BITS + 1` are ignored.
-///
-/// Uses **shift-outer, word-inner** ordering — does **not** guarantee the
+/// Scans positions `pos ∈ [0, haystack_bit_len - needle_bit_len]` using
+/// **shift-outer, word-inner** ordering — does **not** guarantee the
 /// returned position is the earliest match.
 #[inline]
 pub(super) fn find_first_candidate<F>(
     haystack: &[u64],
-    needle_first: u64,
-    needle_mask: u64,
-    last_start: usize,
+    haystack_bit_len: usize,
+    needle_words: &[u64],
+    needle_bit_len: usize,
     verify: &mut F,
 ) -> Option<usize>
 where
     F: FnMut(usize) -> bool,
 {
+    let needle_first = needle_words[0];
+    let needle_mask = low_mask(needle_bit_len.min(WORD_BITS));
+    let last_start = haystack_bit_len - needle_bit_len;
     let max_word = last_start / WORD_BITS;
     let word_limit = (max_word + 1).min(haystack.len());
 
