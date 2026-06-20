@@ -16,7 +16,18 @@ src/
     impls_for_construction.rs    # new, try_from, from_bool_iter, from_words, zeros, repeat
     impls_for_access.rs          # get, len, is_empty, to_string
     impls_for_editing.rs         # push, pop, insert, remove, set, extend, truncate, slice, etc.
-    impls_for_matching.rs        # find_bits, rfind_bits, starts_with, ends_with, contains_bits, etc.
+    impls_for_matching.rs        # bits_equal_at + submodule declarations
+    impls_for_matching/
+      impls_for_matches_at.rs    #   matches_at, starts_with, ends_with
+      impls_for_matches_at/
+        funcs_for_starts_with_core.rs  #   SIMD starts_with word equality
+        funcs_for_ends_with_core.rs    #   SIMD ends_with (aligned + unaligned)
+      impls_for_find.rs          #   contains, find, rfind
+      impls_for_find/
+        funcs_for_contains_core.rs    #   SIMD find_any_candidate (shift-outer)
+        funcs_for_find_core.rs        #   SIMD find_first_word (word-outer)
+        funcs_for_rfind_core.rs       #   SIMD find_last_word (word-reverse)
+      impls_for_strip.rs         #   strip_prefix, strip_suffix
     impls_for_iter.rs            # Iterator impl (yields bools)
     impls_for_fmt.rs             # Display, Debug (outputs "1010…" string)
     impls_for_bit_ops/
