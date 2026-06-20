@@ -1,10 +1,10 @@
-mod funcs_for_binary_core;
+mod impls_for_and;
 mod impls_for_count_ones;
 mod impls_for_not;
+mod impls_for_or;
 mod impls_for_shl;
 mod impls_for_shr;
-
-use alloc::vec::Vec;
+mod impls_for_xor;
 
 use crate::bit_string::errors::BitStringLenMismatch;
 

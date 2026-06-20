@@ -1,8 +1,8 @@
-use super::*;
+use alloc::vec::Vec;
 
-const OP_AND: u8 = 0;
-const OP_OR: u8 = 1;
-const OP_XOR: u8 = 2;
+pub(super) const OP_AND: u8 = 0;
+pub(super) const OP_OR: u8 = 1;
+pub(super) const OP_XOR: u8 = 2;
 
 #[inline]
 pub(super) fn owned<const OP: u8>(lhs: &[u64], rhs: &[u64]) -> Vec<u64> {
@@ -369,10 +369,6 @@ mod neon {
         }
     }
 }
-
-mod impls_for_and;
-mod impls_for_or;
-mod impls_for_xor;
 
 #[cfg(test)]
 mod tests_for_backend_equivalence;

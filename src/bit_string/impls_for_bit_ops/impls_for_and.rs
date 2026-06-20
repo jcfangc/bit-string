@@ -1,4 +1,7 @@
-use super::*;
+use crate::bit_string::errors::BitStringLenMismatch;
+use crate::bit_string::traits::*;
+
+use super::BitString;
 
 impl BitString {
     /// Returns `self & rhs` without mutating either input.
@@ -7,7 +10,7 @@ impl BitString {
         self.require_same_len(rhs)?;
 
         Ok(Self {
-            words: owned::<OP_AND>(&self.words, &rhs.words),
+            words: self.words.and(&rhs.words),
             bit_len: self.bit_len,
         })
     }
@@ -16,7 +19,7 @@ impl BitString {
     #[inline]
     pub fn and_assign(&mut self, rhs: &Self) -> Result<(), BitStringLenMismatch> {
         self.require_same_len(rhs)?;
-        assign::<OP_AND>(&mut self.words, &rhs.words);
+        self.words.and_assign(&rhs.words);
         Ok(())
     }
 
@@ -24,7 +27,7 @@ impl BitString {
     #[inline]
     pub fn and_into(mut self, rhs: &Self) -> Result<Self, BitStringLenMismatch> {
         self.require_same_len(rhs)?;
-        assign::<OP_AND>(&mut self.words, &rhs.words);
+        self.words.and_assign(&rhs.words);
         Ok(self)
     }
 }
