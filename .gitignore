@@ -1,3 +1,4 @@
 /target
 /.vscode
 /.venv
+/proptest-regressions
