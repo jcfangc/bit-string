@@ -131,7 +131,7 @@ fn into_overwrites_in_place() {
     let bits = BitString::try_from("00111100").unwrap();
     let replacement = BitString::try_from("1010").unwrap();
 
-    let result = bits.replace_into(2, &replacement);
+    let result = bits.replace(2, &replacement);
 
     assert_eq!(result.bit_len(), 8);
     assert_eq!(result.to_string(), "00101000");
@@ -142,7 +142,7 @@ fn into_extends() {
     let bits = BitString::try_from("0011").unwrap();
     let replacement = BitString::try_from("10101").unwrap();
 
-    let result = bits.replace_into(2, &replacement);
+    let result = bits.replace(2, &replacement);
 
     assert_eq!(result.bit_len(), 7);
     assert_eq!(result.to_string(), "0010101");
@@ -153,7 +153,7 @@ fn into_clamps_start() {
     let bits = BitString::try_from("110").unwrap();
     let replacement = BitString::try_from("01").unwrap();
 
-    let result = bits.replace_into(7, &replacement);
+    let result = bits.replace(7, &replacement);
 
     assert_eq!(result.to_string(), "11001");
 }

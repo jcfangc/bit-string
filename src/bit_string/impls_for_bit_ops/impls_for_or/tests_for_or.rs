@@ -8,7 +8,7 @@ fn assert_or_variants(lhs: &BitString, rhs: &BitString, expected: &BitString) {
     let mut assigned = lhs.clone();
     assigned.or_assign(rhs).unwrap();
 
-    let into = lhs.clone().or_into(rhs).unwrap();
+    let into = lhs.clone().or(rhs).unwrap();
 
     assert_eq!(owned, *expected);
     assert_eq!(assigned, *expected);
@@ -112,7 +112,7 @@ fn or_into_matches_or() {
     let rhs = BitString::try_from("010011").unwrap();
 
     let expected = lhs.or(&rhs).unwrap();
-    let actual = lhs.or_into(&rhs).unwrap();
+    let actual = lhs.or(&rhs).unwrap();
 
     assert_eq!(actual, expected);
 }
@@ -133,5 +133,5 @@ fn returns_len_mismatch_for_different_lengths() {
     assert_eq!(assigned.or_assign(&rhs).unwrap_err(), expected);
     assert_eq!(assigned.to_string(), "101");
 
-    assert_eq!(lhs.or_into(&rhs).unwrap_err(), expected);
+    assert_eq!(lhs.or(&rhs).unwrap_err(), expected);
 }

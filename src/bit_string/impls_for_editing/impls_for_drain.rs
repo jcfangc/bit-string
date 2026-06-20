@@ -127,26 +127,6 @@ impl BitString {
         self.words = words;
         self.bit_len = bit_len;
     }
-
-    /// Consuming variant: removes `interval`, reusing `self`'s allocation
-    /// when the clamped gap is at least one word.
-    ///
-    /// The interval is clamped to `[0, self.bit_len())`.  An interval that lies
-    /// entirely beyond the bit string length returns `self` unchanged.
-    #[inline]
-    pub fn drain_interval_into(mut self, interval: UsizeCO) -> Self {
-        let Some(clamped) = self.clamp_drain_interval(interval) else {
-            return self;
-        };
-
-        if let Ok(witnessed) = self.try_witness_shiftable(clamped) {
-            self.drain_shift_in_place(witnessed);
-            return self;
-        }
-
-        let (words, bit_len) = self.drain_allocate(clamped);
-        BitString { words, bit_len }
-    }
 }
 
 #[cfg(test)]

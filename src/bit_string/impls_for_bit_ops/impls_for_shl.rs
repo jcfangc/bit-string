@@ -17,13 +17,6 @@ impl BitString {
     pub fn shl_assign(&mut self, amount: usize) {
         self.words.shl_assign(self.bit_len, amount);
     }
-
-    /// Consumes `self`, reuses its backing storage, and returns `self << amount`.
-    #[inline]
-    pub fn shl_into(mut self, amount: usize) -> Self {
-        self.words.shl_assign(self.bit_len, amount);
-        self
-    }
 }
 
 #[cfg(test)]

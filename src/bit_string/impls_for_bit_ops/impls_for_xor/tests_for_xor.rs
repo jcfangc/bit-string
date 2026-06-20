@@ -8,7 +8,7 @@ fn assert_xor_variants(lhs: &BitString, rhs: &BitString, expected: &BitString) {
     let mut assigned = lhs.clone();
     assigned.xor_assign(rhs).unwrap();
 
-    let into = lhs.clone().xor_into(rhs).unwrap();
+    let into = lhs.clone().xor(rhs).unwrap();
 
     assert_eq!(owned, *expected);
     assert_eq!(assigned, *expected);
@@ -121,7 +121,7 @@ fn xor_into_matches_xor() {
     let rhs = BitString::try_from("110011").unwrap();
 
     let expected = lhs.xor(&rhs).unwrap();
-    let actual = lhs.xor_into(&rhs).unwrap();
+    let actual = lhs.xor(&rhs).unwrap();
 
     assert_eq!(actual, expected);
 }
@@ -142,5 +142,5 @@ fn returns_len_mismatch_for_different_lengths() {
     assert_eq!(assigned.xor_assign(&rhs).unwrap_err(), expected);
     assert_eq!(assigned.to_string(), "101");
 
-    assert_eq!(lhs.xor_into(&rhs).unwrap_err(), expected);
+    assert_eq!(lhs.xor(&rhs).unwrap_err(), expected);
 }

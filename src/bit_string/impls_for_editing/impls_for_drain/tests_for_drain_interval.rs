@@ -186,7 +186,7 @@ fn borrowing_clamps_empty_for_out_of_bounds_interval() {
 fn into_clamps_interval_and_reuses_self() {
     let bits = BitString::try_from("110011").unwrap();
     // interval [1, 8) clamps to [1, 6)
-    let result = bits.drain_interval_into(iv(1, 8));
+    let result = bits.drain_interval(iv(1, 8));
     assert_eq!(result.to_string(), "1");
     assert_eq!(result.bit_len(), 1);
 }
@@ -195,7 +195,7 @@ fn into_clamps_interval_and_reuses_self() {
 fn into_clamps_to_empty_returns_self() {
     let bits = BitString::try_from("101").unwrap();
     // interval [10, 20) clamps to [3, 3) — empty
-    let result = bits.drain_interval_into(iv(10, 20));
+    let result = bits.drain_interval(iv(10, 20));
     assert_eq!(result.to_string(), "101");
     assert_eq!(result.bit_len(), 3);
 }
@@ -217,7 +217,7 @@ fn assign_clamps_end_beyond_len_partial_overlap() {
 fn into_drains_prefix() {
     let bits = BitString::try_from("101001").unwrap();
 
-    let result = bits.drain_interval_into(iv(0, 2));
+    let result = bits.drain_interval(iv(0, 2));
 
     assert_eq!(result.to_string(), "1001");
     assert_eq!(result.bit_len(), 4);
@@ -227,7 +227,7 @@ fn into_drains_prefix() {
 fn into_drains_middle() {
     let bits = BitString::try_from("101001").unwrap();
 
-    let result = bits.drain_interval_into(iv(2, 5));
+    let result = bits.drain_interval(iv(2, 5));
 
     assert_eq!(result.to_string(), "101");
     assert_eq!(result.bit_len(), 3);
@@ -237,7 +237,7 @@ fn into_drains_middle() {
 fn into_drains_suffix() {
     let bits = BitString::try_from("101001").unwrap();
 
-    let result = bits.drain_interval_into(iv(3, 6));
+    let result = bits.drain_interval(iv(3, 6));
 
     assert_eq!(result.to_string(), "101");
     assert_eq!(result.bit_len(), 3);
@@ -253,7 +253,7 @@ fn into_drains_large_gap_for_in_place_path() {
 
     // Drain [10, 120): bit 50 is removed (inside interval);
     // bits at 130 and 199 shift left by 110.
-    let result = bits.drain_interval_into(iv(10, 120));
+    let result = bits.drain_interval(iv(10, 120));
 
     // New length: 200 - 110 = 90.
     assert_eq!(result.bit_len(), 90);

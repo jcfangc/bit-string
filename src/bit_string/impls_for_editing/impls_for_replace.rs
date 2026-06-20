@@ -135,20 +135,6 @@ impl BitString {
         self.words = result.words;
         self.bit_len = result.bit_len;
     }
-
-    /// Consuming variant: replaces the interval, reusing `self`'s allocation
-    /// when the replacement has the same length as the clamped interval.
-    #[inline]
-    pub fn replace_interval_into(mut self, interval: UsizeCO, replacement: &Self) -> Self {
-        let (start, end) = self.clamp_replace_interval(interval);
-
-        if let Ok(witnessed_start) = Self::try_witness_equal_len(start, end, replacement) {
-            self.replace_equal_length_in_place(witnessed_start, replacement);
-            return self;
-        }
-
-        self.replace_allocate(start, end, replacement)
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -181,20 +167,6 @@ impl BitString {
         // SAFETY: start < end by the guard above.
         let interval = unsafe { UsizeCO::new_unchecked(start, end) };
         self.replace_interval_assign(interval, replacement);
-    }
-
-    /// Consuming variant of [`replace`](Self::replace).
-    #[inline]
-    pub fn replace_into(self, start: usize, replacement: &Self) -> Self {
-        let (start, end) = self.clamp_replace_range(start, replacement.bit_len);
-        if start == end {
-            let mut this = self;
-            this.insert_bit_string(start, replacement);
-            return this;
-        }
-        // SAFETY: start < end by the guard above.
-        let interval = unsafe { UsizeCO::new_unchecked(start, end) };
-        self.replace_interval_into(interval, replacement)
     }
 }
 

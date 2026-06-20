@@ -20,13 +20,6 @@ impl BitString {
         self.words.or_assign(&rhs.words);
         Ok(())
     }
-
-    #[inline]
-    pub fn or_into(mut self, rhs: &Self) -> Result<Self, BitStringLenMismatch> {
-        self.require_same_len(rhs)?;
-        self.words.or_assign(&rhs.words);
-        Ok(self)
-    }
 }
 
 #[cfg(test)]

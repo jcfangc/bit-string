@@ -63,7 +63,7 @@ fn count_changes_after_set() {
 
 #[test]
 fn count_ones_ignores_unused_tail_bits() {
-    let bits = BitString::ones(65).not_into();
+    let bits = BitString::ones(65).not();
 
     assert_eq!(bits.bit_len(), 65);
     assert_eq!(bits.count_ones(), 0);

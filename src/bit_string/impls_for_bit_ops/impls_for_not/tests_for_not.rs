@@ -8,7 +8,7 @@ fn assert_not_variants(input: &BitString, expected: &BitString) {
     let mut assigned = input.clone();
     assigned.not_assign();
 
-    let into = input.clone().not_into();
+    let into = input.clone().not();
 
     assert_eq!(owned, *expected);
     assert_eq!(assigned, *expected);
@@ -96,7 +96,7 @@ fn not_into_matches_not() {
     let input = BitString::try_from("101101").unwrap();
 
     let expected = input.not();
-    let actual = input.not_into();
+    let actual = input.not();
 
     assert_eq!(actual, expected);
 }

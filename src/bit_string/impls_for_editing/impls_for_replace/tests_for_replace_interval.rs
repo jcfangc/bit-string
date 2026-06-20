@@ -187,7 +187,7 @@ fn into_replaces_same_length() {
     let bits = BitString::try_from("00111100").unwrap();
     let replacement = BitString::try_from("1010").unwrap();
 
-    let result = bits.replace_interval_into(iv(2, 6), &replacement);
+    let result = bits.replace_interval(iv(2, 6), &replacement);
 
     assert_eq!(result.bit_len(), 8);
     assert_eq!(result.to_string(), "00101000");
@@ -198,7 +198,7 @@ fn into_replaces_shorter() {
     let bits = BitString::try_from("00111100").unwrap();
     let replacement = BitString::try_from("10").unwrap();
 
-    let result = bits.replace_interval_into(iv(2, 6), &replacement);
+    let result = bits.replace_interval(iv(2, 6), &replacement);
 
     assert_eq!(result.bit_len(), 6);
     assert_eq!(result.to_string(), "001000");
@@ -209,7 +209,7 @@ fn into_replaces_longer() {
     let bits = BitString::try_from("001100").unwrap();
     let replacement = BitString::try_from("10101").unwrap();
 
-    let result = bits.replace_interval_into(iv(2, 4), &replacement);
+    let result = bits.replace_interval(iv(2, 4), &replacement);
 
     assert_eq!(result.bit_len(), 9);
     assert_eq!(result.to_string(), "001010100");
@@ -220,7 +220,7 @@ fn into_clamps_out_of_bounds() {
     let bits = BitString::try_from("101").unwrap();
     let replacement = BitString::try_from("0").unwrap();
 
-    let result = bits.replace_interval_into(iv(1, 10), &replacement);
+    let result = bits.replace_interval(iv(1, 10), &replacement);
 
     assert_eq!(result.to_string(), "10");
 }

@@ -8,7 +8,7 @@ fn assert_and_variants(lhs: &BitString, rhs: &BitString, expected: &BitString) {
     let mut assigned = lhs.clone();
     assigned.and_assign(rhs).unwrap();
 
-    let into = lhs.clone().and_into(rhs).unwrap();
+    let into = lhs.clone().and(rhs).unwrap();
 
     assert_eq!(owned, *expected);
     assert_eq!(assigned, *expected);
@@ -112,7 +112,7 @@ fn and_into_matches_and() {
     let rhs = BitString::try_from("110011").unwrap();
 
     let expected = lhs.and(&rhs).unwrap();
-    let actual = lhs.and_into(&rhs).unwrap();
+    let actual = lhs.and(&rhs).unwrap();
 
     assert_eq!(actual, expected);
 }
@@ -133,5 +133,5 @@ fn returns_len_mismatch_for_different_lengths() {
     assert_eq!(assigned.and_assign(&rhs).unwrap_err(), expected);
     assert_eq!(assigned.to_string(), "101");
 
-    assert_eq!(lhs.and_into(&rhs).unwrap_err(), expected);
+    assert_eq!(lhs.and(&rhs).unwrap_err(), expected);
 }

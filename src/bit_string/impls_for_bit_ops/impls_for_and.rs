@@ -22,14 +22,6 @@ impl BitString {
         self.words.and_assign(&rhs.words);
         Ok(())
     }
-
-    /// Consumes `self`, reuses its backing storage, and returns `self & rhs`.
-    #[inline]
-    pub fn and_into(mut self, rhs: &Self) -> Result<Self, BitStringLenMismatch> {
-        self.require_same_len(rhs)?;
-        self.words.and_assign(&rhs.words);
-        Ok(self)
-    }
 }
 
 #[cfg(test)]

@@ -8,7 +8,7 @@ fn assert_shl_variants(input: &BitString, amount: usize, expected: &BitString) {
     let mut assigned = input.clone();
     assigned.shl_assign(amount);
 
-    let into = input.clone().shl_into(amount);
+    let into = input.clone().shl(amount);
 
     assert_eq!(owned, *expected);
     assert_eq!(assigned, *expected);

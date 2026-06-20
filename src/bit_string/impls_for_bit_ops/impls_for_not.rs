@@ -17,13 +17,6 @@ impl BitString {
     pub fn not_assign(&mut self) {
         self.words.not_assign(self.bit_len);
     }
-
-    /// Consumes `self`, reuses its backing storage, and returns `!self`.
-    #[inline]
-    pub fn not_into(mut self) -> Self {
-        self.words.not_assign(self.bit_len);
-        self
-    }
 }
 
 #[cfg(test)]
