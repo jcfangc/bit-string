@@ -42,9 +42,16 @@ pub(crate) trait BitsArith {
     /// Performs `self >>= amount` (zero-fill) in place, masking with
     /// `bit_len`.
     fn shr_assign(&mut self, bit_len: usize, amount: usize);
+
+    /// Returns the number of ones (set bits) in the first `bit_len` bits.
+    ///
+    /// Bits beyond `bit_len` are assumed to already be zero (masked by
+    /// prior calls to [`BitsEdit::mask_unused_bits`]).
+    fn count_ones(&self, bit_len: usize) -> usize;
 }
 
 pub(crate) mod funcs_for_binary_core;
+pub(crate) mod funcs_for_count_ones;
 pub(crate) mod funcs_for_not_core;
 pub(crate) mod funcs_for_shl_core;
 pub(crate) mod funcs_for_shr_core;

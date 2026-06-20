@@ -1,4 +1,4 @@
-use super::*;
+use crate::WORD_BITS;
 
 /// Below this many full words, a direct `u64::count_ones()` loop beats the
 /// SIMD dispatch overhead.  Must match each backend's `LANES`.

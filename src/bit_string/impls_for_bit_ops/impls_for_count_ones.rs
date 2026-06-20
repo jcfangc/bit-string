@@ -1,18 +1,20 @@
-use super::*;
+use crate::bit_string::traits::*;
+
+use super::BitString;
 
 impl BitString {
+    /// Returns the number of bits set to 1.
     #[inline]
     pub fn count_ones(&self) -> usize {
-        funcs_for_count_ones::count_ones(&self.words, self.bit_len)
+        self.words.count_ones(self.bit_len)
     }
 
+    /// Returns the number of bits set to 0.
     #[inline]
     pub fn count_zeros(&self) -> usize {
         self.bit_len - self.count_ones()
     }
 }
-
-mod funcs_for_count_ones;
 
 #[cfg(test)]
 mod tests_for_count_ones;
