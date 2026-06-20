@@ -82,11 +82,9 @@ where
         let base = i * WORD_BITS;
         let w0 = haystack[i];
         let w1 = haystack.get(i + 1).copied().unwrap_or(0);
-        for shift in (0..WORD_BITS).rev() {
+        let max_shift = (last_start - base).min(WORD_BITS - 1);
+        for shift in (0..=max_shift).rev() {
             let pos = base + shift;
-            if pos > last_start {
-                continue;
-            }
             let window = if shift == 0 {
                 w0
             } else {
