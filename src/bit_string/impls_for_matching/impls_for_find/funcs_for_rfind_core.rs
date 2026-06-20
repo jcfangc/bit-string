@@ -77,11 +77,9 @@ fn scalar_rfind<F>(
 where
     F: FnMut(usize) -> bool,
 {
-    for i in (0..haystack.len()).rev() {
+    let start_word = (last_start / WORD_BITS).min(haystack.len().saturating_sub(1));
+    for i in (0..=start_word).rev() {
         let base = i * WORD_BITS;
-        if base > last_start {
-            continue;
-        }
         let w0 = haystack[i];
         let w1 = haystack.get(i + 1).copied().unwrap_or(0);
         for shift in (0..WORD_BITS).rev() {
@@ -136,11 +134,9 @@ mod sse2 {
         let needle = _mm_set1_epi64x(needle_key as i64);
         let mask = _mm_set1_epi64x(needle_mask as i64);
 
-        for i in (0..haystack.len()).rev() {
+        let start_word = (last_start / WORD_BITS).min(haystack.len().saturating_sub(1));
+        for i in (0..=start_word).rev() {
             let base = i * WORD_BITS;
-            if base > last_start {
-                continue;
-            }
             let w0 = haystack[i];
             let w1 = haystack.get(i + 1).copied().unwrap_or(0);
             let max_shift = WORD_BITS.min(last_start - base + 1);
@@ -218,11 +214,9 @@ mod avx2 {
         let needle = _mm256_set1_epi64x(needle_key as i64);
         let mask = _mm256_set1_epi64x(needle_mask as i64);
 
-        for i in (0..haystack.len()).rev() {
+        let start_word = (last_start / WORD_BITS).min(haystack.len().saturating_sub(1));
+        for i in (0..=start_word).rev() {
             let base = i * WORD_BITS;
-            if base > last_start {
-                continue;
-            }
             let w0 = haystack[i];
             let w1 = haystack.get(i + 1).copied().unwrap_or(0);
             let max_shift = WORD_BITS.min(last_start - base + 1);
@@ -292,11 +286,9 @@ mod neon {
         let needle = vdupq_n_u64(needle_key);
         let mask = vdupq_n_u64(needle_mask);
 
-        for i in (0..haystack.len()).rev() {
+        let start_word = (last_start / WORD_BITS).min(haystack.len().saturating_sub(1));
+        for i in (0..=start_word).rev() {
             let base = i * WORD_BITS;
-            if base > last_start {
-                continue;
-            }
             let w0 = haystack[i];
             let w1 = haystack.get(i + 1).copied().unwrap_or(0);
             let max_shift = WORD_BITS.min(last_start - base + 1);
