@@ -143,8 +143,9 @@ mod sse2 {
             }
             let w0 = haystack[i];
             let w1 = haystack.get(i + 1).copied().unwrap_or(0);
+            let max_shift = WORD_BITS.min(last_start - base + 1);
 
-            let mut s = WORD_BITS;
+            let mut s = max_shift.next_multiple_of(2).min(WORD_BITS);
             while s > 0 {
                 s -= 2;
 
@@ -224,8 +225,9 @@ mod avx2 {
             }
             let w0 = haystack[i];
             let w1 = haystack.get(i + 1).copied().unwrap_or(0);
+            let max_shift = WORD_BITS.min(last_start - base + 1);
 
-            let mut s = WORD_BITS;
+            let mut s = max_shift.next_multiple_of(4).min(WORD_BITS);
             while s > 0 {
                 s -= 4;
 
@@ -297,8 +299,9 @@ mod neon {
             }
             let w0 = haystack[i];
             let w1 = haystack.get(i + 1).copied().unwrap_or(0);
+            let max_shift = WORD_BITS.min(last_start - base + 1);
 
-            let mut s = WORD_BITS;
+            let mut s = max_shift.next_multiple_of(2).min(WORD_BITS);
             while s > 0 {
                 s -= 2;
 
