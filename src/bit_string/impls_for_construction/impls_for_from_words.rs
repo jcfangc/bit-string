@@ -1,5 +1,6 @@
 use super::*;
 use crate::bit_string::traits::*;
+use crate::funcs_for_bits::*;
 
 impl BitString {
     /// Constructs a bit string from packed little-endian words.

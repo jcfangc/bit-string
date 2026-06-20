@@ -1,8 +1,11 @@
-use crate::{WORD_BITS, bit_string::traits::*};
+use crate::{WORD_BITS, last_word_mask, low_mask, word_len};
+
+use super::BitsCopied;
+use super::BitsEdit;
 
 impl BitsEdit for [u64] {
     /// Masks the last used word with
-    /// [`BitsMask::last_word_mask(len)`](BitsMask::last_word_mask),
+    /// [`last_word_mask(len)`](last_word_mask),
     /// and zeros any words beyond `word_len(len)`.
     ///
     /// When `self` already contains exactly `word_len(len)` words only the
@@ -14,7 +17,7 @@ impl BitsEdit for [u64] {
             self[w] = 0;
         }
         if let Some(last) = self.get_mut(used.wrapping_sub(1)) {
-            *last &= <[u64]>::last_word_mask(len);
+            *last &= last_word_mask(len);
         }
     }
 
@@ -55,12 +58,12 @@ impl BitsEdit for [u64] {
         }
     }
 
-    /// Masks `value` down to `len` bits via [`BitsMask::low_mask`], then ORs it into
+    /// Masks `value` down to `len` bits via [`low_mask`], then ORs it into
     /// `self` at `bit_start`. When the write crosses a word boundary the high
     /// part spills into the next word.
     #[inline]
     fn write_word_at(&mut self, bit_start: usize, value: u64, len: usize) {
-        let value = value & <[u64]>::low_mask(len);
+        let value = value & low_mask(len);
         let word = bit_start / WORD_BITS;
         let shift = bit_start % WORD_BITS;
 
@@ -115,8 +118,8 @@ impl BitsEdit for [u64] {
                 WORD_BITS
             };
 
-            let preserve_mask = <[u64]>::low_mask(lo);
-            let range_mask = <[u64]>::low_mask(hi) & !<[u64]>::low_mask(lo);
+            let preserve_mask = low_mask(lo);
+            let range_mask = low_mask(hi) & !low_mask(lo);
             let range = cur & range_mask;
 
             let overflow = if hi == WORD_BITS {
@@ -161,8 +164,8 @@ impl BitsEdit for [u64] {
                 WORD_BITS
             };
 
-            let preserve_mask = <[u64]>::low_mask(lo) | !<[u64]>::low_mask(hi);
-            let range_mask = <[u64]>::low_mask(hi) & !<[u64]>::low_mask(lo);
+            let preserve_mask = low_mask(lo) | !low_mask(hi);
+            let range_mask = low_mask(hi) & !low_mask(lo);
             let range = cur & range_mask;
 
             let overflow = if lo == 0 && w > first_word {
@@ -191,16 +194,16 @@ impl BitsEdit for [u64] {
         let last = end.saturating_sub(1) / WORD_BITS;
 
         if first == last {
-            let mask = <[u64]>::low_mask(len) << (start % WORD_BITS);
+            let mask = low_mask(len) << (start % WORD_BITS);
             self[first] &= !mask;
         } else {
-            self[first] &= <[u64]>::low_mask(start % WORD_BITS);
+            self[first] &= low_mask(start % WORD_BITS);
             for w in (first + 1)..last {
                 self[w] = 0;
             }
             let end_rem = end % WORD_BITS;
             if end_rem != 0 {
-                self[last] &= !<[u64]>::low_mask(end_rem);
+                self[last] &= !low_mask(end_rem);
             } else {
                 self[last] = 0;
             }

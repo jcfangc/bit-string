@@ -28,8 +28,7 @@ pub(crate) trait BitsEdit {
     /// Writes the low `len` bits of `value` into `self` starting at `bit_start`.
     ///
     /// Existing bits in the destination range are preserved (the write uses
-    /// bitwise OR). `len` is clamped to `WORD_BITS` via
-    /// [`BitsMask::low_mask`]; callers
+    /// bitwise OR). `len` is clamped to `WORD_BITS` via [`low_mask`]; callers
     /// must ensure `len <= WORD_BITS`. When `bit_start` is not word-aligned
     /// the value is split across two consecutive words.
     fn write_word_at(&mut self, bit_start: usize, value: u64, len: usize);
@@ -61,8 +60,6 @@ pub(crate) trait BitsEdit {
 }
 
 pub(crate) mod copy;
-pub(crate) mod funcs_for_alloc;
-pub(crate) mod impls_for_bits_edit;
+pub(crate) mod impls_for_u64_slice;
 
 pub(crate) use copy::BitsCopied;
-pub(crate) use funcs_for_alloc::*;

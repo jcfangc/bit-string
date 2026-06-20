@@ -1,4 +1,5 @@
 use crate::bit_string::traits::*;
+use crate::funcs_for_bits::*;
 
 use super::*;
 
@@ -23,7 +24,7 @@ impl BitString {
     /// masked out.
     #[inline]
     pub fn set_chunk(&mut self, bit_start: usize, value: u64, len: usize) {
-        let value = value & <[u64]>::low_mask(len);
+        let value = value & low_mask(len);
         let word = bit_start / WORD_BITS;
         let shift = bit_start % WORD_BITS;
 
