@@ -28,7 +28,7 @@ impl BitString {
         if needle.bit_len == 0 {
             return Some(0);
         }
-        if needle.bit_len > self.bit_len {
+        if !self.contains(needle) {
             return None;
         }
 
@@ -45,7 +45,7 @@ impl BitString {
         if needle.bit_len == 0 {
             return Some(self.bit_len);
         }
-        if needle.bit_len > self.bit_len {
+        if !self.contains(needle) {
             return None;
         }
 
