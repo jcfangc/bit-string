@@ -12,6 +12,18 @@ use crate::WORD_BITS;
 // Entry point
 // ---------------------------------------------------------------------------
 
+/// Returns `true` if any 64-bit window in `haystack` matches
+/// `needle_first` (after masking) AND `verify(pos)` succeeds.
+///
+/// Only positions `pos ∈ [0, last_start]` are considered.  Words beyond
+/// `last_start / WORD_BITS + 1` are ignored.
+///
+/// Uses **shift-outer, word-inner** ordering: for each bit offset
+/// (shift), all qualifying word pairs are scanned.  Within a shift,
+/// the SIMD backends process `LANES` words in parallel.  This ordering
+/// does **not** guarantee that the first match found is the earliest
+/// position — use [`find_first_word`](super::funcs_for_find_core::find_first_word)
+/// when position order matters.
 #[inline]
 pub(super) fn contains_first_word<F>(
     haystack: &[u64],
@@ -60,9 +72,11 @@ where
 }
 
 // ---------------------------------------------------------------------------
-// Scalar
+// Scalar fallback
 // ---------------------------------------------------------------------------
 
+/// Word-by-word scan: for each shift, check every word pair in
+/// `[0, word_limit)` for a matching window.
 fn scalar<F>(
     haystack: &[u64],
     needle_first: u64,
@@ -120,6 +134,9 @@ mod sse2 {
 
     const LANES: usize = 2;
 
+    /// SSE2 backend: loads 2 consecutive words, computes a sliding
+    /// window for the current shift, and compares against the broadcast
+    /// needle word.  `movemask` extracts match lanes.
     #[target_feature(enable = "sse2")]
     pub(super) unsafe fn contains<F>(
         haystack: &[u64],
@@ -223,6 +240,7 @@ mod avx2 {
 
     const LANES: usize = 4;
 
+    /// AVX2 backend: same as SSE2 but with 4-lane (256-bit) vectors.
     #[target_feature(enable = "avx2")]
     pub(super) unsafe fn contains<F>(
         haystack: &[u64],
@@ -315,6 +333,8 @@ mod neon {
 
     const LANES: usize = 2;
 
+    /// NEON backend: 2-lane comparison for aarch64.  Unaligned windows
+    /// fall back to scalar per-position computation.
     #[target_feature(enable = "neon")]
     pub(super) unsafe fn contains<F>(
         haystack: &[u64],
