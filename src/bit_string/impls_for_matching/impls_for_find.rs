@@ -4,6 +4,7 @@ use super::*;
 
 mod funcs_for_contains_core;
 mod funcs_for_find_core;
+mod funcs_for_rfind_core;
 
 impl BitString {
     #[inline]
@@ -50,32 +51,13 @@ impl BitString {
             return None;
         }
 
-        let last_start = self.bit_len - needle.bit_len;
-        let needle_words = needle.as_words();
-        let needle_first = needle_words[0];
-        let needle_mask = low_mask(needle.bit_len.min(WORD_BITS));
-
-        // Word-outer reverse — scans rightmost positions first.
-        for i in (0..self.words.len()).rev() {
-            let w0 = self.words[i];
-            let w1 = self.words.get(i + 1).copied().unwrap_or(0);
-            for shift in (0..WORD_BITS).rev() {
-                let pos = i * WORD_BITS + shift;
-                if pos > last_start {
-                    continue;
-                }
-                let window = if shift == 0 {
-                    w0
-                } else {
-                    (w0 >> shift) | (w1 << (WORD_BITS - shift))
-                };
-                if (window & needle_mask) == needle_first && bits_equal_at(self, pos, needle) {
-                    return Some(pos);
-                }
-            }
-        }
-
-        None
+        funcs_for_rfind_core::find_last_word(
+            &self.words,
+            self.bit_len,
+            needle.as_words(),
+            needle.bit_len,
+            &mut |pos| bits_equal_at(self, pos, needle),
+        )
     }
 }
 
