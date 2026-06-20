@@ -35,8 +35,18 @@ pub(super) fn contains_first_word<F>(
 where
     F: FnMut(usize) -> bool,
 {
+    let max_word = last_start / WORD_BITS;
+    let word_limit = (max_word + 1).min(haystack.len());
+
     if haystack.len() < SMALL_WORDS {
-        return scalar(haystack, needle_first, needle_mask, last_start, verify);
+        return scalar(
+            haystack,
+            needle_first,
+            needle_mask,
+            last_start,
+            word_limit,
+            verify,
+        );
     }
 
     #[cfg(all(
@@ -45,7 +55,14 @@ where
     ))]
     {
         unsafe {
-            return avx2::contains(haystack, needle_first, needle_mask, last_start, verify);
+            return avx2::contains(
+                haystack,
+                needle_first,
+                needle_mask,
+                last_start,
+                word_limit,
+                verify,
+            );
         }
     }
 
@@ -56,19 +73,40 @@ where
     ))]
     {
         unsafe {
-            return sse2::contains(haystack, needle_first, needle_mask, last_start, verify);
+            return sse2::contains(
+                haystack,
+                needle_first,
+                needle_mask,
+                last_start,
+                word_limit,
+                verify,
+            );
         }
     }
 
     #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
     {
         unsafe {
-            return neon::contains(haystack, needle_first, needle_mask, last_start, verify);
+            return neon::contains(
+                haystack,
+                needle_first,
+                needle_mask,
+                last_start,
+                word_limit,
+                verify,
+            );
         }
     }
 
     #[allow(unused)]
-    scalar(haystack, needle_first, needle_mask, last_start, verify)
+    scalar(
+        haystack,
+        needle_first,
+        needle_mask,
+        last_start,
+        word_limit,
+        verify,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -82,15 +120,12 @@ fn scalar<F>(
     needle_first: u64,
     needle_mask: u64,
     last_start: usize,
+    word_limit: usize,
     verify: &mut F,
 ) -> bool
 where
     F: FnMut(usize) -> bool,
 {
-    // Only scan words that can contain a window starting at ≤ last_start.
-    let max_word = last_start / WORD_BITS;
-    let word_limit = (max_word + 1).min(haystack.len());
-
     for shift in 0..WORD_BITS {
         for i in 0..word_limit {
             let pos = i * WORD_BITS + shift;
@@ -143,6 +178,7 @@ mod sse2 {
         needle_first: u64,
         needle_mask: u64,
         last_start: usize,
+        word_limit: usize,
         verify: &mut F,
     ) -> bool
     where
@@ -150,8 +186,6 @@ mod sse2 {
     {
         let needle = unsafe { _mm_set1_epi64x(needle_first as i64) };
         let mask = unsafe { _mm_set1_epi64x(needle_mask as i64) };
-        let max_word = last_start / WORD_BITS;
-        let word_limit = (max_word + 1).min(haystack.len());
 
         for shift in 0..WORD_BITS {
             let mut i = 0;
@@ -247,6 +281,7 @@ mod avx2 {
         needle_first: u64,
         needle_mask: u64,
         last_start: usize,
+        word_limit: usize,
         verify: &mut F,
     ) -> bool
     where
@@ -254,8 +289,6 @@ mod avx2 {
     {
         let needle = unsafe { _mm256_set1_epi64x(needle_first as i64) };
         let mask = unsafe { _mm256_set1_epi64x(needle_mask as i64) };
-        let max_word = last_start / WORD_BITS;
-        let word_limit = (max_word + 1).min(haystack.len());
 
         for shift in 0..WORD_BITS {
             let mut i = 0;
@@ -341,6 +374,7 @@ mod neon {
         needle_first: u64,
         needle_mask: u64,
         last_start: usize,
+        word_limit: usize,
         verify: &mut F,
     ) -> bool
     where
@@ -348,8 +382,6 @@ mod neon {
     {
         let needle = unsafe { vdupq_n_u64(needle_first) };
         let mask = unsafe { vdupq_n_u64(needle_mask) };
-        let max_word = last_start / WORD_BITS;
-        let word_limit = (max_word + 1).min(haystack.len());
 
         for shift in 0..WORD_BITS {
             let mut i = 0;
