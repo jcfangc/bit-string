@@ -18,3 +18,6 @@ mod impls_for_iter;
 mod impls_for_matching;
 
 pub(crate) mod traits;
+
+#[cfg(test)]
+mod tests_for_proptest;

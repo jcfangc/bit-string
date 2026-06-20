@@ -22,3 +22,6 @@ mod impls_for_retain;
 mod impls_for_set;
 mod impls_for_slice;
 mod impls_for_truncate;
+
+#[cfg(test)]
+mod tests_for_invariants;

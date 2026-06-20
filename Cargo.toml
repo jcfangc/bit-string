@@ -21,6 +21,7 @@ doctest = false
 [dev-dependencies]
 bitvec_simd = "0.20.5"
 divan = { package = "codspeed-divan-compat", version = "4.7.0" }
+proptest = "1.11.0"
 
 
 [[bench]]
