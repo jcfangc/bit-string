@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::bit_string::bits::*;
+use crate::bit_string::traits::*;
 
 /// Pack `bit_len` ASCII '0'/'1' bytes from `src` into a `Vec<u64>`.
 ///

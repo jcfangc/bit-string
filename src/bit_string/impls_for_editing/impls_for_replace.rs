@@ -1,7 +1,7 @@
 use int_interval::UsizeCO;
 use witnessed::{WitnessExt, Witnessed};
 
-use crate::bit_string::bits::*;
+use crate::bit_string::traits::*;
 
 use super::*;
 

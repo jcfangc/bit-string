@@ -1,5 +1,5 @@
 use super::*;
-use crate::bit_string::bits::*;
+use crate::bit_string::traits::*;
 use alloc::vec::Vec;
 
 impl BitString {

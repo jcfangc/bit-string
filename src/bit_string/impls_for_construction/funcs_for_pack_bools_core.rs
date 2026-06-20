@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::bit_string::bits::*;
+use crate::bit_string::traits::*;
 
 /// Pack `bit_len` LSBs from `src` into a `Vec<u64>`.
 ///
