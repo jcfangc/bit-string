@@ -1,9 +1,31 @@
+use crate::bit_string::traits::*;
+use crate::funcs_for_bits::*;
+
 use super::*;
 
+/// Compare `needle` bits against `haystack` starting at `offset`, using
+/// word-level reads so that each iteration compares up to 64 bits.
 #[inline]
 fn bits_equal_at(haystack: &BitString, offset: usize, needle: &BitString) -> bool {
-    for index in 0..needle.bit_len {
-        if haystack.get(offset + index).unwrap() != needle.get(index).unwrap() {
+    let needle_bits = needle.bit_len;
+    let needle_words = needle.as_words();
+    let full_words = needle_bits / WORD_BITS;
+    let rem_bits = needle_bits % WORD_BITS;
+
+    // Full u64 words — needle is always word-aligned at index 0 so we
+    // compare needle_words[i] directly.
+    for i in 0..full_words {
+        let h = haystack.words.read_word_at(offset + i * WORD_BITS);
+        if h != needle_words[i] {
+            return false;
+        }
+    }
+
+    // Last partial word (if any).
+    if rem_bits > 0 {
+        let mask = low_mask(rem_bits);
+        let h = haystack.words.read_word_at(offset + full_words * WORD_BITS);
+        if (h & mask) != (needle_words[full_words] & mask) {
             return false;
         }
     }
@@ -50,7 +72,21 @@ impl BitString {
 
         let last_start = self.bit_len - needle.bit_len;
 
-        (0..=last_start).find(|&index| bits_equal_at(self, index, needle))
+        // When the needle is very short (≤ 64 bits) we can use a one-word
+        // pre-filter: only call the full bits_equal_at when the first
+        // 64-bit window matches.
+        let needle_words = needle.as_words();
+        let needle_first = needle_words[0];
+        let needle_mask = low_mask(needle.bit_len.min(WORD_BITS));
+
+        funcs_for_find_core::find_first_word(
+            &self.words,
+            self.bit_len,
+            needle_first,
+            needle_mask,
+            last_start,
+            &mut |pos| bits_equal_at(self, pos, needle),
+        )
     }
 
     pub fn rfind(&self, needle: &Self) -> Option<usize> {
@@ -79,6 +115,8 @@ impl BitString {
             .then(|| self.slice_until(self.bit_len - suffix.bit_len))
     }
 }
+
+mod funcs_for_find_core;
 
 #[cfg(test)]
 mod tests_for_bits_equal_at;

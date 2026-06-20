@@ -1,28 +1,5 @@
 use crate::WORD_BITS;
-
-/// Below this many full words, a direct `u64::count_ones()` loop beats the
-/// SIMD dispatch overhead.  Must match each backend's `LANES`.
-#[cfg(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "avx2"
-))]
-const SMALL_WORDS: usize = 4;
-#[cfg(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "ssse3",
-    not(target_feature = "avx2")
-))]
-const SMALL_WORDS: usize = 2;
-#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-const SMALL_WORDS: usize = 2;
-#[cfg(not(any(
-    all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        any(target_feature = "avx2", target_feature = "ssse3")
-    ),
-    all(target_arch = "aarch64", target_feature = "neon"),
-)))]
-const SMALL_WORDS: usize = 0;
+use crate::funcs_for_bits::SMALL_WORDS;
 
 #[inline]
 pub(super) fn count_ones(bits: &[u64], bit_len: usize) -> usize {
