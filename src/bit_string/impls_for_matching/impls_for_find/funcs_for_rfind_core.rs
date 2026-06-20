@@ -305,7 +305,7 @@ mod neon {
                         (w0 >> shift) | (w1 << (WORD_BITS - shift))
                     };
                 }
-                let windows = vld1q_u64(wins.as_ptr());
+                let windows = unsafe { vld1q_u64(wins.as_ptr()) };
                 let m = vandq_u64(windows, mask);
                 let c = vceqq_u64(m, needle);
 
