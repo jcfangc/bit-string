@@ -17,16 +17,16 @@ impl BitString {
     #[inline]
     pub(crate) fn bits_equal_at(&self, offset: usize, needle: &Self) -> bool {
         let needle_bits = needle.bit_len;
+        if needle_bits == 0 {
+            return true;
+        }
         let needle_words = needle.as_words();
 
         // Sub-word fast path: the entire pattern fits in one u64 —
         // single read + mask avoids all branching and loop overhead.
         if needle_bits <= WORD_BITS {
-            let mask = low_mask(needle_bits);
-            if mask == 0 {
-                return true; // empty needle always matches
-            }
             let h = self.words.read_word_at(offset);
+            let mask = low_mask(needle_bits);
             return (h & mask) == (needle_words[0] & mask);
         }
 
@@ -90,6 +90,9 @@ impl BitString {
     /// the word-aligned position-0 case.
     #[inline]
     pub fn starts_with(&self, prefix: &Self) -> bool {
+        if prefix.bit_len == 0 {
+            return true;
+        }
         if prefix.bit_len > self.bit_len {
             return false;
         }
@@ -100,9 +103,6 @@ impl BitString {
         // Sub-word fast path: one u64 read + mask.
         if prefix.bit_len <= WORD_BITS {
             let mask = low_mask(prefix.bit_len);
-            if mask == 0 {
-                return true; // empty prefix always matches
-            }
             return (sw[0] & mask) == (pw[0] & mask);
         }
 
@@ -127,6 +127,9 @@ impl BitString {
     /// Returns `true` if `suffix` is a suffix of `self`.
     #[inline]
     pub fn ends_with(&self, suffix: &Self) -> bool {
+        if suffix.bit_len == 0 {
+            return true;
+        }
         if suffix.bit_len > self.bit_len {
             return false;
         }
@@ -139,10 +142,6 @@ impl BitString {
 
         // Sub-word fast path: one 64-bit window + mask.
         if suffix.bit_len <= WORD_BITS {
-            let mask = low_mask(suffix.bit_len);
-            if mask == 0 {
-                return true; // empty suffix always matches
-            }
             let h = if shift == 0 {
                 sw[0]
             } else {
@@ -150,6 +149,7 @@ impl BitString {
                 let w1 = sw.get(1).copied().unwrap_or(0);
                 (w0 >> shift) | (w1 << (WORD_BITS - shift))
             };
+            let mask = low_mask(suffix.bit_len);
             return (h & mask) == (pw[0] & mask);
         }
 
