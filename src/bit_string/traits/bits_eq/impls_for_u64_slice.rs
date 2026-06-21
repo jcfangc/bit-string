@@ -1,13 +1,18 @@
+use crate::WORD_BITS;
+
 use super::BitsEq;
 
 impl BitsEq for [u64] {
     #[inline]
-    fn eq_words(&self, other: &[u64], count: usize) -> bool {
-        super::funcs_for_eq_words_core::eq_words(self, other, count)
-    }
+    fn eq_words(&self, other: &[u64], count: usize, offset: usize) -> bool {
+        let shift = offset % WORD_BITS;
+        let base = offset / WORD_BITS;
+        let sw = &self[base..];
 
-    #[inline]
-    fn eq_words_shifted(&self, other: &[u64], count: usize, shift: usize) -> bool {
-        super::funcs_for_eq_words_shifted_core::eq_words_shifted(self, other, count, shift)
+        if shift == 0 {
+            super::funcs_for_eq_words_aligned_core::eq_words_aligned(sw, other, count)
+        } else {
+            super::funcs_for_eq_words_unaligned_core::eq_words_unaligned(sw, other, count, shift)
+        }
     }
 }

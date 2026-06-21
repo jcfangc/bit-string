@@ -1,4 +1,3 @@
-use crate::SMALL_WORDS;
 use crate::WORD_BITS;
 use crate::funcs_for_bits::low_mask;
 
@@ -7,10 +6,9 @@ use super::*;
 impl BitString {
     /// Compare `needle` bits against `self` starting at `offset`.
     ///
-    /// For word-aligned offsets, the full words are compared via
-    /// [`BitsEq::eq_words`].  For unaligned offsets, shifted 64-bit
-    /// windows are computed via [`BitsEq::eq_words_shifted`].
-    /// Short patterns fall back to scalar.
+    /// Delegates to [`BitsEq::eq_words`] which internally dispatches to
+    /// aligned or unaligned SIMD based on the intra-word shift.
+    /// Single-word patterns use a direct read+mask fast path.
     #[inline]
     pub(crate) fn bits_equal_at(&self, offset: usize, needle: &Self) -> bool {
         let needle_bits = needle.bit_len;
@@ -19,8 +17,7 @@ impl BitString {
         }
         let needle_words = needle.as_words();
 
-        // Sub-word fast path: the entire pattern fits in one u64 —
-        // single read + mask avoids all branching and loop overhead.
+        // Sub-word fast path: the entire pattern fits in one u64.
         if needle_bits <= WORD_BITS {
             let h = self.words.read_word_at(offset);
             let mask = low_mask(needle_bits);
@@ -29,27 +26,8 @@ impl BitString {
 
         let full_words = needle_bits / WORD_BITS;
 
-        if full_words >= SMALL_WORDS {
-            let shift = offset % WORD_BITS;
-            let base_word = offset / WORD_BITS;
-            let sw: &[u64] = &self.words[base_word..];
-
-            if shift == 0 {
-                if !sw.eq_words(needle_words, full_words) {
-                    return false;
-                }
-            } else {
-                if !sw.eq_words_shifted(needle_words, full_words, shift) {
-                    return false;
-                }
-            }
-        } else {
-            for i in 0..full_words {
-                let h = self.words.read_word_at(offset + i * WORD_BITS);
-                if h != needle_words[i] {
-                    return false;
-                }
-            }
+        if !self.words.eq_words(needle_words, full_words, offset) {
+            return false;
         }
 
         let rem_bits = needle_bits % WORD_BITS;
@@ -105,8 +83,7 @@ impl BitString {
 
         let full_words = prefix.bit_len / WORD_BITS;
 
-        // Word-aligned at position 0 — use SIMD word equality.
-        if !sw.eq_words(pw, full_words) {
+        if !sw.eq_words(pw, full_words, 0) {
             return false;
         }
 
@@ -152,7 +129,7 @@ impl BitString {
 
         let full_words = suffix.bit_len / WORD_BITS;
 
-        if !sw.eq_words_shifted(pw, full_words, shift) {
+        if !self.words.eq_words(pw, full_words, start) {
             return false;
         }
 

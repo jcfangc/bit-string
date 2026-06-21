@@ -1,8 +1,8 @@
-//! SIMD word-level shifted-window equality.
+//! SIMD word-level unaligned (shifted-window) equality.
 //!
-//! When `shift == 0` this delegates to [`super::funcs_for_eq_words_core::eq_words`].
-//! Otherwise it computes shifted 64-bit windows via SIMD and compares each
-//! against the corresponding word in `other`.
+//! Computes shifted 64-bit windows and compares each against the
+//! corresponding word in `other`.  The caller must ensure `shift != 0`;
+//! the `shift == 0` fast path is handled by the trait impl.
 
 use crate::SMALL_WORDS;
 use crate::WORD_BITS;
@@ -12,10 +12,8 @@ use crate::WORD_BITS;
 // ---------------------------------------------------------------------------
 
 #[inline]
-pub(super) fn eq_words_shifted(src: &[u64], other: &[u64], count: usize, shift: usize) -> bool {
-    if shift == 0 {
-        return super::funcs_for_eq_words_core::eq_words(src, other, count);
-    }
+pub(super) fn eq_words_unaligned(src: &[u64], other: &[u64], count: usize, shift: usize) -> bool {
+    debug_assert!(shift > 0 && shift < WORD_BITS);
 
     if count < SMALL_WORDS {
         for i in 0..count {
@@ -33,7 +31,7 @@ pub(super) fn eq_words_shifted(src: &[u64], other: &[u64], count: usize, shift: 
         target_feature = "avx2"
     ))]
     {
-        return unsafe { avx2::eq_words_shifted(src, other, count, shift) };
+        return unsafe { avx2::eq_words_unaligned(src, other, count, shift) };
     }
 
     #[cfg(all(
@@ -42,12 +40,12 @@ pub(super) fn eq_words_shifted(src: &[u64], other: &[u64], count: usize, shift: 
         not(target_feature = "avx2")
     ))]
     {
-        return unsafe { sse2::eq_words_shifted(src, other, count, shift) };
+        return unsafe { sse2::eq_words_unaligned(src, other, count, shift) };
     }
 
     #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
     {
-        return unsafe { neon::eq_words_shifted(src, other, count, shift) };
+        return unsafe { neon::eq_words_unaligned(src, other, count, shift) };
     }
 
     #[allow(unused)]
@@ -80,7 +78,7 @@ mod avx2 {
     };
 
     #[target_feature(enable = "avx2")]
-    pub(super) unsafe fn eq_words_shifted(
+    pub(super) unsafe fn eq_words_unaligned(
         src: &[u64],
         other: &[u64],
         len: usize,
@@ -131,7 +129,7 @@ mod sse2 {
     };
 
     #[target_feature(enable = "sse2")]
-    pub(super) unsafe fn eq_words_shifted(
+    pub(super) unsafe fn eq_words_unaligned(
         src: &[u64],
         other: &[u64],
         len: usize,
@@ -174,7 +172,7 @@ mod neon {
     };
 
     #[target_feature(enable = "neon")]
-    pub(super) unsafe fn eq_words_shifted(
+    pub(super) unsafe fn eq_words_unaligned(
         src: &[u64],
         other: &[u64],
         len: usize,
