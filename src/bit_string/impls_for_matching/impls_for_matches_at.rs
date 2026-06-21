@@ -4,16 +4,13 @@ use crate::funcs_for_bits::low_mask;
 
 use super::*;
 
-mod funcs_for_ends_with_core;
-mod funcs_for_starts_with_core;
-
 impl BitString {
     /// Compare `needle` bits against `self` starting at `offset`.
     ///
-    /// For word-aligned offsets, the full words are compared via the
-    /// SIMD word-equality backend ([`starts_with_words`]).  For unaligned
-    /// offsets, shifted 64-bit windows are computed via
-    /// [`ends_with_words`].  Short patterns fall back to scalar.
+    /// For word-aligned offsets, the full words are compared via
+    /// [`BitsEq::eq_words`].  For unaligned offsets, shifted 64-bit
+    /// windows are computed via [`BitsEq::eq_words_shifted`].
+    /// Short patterns fall back to scalar.
     #[inline]
     pub(crate) fn bits_equal_at(&self, offset: usize, needle: &Self) -> bool {
         let needle_bits = needle.bit_len;
@@ -38,11 +35,11 @@ impl BitString {
             let sw: &[u64] = &self.words[base_word..];
 
             if shift == 0 {
-                if !funcs_for_starts_with_core::starts_with_words(sw, needle_words, full_words) {
+                if !sw.eq_words(needle_words, full_words) {
                     return false;
                 }
             } else {
-                if !funcs_for_ends_with_core::ends_with_words(sw, needle_words, full_words, shift) {
+                if !sw.eq_words_shifted(needle_words, full_words, shift) {
                     return false;
                 }
             }
@@ -109,7 +106,7 @@ impl BitString {
         let full_words = prefix.bit_len / WORD_BITS;
 
         // Word-aligned at position 0 — use SIMD word equality.
-        if !funcs_for_starts_with_core::starts_with_words(sw, pw, full_words) {
+        if !sw.eq_words(pw, full_words) {
             return false;
         }
 
@@ -155,7 +152,7 @@ impl BitString {
 
         let full_words = suffix.bit_len / WORD_BITS;
 
-        if !funcs_for_ends_with_core::ends_with_words(sw, pw, full_words, shift) {
+        if !sw.eq_words_shifted(pw, full_words, shift) {
             return false;
         }
 
