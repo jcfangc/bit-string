@@ -127,3 +127,114 @@ fn copies_more_than_one_chunk() {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// Multi-word SIMD path tests — each case needs enough full_words to hit the
+// SIMD threshold (SMALL_WORDS on AVX2 = 4, SSE2/NEON = 2).
+// ---------------------------------------------------------------------------
+
+/// Helper: scalar copy via read_word_at + write_word_at, used as oracle.
+fn scalar_paste(src: &[u64], src_start: usize, len: usize, dst: &mut [u64], dst_start: usize) {
+    let full_words = len / WORD_BITS;
+    let rem = len % WORD_BITS;
+    for i in 0..full_words {
+        let chunk = src.read_word_at(src_start + i * WORD_BITS);
+        dst.write_word_at(dst_start + i * WORD_BITS, chunk, WORD_BITS);
+    }
+    if rem > 0 {
+        let chunk = src.read_word_at(src_start + full_words * WORD_BITS);
+        dst.write_word_at(dst_start + full_words * WORD_BITS, chunk, rem);
+    }
+}
+
+#[test]
+fn case2_unaligned_src_multiword_vs_scalar() {
+    // Case 2: src unaligned, dst aligned — exercises copy_words_shifted.
+    for count in [4, 16, 100] {
+        let src: Vec<u64> = (0..count + 2)
+            .map(|i| (i as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15))
+            .collect();
+        let len = count * WORD_BITS;
+        let src_start = 21; // unaligned
+        let dst_start = 0; // aligned
+
+        let mut dst_impl = vec![0; count + 1];
+        let mut dst_oracle = vec![0; count + 1];
+
+        src.copy_bits(src_start, len)
+            .paste_to(&mut dst_impl, dst_start);
+        scalar_paste(&src, src_start, len, &mut dst_oracle, dst_start);
+
+        assert_eq!(&dst_impl[..count], &dst_oracle[..count], "count={count}");
+    }
+}
+
+#[test]
+fn case3_aligned_src_unaligned_dst_multiword_vs_scalar() {
+    // Case 3: src aligned, dst unaligned — exercises reversed shift SIMD.
+    for count in [4, 16, 100] {
+        let src: Vec<u64> = (0..count + 2)
+            .map(|i| (i as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15))
+            .collect();
+        let len = count * WORD_BITS;
+        let src_start = 0; // aligned
+        let dst_start = 21; // unaligned
+
+        let mut dst_impl = vec![0; count + 2];
+        let mut dst_oracle = vec![0; count + 2];
+
+        src.copy_bits(src_start, len)
+            .paste_to(&mut dst_impl, dst_start);
+        scalar_paste(&src, src_start, len, &mut dst_oracle, dst_start);
+
+        assert_eq!(
+            &dst_impl[..count + 2],
+            &dst_oracle[..count + 2],
+            "count={count}"
+        );
+    }
+}
+
+#[test]
+fn case3_preserves_existing_dst_bits_below_dst_shift() {
+    // The first boundary word ORs into dst — bits below dst_shift must survive.
+    let src = words_from_indices(&[0, 10, 20, 30, 40, 50], 2);
+    let existing_bit = 3; // below dst_shift = 5
+    let mut dst = vec![0; 3];
+    dst.set_bit_at(existing_bit, true);
+
+    // This hits Case 3: src_start = 0 (aligned), dst_start = 5 (unaligned).
+    src.copy_bits(0, 128).paste_to(&mut dst, 5);
+
+    // The existing bit at position 3 must still be set.
+    assert!(
+        dst.read_bit_at(existing_bit),
+        "existing bit below dst_shift was clobbered"
+    );
+}
+
+#[test]
+fn case4_both_unaligned_multiword_vs_scalar() {
+    // Case 4: both src and dst unaligned — scalar fallback.
+    for count in [4, 16] {
+        let src: Vec<u64> = (0..count + 3)
+            .map(|i| (i as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15))
+            .collect();
+        let len = count * WORD_BITS;
+        let src_start = 13; // unaligned
+        let dst_start = 37; // unaligned
+
+        let mut dst_impl = vec![0; count + 3];
+        let mut dst_oracle = vec![0; count + 3];
+
+        src.copy_bits(src_start, len)
+            .paste_to(&mut dst_impl, dst_start);
+        scalar_paste(&src, src_start, len, &mut dst_oracle, dst_start);
+
+        assert_eq!(
+            &dst_impl[..count + 3],
+            &dst_oracle[..count + 3],
+            "count={count}"
+        );
+    }
+}

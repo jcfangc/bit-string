@@ -22,6 +22,7 @@ impl BitsCopied<'_> {
     /// Picks the fastest available backend based on alignment:
     ///
     /// | Src aligned | Dst aligned | Backend              |
+    /// |:-:|:-:|-:|
     /// |     ✓       |     ✓       | `copy_words` (memcpy)|
     /// |     ✗       |     ✓       | `copy_words_shifted` |
     /// |     ✓       |     ✗       | SIMD reversed shift  |
@@ -42,10 +43,11 @@ impl BitsCopied<'_> {
                 let dw = dst_start / WORD_BITS;
                 funcs_for_copy_words_core::copy_words(&mut dst[dw..], &self.src[sw..], full_words);
             }
+        }
         // === Case 2: dst aligned, src shifted ===
         // dst[i] = (src[i] >> shift) | (src[i+1] << (64-shift))
         // Each output word is a shifted 64-bit window from src.
-        } else if !self.aligned && dst_aligned {
+        else if !self.aligned && dst_aligned {
             if full_words > 0 {
                 let shift = self.src_start % WORD_BITS;
                 let base = self.src_start / WORD_BITS;
@@ -57,6 +59,7 @@ impl BitsCopied<'_> {
                     shift,
                 );
             }
+        }
         // === Case 3: src aligned, dst shifted (reversed shift) ===
         // The scalar write_word_at loop distributes each src word across two
         // dst words.  The middle dst words form shifted windows mirrored from
@@ -67,7 +70,7 @@ impl BitsCopied<'_> {
         //
         // Guard: need src[N] in the backing array for the SIMD window, hence
         // `self.src.len() > sw + full_words`.
-        } else if self.aligned
+        else if self.aligned
             && full_words > 1
             && self.src.len() > self.src_start / WORD_BITS + full_words
         {
@@ -90,11 +93,12 @@ impl BitsCopied<'_> {
 
             // High boundary: spill from the last src word.
             dst[dw + full_words] |= self.src[sw + mid_count] >> (WORD_BITS - dst_shift);
+        }
         // === Case 4: dst unaligned, src unaligned ===
         // Both offsets are non-zero — read_word_at + write_word_at are the
         // safest fallback.  Each src word is read with its own intra-word shift,
         // then OR'd into two dst words.
-        } else {
+        else {
             for i in 0..full_words {
                 let chunk = self.src.read_word_at(self.src_start + i * WORD_BITS);
                 dst.write_word_at(dst_start + i * WORD_BITS, chunk, WORD_BITS);
