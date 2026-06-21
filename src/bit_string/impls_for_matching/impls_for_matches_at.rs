@@ -25,11 +25,8 @@ impl BitString {
         }
 
         let full_words = needle_bits / WORD_BITS;
-        let shift = offset % WORD_BITS;
-        let base_word = offset / WORD_BITS;
-        let sw: &[u64] = &self.words[base_word..];
 
-        if !sw.eq_words(needle_words, full_words, shift) {
+        if !self.words.eq_words(needle_words, full_words, offset) {
             return false;
         }
 
@@ -132,7 +129,7 @@ impl BitString {
 
         let full_words = suffix.bit_len / WORD_BITS;
 
-        if !sw.eq_words(pw, full_words, shift) {
+        if !self.words.eq_words(pw, full_words, start) {
             return false;
         }
 
