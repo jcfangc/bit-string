@@ -1,31 +1,24 @@
 /// Word-level equality comparison on `[u64]` backing storage.
 ///
-/// Two operations are provided:
-/// - [`eq_words`] — direct word comparison for word-aligned sequences.
-/// - [`eq_words_shifted`] — shifted-window comparison for unaligned sequences.
+/// A single method dispatches to the appropriate SIMD backend based on
+/// the intra-word shift:
+/// - `shift == 0` — word-aligned, uses [`funcs_for_eq_words_aligned_core`].
+/// - `shift != 0` — unaligned shifted-window, uses [`funcs_for_eq_words_unaligned_core`].
 ///
-/// Each dispatches to the best available SIMD backend (AVX2, SSE2, NEON)
-/// at compile time, falling back to scalar for small inputs.
+/// Short inputs fall back to scalar in both backends.
 pub(crate) trait BitsEq {
-    /// Returns `true` if the first `count` words of `self` match `other`.
+    /// Returns `true` if the first `count` words of `self` match `other`,
+    /// compensating for an intra-word shift of `shift` bits.
     ///
-    /// Both slices must be word-aligned (i.e. the comparison starts at bit 0
-    /// of each word). For fewer than [`SMALL_WORDS`](crate::SMALL_WORDS) words
-    /// the scalar loop is used directly.
-    fn eq_words(&self, other: &[u64], count: usize) -> bool;
-
-    /// Returns `true` if the `count` shifted 64-bit windows of `self` match
-    /// `other`, where each window is computed as:
+    /// When `shift == 0` this is a direct word comparison.  When `shift != 0`
+    /// each 64-bit window is computed as:
     ///
     /// ```text
     /// window[i] = (self[i] >> shift) | (self[i + 1] << (WORD_BITS - shift))
     /// ```
-    ///
-    /// When `shift == 0` this delegates to [`eq_words`].  Short inputs fall
-    /// back to scalar.
-    fn eq_words_shifted(&self, other: &[u64], count: usize, shift: usize) -> bool;
+    fn eq_words(&self, other: &[u64], count: usize, shift: usize) -> bool;
 }
 
-pub(crate) mod funcs_for_eq_words_core;
-pub(crate) mod funcs_for_eq_words_shifted_core;
+pub(crate) mod funcs_for_eq_words_aligned_core;
+pub(crate) mod funcs_for_eq_words_unaligned_core;
 pub(crate) mod impls_for_u64_slice;

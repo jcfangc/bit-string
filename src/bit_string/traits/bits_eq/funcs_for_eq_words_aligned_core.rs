@@ -12,7 +12,7 @@ use crate::SMALL_WORDS;
 /// Dispatches to the best available SIMD backend at compile time.
 /// Short inputs fall back to scalar.
 #[inline]
-pub(super) fn eq_words(src: &[u64], other: &[u64], count: usize) -> bool {
+pub(super) fn eq_words_aligned(src: &[u64], other: &[u64], count: usize) -> bool {
     if count < SMALL_WORDS {
         for i in 0..count {
             if src[i] != other[i] {
