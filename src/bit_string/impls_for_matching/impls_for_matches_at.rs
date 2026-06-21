@@ -8,23 +8,6 @@ mod funcs_for_ends_with_core;
 mod funcs_for_starts_with_core;
 
 impl BitString {
-    /// Returns `true` if `pattern` matches the bits starting at `index`.
-    ///
-    /// Delegates to [`bits_equal_at`] which uses SIMD word-equality for
-    /// long patterns and scalar comparison for short ones.
-    #[inline]
-    pub fn matches_at(&self, index: usize, pattern: &Self) -> bool {
-        if index > self.bit_len {
-            return false;
-        }
-
-        if pattern.bit_len > self.bit_len - index {
-            return false;
-        }
-
-        self.bits_equal_at(index, pattern)
-    }
-
     /// Compare `needle` bits against `self` starting at `offset`.
     ///
     /// For word-aligned offsets, the full words are compared via the
@@ -35,6 +18,18 @@ impl BitString {
     pub(crate) fn bits_equal_at(&self, offset: usize, needle: &Self) -> bool {
         let needle_bits = needle.bit_len;
         let needle_words = needle.as_words();
+
+        // Sub-word fast path: the entire pattern fits in one u64 —
+        // single read + mask avoids all branching and loop overhead.
+        if needle_bits <= WORD_BITS {
+            let mask = low_mask(needle_bits);
+            if mask == 0 {
+                return true; // empty needle always matches
+            }
+            let h = self.words.read_word_at(offset);
+            return (h & mask) == (needle_words[0] & mask);
+        }
+
         let full_words = needle_bits / WORD_BITS;
 
         if full_words >= SMALL_WORDS {
@@ -72,6 +67,23 @@ impl BitString {
         true
     }
 
+    /// Returns `true` if `pattern` matches the bits starting at `index`.
+    ///
+    /// Delegates to [`bits_equal_at`] which uses SIMD word-equality for
+    /// long patterns and scalar comparison for short ones.
+    #[inline]
+    pub fn matches_at(&self, index: usize, pattern: &Self) -> bool {
+        if index > self.bit_len {
+            return false;
+        }
+
+        if pattern.bit_len > self.bit_len - index {
+            return false;
+        }
+
+        self.bits_equal_at(index, pattern)
+    }
+
     /// Returns `true` if `prefix` is a prefix of `self`.
     ///
     /// This is equivalent to [`matches_at`]`(0, prefix)` but optimized for
@@ -84,6 +96,16 @@ impl BitString {
 
         let pw = prefix.as_words();
         let sw: &[u64] = &self.words;
+
+        // Sub-word fast path: one u64 read + mask.
+        if prefix.bit_len <= WORD_BITS {
+            let mask = low_mask(prefix.bit_len);
+            if mask == 0 {
+                return true; // empty prefix always matches
+            }
+            return (sw[0] & mask) == (pw[0] & mask);
+        }
+
         let full_words = prefix.bit_len / WORD_BITS;
 
         // Word-aligned at position 0 — use SIMD word equality.
@@ -114,6 +136,23 @@ impl BitString {
         let base_word = start / WORD_BITS;
         let sw: &[u64] = &self.words[base_word..];
         let pw = suffix.as_words();
+
+        // Sub-word fast path: one 64-bit window + mask.
+        if suffix.bit_len <= WORD_BITS {
+            let mask = low_mask(suffix.bit_len);
+            if mask == 0 {
+                return true; // empty suffix always matches
+            }
+            let h = if shift == 0 {
+                sw[0]
+            } else {
+                let w0 = sw[0];
+                let w1 = sw.get(1).copied().unwrap_or(0);
+                (w0 >> shift) | (w1 << (WORD_BITS - shift))
+            };
+            return (h & mask) == (pw[0] & mask);
+        }
+
         let full_words = suffix.bit_len / WORD_BITS;
 
         if !funcs_for_ends_with_core::ends_with_words(sw, pw, full_words, shift) {
