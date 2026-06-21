@@ -1,4 +1,4 @@
-use crate::bit_string::traits::*;
+use crate::traits::*;
 
 use super::BitString;
 

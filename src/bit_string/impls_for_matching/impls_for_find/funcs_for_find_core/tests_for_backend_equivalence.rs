@@ -66,8 +66,8 @@ proptest! {
         let haystack_len = haystack.bit_len();
         let needle_len = needle.bit_len();
 
-        let haystack_words = haystack.as_words();
-        let needle_words = needle.as_words();
+        let haystack_words = haystack.words();
+        let needle_words = needle.words();
         let needle_first = needle_words[0];
         let needle_mask = low_mask(needle_len.min(WORD_BITS));
         let last_start = haystack_len.saturating_sub(needle_len);

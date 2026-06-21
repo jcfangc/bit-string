@@ -27,9 +27,9 @@ proptest! {
         let needle = BitString::from_bool_iter(n_bools);
 
         let result = super::find_last_word(
-            haystack.as_words(),
+            haystack.words(),
             haystack.bit_len(),
-            needle.as_words(),
+            needle.words(),
             needle.bit_len(),
             &mut |pos| haystack.bits_equal_at(pos, &needle),
         );
@@ -66,9 +66,9 @@ proptest! {
         let needle = BitString::from_bool_iter(n_bools);
 
         let result = super::find_last_word(
-            haystack.as_words(),
+            haystack.words(),
             haystack.bit_len(),
-            needle.as_words(),
+            needle.words(),
             needle.bit_len(),
             &mut |pos| haystack.bits_equal_at(pos, &needle),
         );

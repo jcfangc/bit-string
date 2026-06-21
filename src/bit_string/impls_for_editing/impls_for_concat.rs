@@ -1,5 +1,5 @@
-use crate::bit_string::traits::*;
 use crate::funcs_for_bits::*;
+use crate::traits::*;
 
 use super::*;
 

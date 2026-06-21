@@ -19,7 +19,7 @@ impl BitString {
         funcs_for_contains_core::find_any_candidate(
             &self.words,
             self.bit_len,
-            needle.as_words(),
+            needle.words(),
             needle.bit_len,
             &mut |pos| self.bits_equal_at(pos, needle),
         )
@@ -37,7 +37,7 @@ impl BitString {
             && !funcs_for_contains_core::find_any_candidate(
                 &self.words,
                 self.bit_len,
-                needle.as_words(),
+                needle.words(),
                 needle.bit_len,
                 &mut |pos| self.bits_equal_at(pos, needle),
             )
@@ -49,7 +49,7 @@ impl BitString {
         funcs_for_find_core::find_first_word(
             &self.words,
             self.bit_len,
-            needle.as_words(),
+            needle.words(),
             needle.bit_len,
             &mut |pos| self.bits_equal_at(pos, needle),
         )
@@ -66,7 +66,7 @@ impl BitString {
             && !funcs_for_contains_core::find_any_candidate(
                 &self.words,
                 self.bit_len,
-                needle.as_words(),
+                needle.words(),
                 needle.bit_len,
                 &mut |pos| self.bits_equal_at(pos, needle),
             )
@@ -78,7 +78,7 @@ impl BitString {
         funcs_for_rfind_core::find_last_word(
             &self.words,
             self.bit_len,
-            needle.as_words(),
+            needle.words(),
             needle.bit_len,
             &mut |pos| self.bits_equal_at(pos, needle),
         )

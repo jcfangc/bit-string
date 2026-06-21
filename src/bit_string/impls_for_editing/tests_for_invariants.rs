@@ -11,7 +11,7 @@ use int_interval::UsizeCO;
 fn assert_invariants(bits: &BitString) {
     let bit_len = bits.bit_len();
     let expected_words = word_len(bit_len);
-    let actual_words = bits.as_words().len();
+    let actual_words = bits.words().len();
     assert_eq!(
         actual_words, expected_words,
         "word count mismatch: bit_len={bit_len}, words={actual_words}, expected_words={expected_words}",
@@ -54,7 +54,7 @@ fn clear_on_already_empty_is_idempotent() {
     bits.clear();
     assert!(bits.is_empty());
     assert_eq!(bits.bit_len(), 0);
-    assert_eq!(bits.as_words().len(), 0);
+    assert_eq!(bits.words().len(), 0);
 }
 
 // ---------------------------------------------------------------------------

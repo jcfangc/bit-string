@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::bit_string::traits::*;
+use crate::traits::*;
 
 #[inline]
 pub(super) fn owned(src: &[u64], bit_len: usize) -> Vec<u64> {

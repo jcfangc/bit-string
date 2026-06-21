@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 
 use crate::WORD_BITS;
 
-use crate::bit_string::traits::*;
+use crate::traits::*;
 
 #[inline]
 pub(super) fn owned(src: &[u64], bit_len: usize, amount: usize) -> Vec<u64> {

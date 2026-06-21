@@ -15,7 +15,7 @@ impl BitString {
         if needle_bits == 0 {
             return true;
         }
-        let needle_words = needle.as_words();
+        let needle_words = needle.words();
 
         // Sub-word fast path: the entire pattern fits in one u64.
         if needle_bits <= WORD_BITS {
@@ -72,7 +72,7 @@ impl BitString {
             return false;
         }
 
-        let pw = prefix.as_words();
+        let pw = prefix.words();
         let sw: &[u64] = &self.words;
 
         // Sub-word fast path: one u64 read + mask.
@@ -112,7 +112,7 @@ impl BitString {
         let shift = start % WORD_BITS;
         let base_word = start / WORD_BITS;
         let sw: &[u64] = &self.words[base_word..];
-        let pw = suffix.as_words();
+        let pw = suffix.words();
 
         // Sub-word fast path: one 64-bit window + mask.
         if suffix.bit_len <= WORD_BITS {

@@ -1,5 +1,5 @@
 use crate::bit_string::errors::BitStringLenMismatch;
-use crate::bit_string::traits::*;
+use crate::traits::*;
 
 use super::BitString;
 
