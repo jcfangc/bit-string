@@ -82,6 +82,10 @@ where
         let base = i * WORD_BITS;
         let w0 = haystack[i];
         let w1 = haystack.get(i + 1).copied().unwrap_or(0);
+        // Note: the SIMD backends compute max_shift differently —
+        // `WORD_BITS.min(last_start - base + 1)` — to process
+        // shifts in SIMD-sized chunks (2 or 4), relying on
+        // `pos <= last_start` to skip out-of-range positions.
         let max_shift = (last_start - base).min(WORD_BITS - 1);
         for shift in (0..=max_shift).rev() {
             let pos = base + shift;
@@ -139,6 +143,9 @@ mod sse2 {
             let w1 = haystack.get(i + 1).copied().unwrap_or(0);
             let max_shift = WORD_BITS.min(last_start - base + 1);
 
+            // Round up to a multiple of 2 so the SIMD loop
+            // processes shifts in 2-lane pairs.  Out-of-range
+            // positions are guarded by `pos <= last_start`.
             let mut s = max_shift.next_multiple_of(2).min(WORD_BITS);
             while s > 0 {
                 s -= 2;
@@ -219,6 +226,9 @@ mod avx2 {
             let w1 = haystack.get(i + 1).copied().unwrap_or(0);
             let max_shift = WORD_BITS.min(last_start - base + 1);
 
+            // Round up to a multiple of 4 so the SIMD loop
+            // processes shifts in 4-lane groups.  Out-of-range
+            // positions are guarded by `pos <= last_start`.
             let mut s = max_shift.next_multiple_of(4).min(WORD_BITS);
             while s > 0 {
                 s -= 4;
@@ -291,6 +301,9 @@ mod neon {
             let w1 = haystack.get(i + 1).copied().unwrap_or(0);
             let max_shift = WORD_BITS.min(last_start - base + 1);
 
+            // Round up to a multiple of 2 so the SIMD loop
+            // processes shifts in 2-lane pairs.  Out-of-range
+            // positions are guarded by `pos <= last_start`.
             let mut s = max_shift.next_multiple_of(2).min(WORD_BITS);
             while s > 0 {
                 s -= 2;
@@ -305,7 +318,7 @@ mod neon {
                         (w0 >> shift) | (w1 << (WORD_BITS - shift))
                     };
                 }
-                let windows = vld1q_u64(wins.as_ptr());
+                let windows = unsafe { vld1q_u64(wins.as_ptr()) };
                 let m = vandq_u64(windows, mask);
                 let c = vceqq_u64(m, needle);
 

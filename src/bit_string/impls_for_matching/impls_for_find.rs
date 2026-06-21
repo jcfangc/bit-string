@@ -21,7 +21,7 @@ impl BitString {
             self.bit_len,
             needle.as_words(),
             needle.bit_len,
-            &mut |pos| bits_equal_at(self, pos, needle),
+            &mut |pos| self.bits_equal_at(pos, needle),
         )
         .is_some()
     }
@@ -39,7 +39,7 @@ impl BitString {
                 self.bit_len,
                 needle.as_words(),
                 needle.bit_len,
-                &mut |pos| bits_equal_at(self, pos, needle),
+                &mut |pos| self.bits_equal_at(pos, needle),
             )
             .is_some()
         {
@@ -51,7 +51,7 @@ impl BitString {
             self.bit_len,
             needle.as_words(),
             needle.bit_len,
-            &mut |pos| bits_equal_at(self, pos, needle),
+            &mut |pos| self.bits_equal_at(pos, needle),
         )
     }
 
@@ -68,7 +68,7 @@ impl BitString {
                 self.bit_len,
                 needle.as_words(),
                 needle.bit_len,
-                &mut |pos| bits_equal_at(self, pos, needle),
+                &mut |pos| self.bits_equal_at(pos, needle),
             )
             .is_some()
         {
@@ -80,7 +80,7 @@ impl BitString {
             self.bit_len,
             needle.as_words(),
             needle.bit_len,
-            &mut |pos| bits_equal_at(self, pos, needle),
+            &mut |pos| self.bits_equal_at(pos, needle),
         )
     }
 }
