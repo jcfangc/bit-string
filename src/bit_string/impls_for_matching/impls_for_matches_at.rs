@@ -10,10 +10,8 @@ mod funcs_for_starts_with_core;
 impl BitString {
     /// Returns `true` if `pattern` matches the bits starting at `index`.
     ///
-    /// For word-aligned offsets (`index % WORD_BITS == 0`) this delegates
-    /// to the same SIMD word-equality backend used by [`starts_with`].
-    /// For unaligned offsets it uses the shifted-window SIMD backend
-    /// from [`ends_with`].
+    /// Delegates to [`bits_equal_at`] which uses SIMD word-equality for
+    /// long patterns and scalar comparison for short ones.
     #[inline]
     pub fn matches_at(&self, index: usize, pattern: &Self) -> bool {
         if index > self.bit_len {
@@ -24,40 +22,49 @@ impl BitString {
             return false;
         }
 
-        let pw = pattern.as_words();
-        let full_words = pattern.bit_len / WORD_BITS;
+        self.bits_equal_at(index, pattern)
+    }
 
-        // For short patterns the scalar bits_equal_at is faster than
-        // SIMD dispatch overhead.
-        if full_words < SMALL_WORDS {
-            return bits_equal_at(self, index, pattern);
-        }
+    /// Compare `needle` bits against `self` starting at `offset`.
+    ///
+    /// For word-aligned offsets, the full words are compared via the
+    /// SIMD word-equality backend ([`starts_with_words`]).  For unaligned
+    /// offsets, shifted 64-bit windows are computed via
+    /// [`ends_with_words`].  Short patterns fall back to scalar.
+    #[inline]
+    pub(crate) fn bits_equal_at(&self, offset: usize, needle: &Self) -> bool {
+        let needle_bits = needle.bit_len;
+        let needle_words = needle.as_words();
+        let full_words = needle_bits / WORD_BITS;
 
-        let shift = index % WORD_BITS;
-        let base_word = index / WORD_BITS;
-        let sw: &[u64] = &self.words[base_word..];
+        if full_words >= SMALL_WORDS {
+            let shift = offset % WORD_BITS;
+            let base_word = offset / WORD_BITS;
+            let sw: &[u64] = &self.words[base_word..];
 
-        if shift == 0 {
-            if !funcs_for_starts_with_core::starts_with_words(sw, pw, full_words) {
-                return false;
+            if shift == 0 {
+                if !funcs_for_starts_with_core::starts_with_words(sw, needle_words, full_words) {
+                    return false;
+                }
+            } else {
+                if !funcs_for_ends_with_core::ends_with_words(sw, needle_words, full_words, shift) {
+                    return false;
+                }
             }
         } else {
-            if !funcs_for_ends_with_core::ends_with_words(sw, pw, full_words, shift) {
-                return false;
+            for i in 0..full_words {
+                let h = self.words.read_word_at(offset + i * WORD_BITS);
+                if h != needle_words[i] {
+                    return false;
+                }
             }
         }
 
-        let rem = pattern.bit_len % WORD_BITS;
-        if rem > 0 {
-            let mask = low_mask(rem);
-            let h = if shift == 0 {
-                sw[full_words]
-            } else {
-                let w0 = sw[full_words];
-                let w1 = sw.get(full_words + 1).copied().unwrap_or(0);
-                (w0 >> shift) | (w1 << (WORD_BITS - shift))
-            };
-            if (h & mask) != (pw[full_words] & mask) {
+        let rem_bits = needle_bits % WORD_BITS;
+        if rem_bits > 0 {
+            let mask = low_mask(rem_bits);
+            let h = self.words.read_word_at(offset + full_words * WORD_BITS);
+            if (h & mask) != (needle_words[full_words] & mask) {
                 return false;
             }
         }

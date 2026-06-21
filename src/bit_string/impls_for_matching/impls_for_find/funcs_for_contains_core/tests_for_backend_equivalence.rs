@@ -7,8 +7,6 @@ use proptest::prelude::*;
 
 use crate::BitString;
 
-use super::super::bits_equal_at;
-
 fn config() -> ProptestConfig {
     ProptestConfig {
         cases: 512,
@@ -33,7 +31,7 @@ proptest! {
             haystack.bit_len(),
             needle.as_words(),
             needle.bit_len(),
-            &mut |pos| bits_equal_at(&haystack, pos, &needle),
+            &mut |pos| haystack.bits_equal_at(pos, &needle),
         );
 
         // Brute-force reference: find any match.
@@ -77,7 +75,7 @@ proptest! {
             needle.as_words(),
             needle_len,
             &mut |pos| {
-                let ok = bits_equal_at(&haystack, pos, &needle);
+                let ok = haystack.bits_equal_at(pos, &needle);
                 if ok { any_found = true; }
                 ok
             },

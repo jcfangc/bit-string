@@ -7,8 +7,6 @@ use proptest::prelude::*;
 
 use crate::BitString;
 
-use super::super::bits_equal_at;
-
 fn config() -> ProptestConfig {
     ProptestConfig {
         cases: 512,
@@ -33,7 +31,7 @@ proptest! {
             haystack.bit_len(),
             needle.as_words(),
             needle.bit_len(),
-            &mut |pos| bits_equal_at(&haystack, pos, &needle),
+            &mut |pos| haystack.bits_equal_at(pos, &needle),
         );
 
         // Brute-force: find rightmost match.
@@ -72,7 +70,7 @@ proptest! {
             haystack.bit_len(),
             needle.as_words(),
             needle.bit_len(),
-            &mut |pos| bits_equal_at(&haystack, pos, &needle),
+            &mut |pos| haystack.bits_equal_at(pos, &needle),
         );
 
         let max_pos = haystack.bit_len().saturating_sub(needle.bit_len());
