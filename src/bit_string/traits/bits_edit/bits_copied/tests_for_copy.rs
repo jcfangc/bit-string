@@ -238,3 +238,114 @@ fn case4_both_unaligned_multiword_vs_scalar() {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// Adversarial tests — edge cases targeting paste_to boundary logic.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn case3_guard_exactly_one_extra_word_hits_simd() {
+    // src.len() == sw + full_words + 1 — exactly enough for the SIMD spill read.
+    let count = 16; // full_words = 16, mid_count = 15
+    let src: Vec<u64> = (0..count + 1) // sw=0, src.len() = count+1 = sw+full_words+1
+        .map(|i| (i as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15))
+        .collect();
+    let len = count * WORD_BITS;
+    let mut dst_simd = vec![0; count + 2];
+    let mut dst_oracle = vec![0; count + 2];
+
+    src.copy_bits(0, len).paste_to(&mut dst_simd, 21);
+    scalar_paste(&src, 0, len, &mut dst_oracle, 21);
+
+    assert_eq!(&dst_simd[..count + 2], &dst_oracle[..count + 2]);
+}
+
+#[test]
+fn case3_guard_exact_fit_falls_to_scalar() {
+    // src.len() == sw + full_words — no spare word for SIMD spill, falls to Case 4.
+    let count = 16;
+    let src: Vec<u64> = (0..count) // sw=0, src.len() = count = sw+full_words
+        .map(|i| (i as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15))
+        .collect();
+    let len = count * WORD_BITS;
+    let mut dst_impl = vec![0; count + 2];
+    let mut dst_oracle = vec![0; count + 2];
+
+    src.copy_bits(0, len).paste_to(&mut dst_impl, 21);
+    scalar_paste(&src, 0, len, &mut dst_oracle, 21);
+
+    assert_eq!(&dst_impl[..count + 2], &dst_oracle[..count + 2]);
+}
+
+#[test]
+fn case3_remainder_one_bit_at_extreme_shifts() {
+    // rem=1 + dst_shift ∈ {1, 63} — stress the overlap between high boundary
+    // OR and remainder OR into the same dst word.
+    for dst_shift in [1, 63] {
+        let count = 16;
+        let rem = 1;
+        let len = count * WORD_BITS + rem;
+        let src: Vec<u64> = (0..count + 2)
+            .map(|i| (i as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15))
+            .collect();
+        let mut dst_impl = vec![0; count + 3];
+        let mut dst_oracle = vec![0; count + 3];
+
+        src.copy_bits(0, len).paste_to(&mut dst_impl, dst_shift);
+        scalar_paste(&src, 0, len, &mut dst_oracle, dst_shift);
+
+        assert_eq!(
+            &dst_impl[..count + 3],
+            &dst_oracle[..count + 3],
+            "dst_shift={dst_shift}, rem=1"
+        );
+    }
+}
+
+#[test]
+fn case3_remainder_63bits_at_extreme_shifts() {
+    // rem=63 + dst_shift ∈ {1, 63} — nearly full word remainder.
+    for dst_shift in [1, 63] {
+        let count = 16;
+        let rem = 63;
+        let len = count * WORD_BITS + rem;
+        let src: Vec<u64> = (0..count + 2)
+            .map(|i| (i as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15))
+            .collect();
+        let mut dst_impl = vec![0; count + 3];
+        let mut dst_oracle = vec![0; count + 3];
+
+        src.copy_bits(0, len).paste_to(&mut dst_impl, dst_shift);
+        scalar_paste(&src, 0, len, &mut dst_oracle, dst_shift);
+
+        assert_eq!(
+            &dst_impl[..count + 3],
+            &dst_oracle[..count + 3],
+            "dst_shift={dst_shift}, rem=63"
+        );
+    }
+}
+
+#[test]
+fn case2_remainder_1bit_writes_correct_word_boundary() {
+    // rem=1 — single bit chunk, write_word_at should not corrupt spill.
+    for src_shift in [1, 63] {
+        let count = 16;
+        let rem = 1;
+        let len = count * WORD_BITS + rem;
+        let src: Vec<u64> = (0..count + 2)
+            .map(|i| (i as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15))
+            .collect();
+        let mut dst_impl = vec![0; count + 2];
+        let mut dst_oracle = vec![0; count + 2];
+
+        src.copy_bits(src_shift, len).paste_to(&mut dst_impl, 0);
+        scalar_paste(&src, src_shift, len, &mut dst_oracle, 0);
+
+        assert_eq!(
+            &dst_impl[..count + 2],
+            &dst_oracle[..count + 2],
+            "src_shift={src_shift}, rem=1"
+        );
+    }
+}
