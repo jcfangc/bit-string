@@ -22,6 +22,16 @@ impl BitString {
     pub fn words(&self) -> &[u64] {
         &self.words
     }
+
+    /// Returns a zero-copy [`BitStr`] view of the entire bit string.
+    #[inline]
+    pub fn as_bitstr(&self) -> crate::BitStr<'_> {
+        crate::BitStr {
+            source: self,
+            start: 0,
+            bit_len: self.bit_len,
+        }
+    }
 }
 
 pub mod errors;
@@ -32,6 +42,7 @@ mod impls_for_editing;
 mod impls_for_fmt;
 mod impls_for_iter;
 mod impls_for_matching;
+mod impls_for_predicates;
 
 #[cfg(test)]
 mod tests_for_proptest;

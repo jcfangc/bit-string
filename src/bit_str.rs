@@ -12,15 +12,20 @@ use crate::BitString;
 ///
 /// # Lifetime
 ///
-/// The lifetime `'a` is tied to the source [`BitString`].  While any `BitStr`
+/// The lifetime `'bs` is tied to the source [`BitString`].  While any `BitStr`
 /// is live, Rust's borrow checker prevents mutation of the source.
 #[derive(Clone, Copy)]
 pub struct BitStr<'bs> {
-    source: &'bs BitString,
-    start: usize,
+    pub(crate) source: &'bs BitString,
+    pub(crate) start: usize,
     /// Number of bits in this view.
-    bit_len: usize,
+    pub(crate) bit_len: usize,
 }
+
+pub mod errors;
+mod impls_for_access;
+mod impls_for_predicates;
+mod impls_for_slice;
 
 // ---------------------------------------------------------------------------
 // Getters

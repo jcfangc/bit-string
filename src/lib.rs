@@ -15,4 +15,5 @@ mod bit_string;
 pub use bit_str::BitStr;
 pub use bit_string::BitString;
 
+pub use bit_str::errors::*;
 pub use bit_string::errors::*;
