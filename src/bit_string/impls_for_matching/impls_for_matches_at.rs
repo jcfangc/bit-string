@@ -1,3 +1,4 @@
+use crate::SMALL_WORDS;
 use crate::WORD_BITS;
 use crate::funcs_for_bits::low_mask;
 
@@ -23,11 +24,18 @@ impl BitString {
             return false;
         }
 
+        let pw = pattern.as_words();
+        let full_words = pattern.bit_len / WORD_BITS;
+
+        // For short patterns the scalar bits_equal_at is faster than
+        // SIMD dispatch overhead.
+        if full_words < SMALL_WORDS {
+            return bits_equal_at(self, index, pattern);
+        }
+
         let shift = index % WORD_BITS;
         let base_word = index / WORD_BITS;
         let sw: &[u64] = &self.words[base_word..];
-        let pw = pattern.as_words();
-        let full_words = pattern.bit_len / WORD_BITS;
 
         if shift == 0 {
             if !funcs_for_starts_with_core::starts_with_words(sw, pw, full_words) {

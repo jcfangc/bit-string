@@ -85,6 +85,10 @@ name = "matching_find"
 harness = false
 
 [[bench]]
+name = "matching_matches_at"
+harness = false
+
+[[bench]]
 name = "matching_starts_with"
 harness = false
 
