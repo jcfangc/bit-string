@@ -59,7 +59,7 @@ pub(crate) trait BitsEdit {
     fn shift_left_in_place(&mut self, start: usize, count: usize);
 }
 
-pub(crate) mod copy;
+pub(crate) mod bits_copied;
 pub(crate) mod impls_for_u64_slice;
 
-pub(crate) use copy::BitsCopied;
+pub(crate) use bits_copied::BitsCopied;
