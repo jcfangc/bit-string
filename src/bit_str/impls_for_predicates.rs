@@ -8,21 +8,21 @@ impl<'bs> BitStr<'bs> {
 
     #[inline]
     pub fn any(&self) -> bool {
-        todo!()
+        self.count_ones() != 0
     }
 
     #[inline]
     pub fn all(&self) -> bool {
-        todo!()
+        self.count_ones() == self.bit_len
     }
 
     #[inline]
     pub fn is_all_zeros(&self) -> bool {
-        todo!()
+        !self.any()
     }
 
     #[inline]
     pub fn is_all_ones(&self) -> bool {
-        todo!()
+        self.all()
     }
 }
