@@ -1,6 +1,6 @@
 use crate::BitString;
 
-use super::*;
+use crate::BitStr;
 
 impl<'bs> BitStr<'bs> {
     /// Returns `true` if `needle` is contained within `self`.
