@@ -1,4 +1,6 @@
 use crate::BitString;
+use crate::SMALL_WORDS;
+use crate::traits::*;
 
 use crate::BitStr;
 
@@ -12,13 +14,7 @@ impl<'bs> BitStr<'bs> {
         if needle.bit_len() > self.bit_len {
             return false;
         }
-        let max_pos = self.bit_len - needle.bit_len();
-        for pos in 0..=max_pos {
-            if self.bits_equal_at(pos, needle) {
-                return true;
-            }
-        }
-        false
+        self.find(needle).is_some()
     }
 
     /// Returns the index of the first occurrence of `needle`, or `None`.
@@ -30,13 +26,35 @@ impl<'bs> BitStr<'bs> {
         if needle.bit_len() > self.bit_len {
             return None;
         }
-        let max_pos = self.bit_len - needle.bit_len();
-        for pos in 0..=max_pos {
-            if self.bits_equal_at(pos, needle) {
-                return Some(pos);
-            }
+
+        let start_word = self.start / crate::WORD_BITS;
+        let start_offset = self.start % crate::WORD_BITS;
+        let view_bits = start_offset + self.bit_len;
+        let words = &self.source.words()[start_word..];
+        let needle_words = needle.words();
+        let needle_len = needle.bit_len();
+
+        // Quick rejection: no candidate at all.
+        if words.len() >= SMALL_WORDS
+            && !words
+                .find_any_candidate(view_bits, needle_words, needle_len, &mut |pos| {
+                    pos >= start_offset
+                        && pos + needle_len <= view_bits
+                        && self.bits_equal_at(pos - start_offset, needle)
+                })
+                .is_some()
+        {
+            return None;
         }
-        None
+
+        // Fine-grained word-outer search for the earliest match.
+        words
+            .find_first_word(view_bits, needle_words, needle_len, &mut |pos| {
+                pos >= start_offset
+                    && pos + needle_len <= view_bits
+                    && self.bits_equal_at(pos - start_offset, needle)
+            })
+            .map(|pos| pos - start_offset)
     }
 
     /// Returns the index of the last occurrence of `needle`, or `None`.
@@ -48,13 +66,35 @@ impl<'bs> BitStr<'bs> {
         if needle.bit_len() > self.bit_len {
             return None;
         }
-        let max_pos = self.bit_len - needle.bit_len();
-        for pos in (0..=max_pos).rev() {
-            if self.bits_equal_at(pos, needle) {
-                return Some(pos);
-            }
+
+        let start_word = self.start / crate::WORD_BITS;
+        let start_offset = self.start % crate::WORD_BITS;
+        let view_bits = start_offset + self.bit_len;
+        let words = &self.source.words()[start_word..];
+        let needle_words = needle.words();
+        let needle_len = needle.bit_len();
+
+        // Quick rejection.
+        if words.len() >= SMALL_WORDS
+            && !words
+                .find_any_candidate(view_bits, needle_words, needle_len, &mut |pos| {
+                    pos >= start_offset
+                        && pos + needle_len <= view_bits
+                        && self.bits_equal_at(pos - start_offset, needle)
+                })
+                .is_some()
+        {
+            return None;
         }
-        None
+
+        // Reverse search for the rightmost match.
+        words
+            .find_last_word(view_bits, needle_words, needle_len, &mut |pos| {
+                pos >= start_offset
+                    && pos + needle_len <= view_bits
+                    && self.bits_equal_at(pos - start_offset, needle)
+            })
+            .map(|pos| pos - start_offset)
     }
 }
 

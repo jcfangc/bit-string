@@ -1,10 +1,7 @@
 use crate::SMALL_WORDS;
+use crate::traits::*;
 
 use super::*;
-
-mod funcs_for_contains_core;
-mod funcs_for_find_core;
-mod funcs_for_rfind_core;
 
 impl BitString {
     #[inline]
@@ -16,14 +13,11 @@ impl BitString {
             return false;
         }
 
-        funcs_for_contains_core::find_any_candidate(
-            &self.words,
-            self.bit_len,
-            needle.words(),
-            needle.bit_len,
-            &mut |pos| self.bits_equal_at(pos, needle),
-        )
-        .is_some()
+        self.words
+            .find_any_candidate(self.bit_len, needle.words(), needle.bit_len, &mut |pos| {
+                self.bits_equal_at(pos, needle)
+            })
+            .is_some()
     }
 
     pub fn find(&self, needle: &Self) -> Option<usize> {
@@ -34,25 +28,20 @@ impl BitString {
             return None;
         }
         if self.words.len() >= SMALL_WORDS
-            && !funcs_for_contains_core::find_any_candidate(
-                &self.words,
-                self.bit_len,
-                needle.words(),
-                needle.bit_len,
-                &mut |pos| self.bits_equal_at(pos, needle),
-            )
-            .is_some()
+            && !self
+                .words
+                .find_any_candidate(self.bit_len, needle.words(), needle.bit_len, &mut |pos| {
+                    self.bits_equal_at(pos, needle)
+                })
+                .is_some()
         {
             return None;
         }
 
-        funcs_for_find_core::find_first_word(
-            &self.words,
-            self.bit_len,
-            needle.words(),
-            needle.bit_len,
-            &mut |pos| self.bits_equal_at(pos, needle),
-        )
+        self.words
+            .find_first_word(self.bit_len, needle.words(), needle.bit_len, &mut |pos| {
+                self.bits_equal_at(pos, needle)
+            })
     }
 
     pub fn rfind(&self, needle: &Self) -> Option<usize> {
@@ -63,25 +52,20 @@ impl BitString {
             return None;
         }
         if self.words.len() >= SMALL_WORDS
-            && !funcs_for_contains_core::find_any_candidate(
-                &self.words,
-                self.bit_len,
-                needle.words(),
-                needle.bit_len,
-                &mut |pos| self.bits_equal_at(pos, needle),
-            )
-            .is_some()
+            && !self
+                .words
+                .find_any_candidate(self.bit_len, needle.words(), needle.bit_len, &mut |pos| {
+                    self.bits_equal_at(pos, needle)
+                })
+                .is_some()
         {
             return None;
         }
 
-        funcs_for_rfind_core::find_last_word(
-            &self.words,
-            self.bit_len,
-            needle.words(),
-            needle.bit_len,
-            &mut |pos| self.bits_equal_at(pos, needle),
-        )
+        self.words
+            .find_last_word(self.bit_len, needle.words(), needle.bit_len, &mut |pos| {
+                self.bits_equal_at(pos, needle)
+            })
     }
 }
 
