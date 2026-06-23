@@ -1,30 +1,30 @@
-use crate::BitString;
-use crate::SMALL_WORDS;
-use crate::WORD_BITS;
 use crate::traits::*;
+use crate::{SMALL_WORDS, WORD_BITS};
 
 use crate::BitStr;
 
 impl<'bs> BitStr<'bs> {
     /// Returns `true` if `needle` is contained within `self`.
     #[inline]
-    pub fn contains(&self, needle: &BitString) -> bool {
-        if needle.bit_len() == 0 {
+    pub fn contains(&self, needle: &BitStr<'_>) -> bool {
+        if needle.bit_len == 0 {
             return true;
         }
-        if needle.bit_len() > self.bit_len {
+        if needle.bit_len > self.bit_len {
             return false;
         }
 
         let words = self.source.words();
         let sw = self.start / WORD_BITS;
         let so = self.start % WORD_BITS;
+        let needle_words = needle.source.words();
+        let needle_len = needle.bit_len;
 
         // Unaligned start: check the first partial word before delegating to
         // SIMD on the aligned remainder.
         if so != 0 {
             let first_bits = (WORD_BITS - so).min(self.bit_len);
-            let max = first_bits.saturating_sub(needle.bit_len());
+            let max = first_bits.saturating_sub(needle_len);
             for p in 0..=max {
                 if self.bits_equal_at(p, needle) {
                     return true;
@@ -34,10 +34,9 @@ impl<'bs> BitStr<'bs> {
             if remaining == 0 {
                 return false;
             }
-            // Aligned remainder — SIMD shift-outer candidate scan.
             let aligned = &words[sw + 1..];
             return aligned
-                .find_any_candidate(remaining, needle.words(), needle.bit_len(), &mut |pos| {
+                .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
                     self.bits_equal_at(pos + first_bits, needle)
                 })
                 .is_some();
@@ -45,7 +44,7 @@ impl<'bs> BitStr<'bs> {
 
         // Word-aligned: full SIMD on the relevant suffix.
         words[sw..]
-            .find_any_candidate(self.bit_len, needle.words(), needle.bit_len(), &mut |pos| {
+            .find_any_candidate(self.bit_len, needle_words, needle_len, &mut |pos| {
                 self.bits_equal_at(pos, needle)
             })
             .is_some()
@@ -53,21 +52,21 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns the index of the first occurrence of `needle`, or `None`.
     #[inline]
-    pub fn find(&self, needle: &BitString) -> Option<usize> {
-        if needle.bit_len() == 0 {
+    pub fn find(&self, needle: &BitStr<'_>) -> Option<usize> {
+        if needle.bit_len == 0 {
             return Some(0);
         }
-        if needle.bit_len() > self.bit_len {
+        if needle.bit_len > self.bit_len {
             return None;
         }
 
         let words = self.source.words();
         let sw = self.start / WORD_BITS;
         let so = self.start % WORD_BITS;
-        let needle_words = needle.words();
-        let needle_len = needle.bit_len();
+        let needle_words = needle.source.words();
+        let needle_len = needle.bit_len;
 
-        // Word-aligned fast path: the entire view is SIMD-friendly.
+        // Word-aligned fast path.
         if so == 0 {
             return words[sw..].find_first_word(
                 self.bit_len,
@@ -113,19 +112,19 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns the index of the last occurrence of `needle`, or `None`.
     #[inline]
-    pub fn rfind(&self, needle: &BitString) -> Option<usize> {
-        if needle.bit_len() == 0 {
+    pub fn rfind(&self, needle: &BitStr<'_>) -> Option<usize> {
+        if needle.bit_len == 0 {
             return Some(self.bit_len);
         }
-        if needle.bit_len() > self.bit_len {
+        if needle.bit_len > self.bit_len {
             return None;
         }
 
         let words = self.source.words();
         let sw = self.start / WORD_BITS;
         let so = self.start % WORD_BITS;
-        let needle_words = needle.words();
-        let needle_len = needle.bit_len();
+        let needle_words = needle.source.words();
+        let needle_len = needle.bit_len;
 
         // Word-aligned fast path.
         if so == 0 {
@@ -137,7 +136,7 @@ impl<'bs> BitStr<'bs> {
             );
         }
 
-        // Unaligned: SIMD on the aligned remainder first (reverse order),
+        // Unaligned: SIMD on the aligned remainder first (reverse),
         // then fall back to the first partial word.
         let first_bits = (WORD_BITS - so).min(self.bit_len);
         let remaining = self.bit_len - first_bits;
