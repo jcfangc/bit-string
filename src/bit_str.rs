@@ -1,3 +1,5 @@
+use int_interval::UsizeCO;
+
 use crate::BitString;
 
 /// A zero-copy borrowed view of a [`BitString`] or subrange thereof.
@@ -27,11 +29,11 @@ mod impls_for_access;
 mod impls_for_bit_arith;
 mod impls_for_eq;
 mod impls_for_fmt;
+mod impls_for_hash;
 mod impls_for_iter;
 mod impls_for_matching;
 mod impls_for_predicates;
 mod impls_for_slice;
-mod impls_for_to_bit_string;
 
 // ---------------------------------------------------------------------------
 // Getters
@@ -54,4 +56,20 @@ impl<'bs> BitStr<'bs> {
     pub fn source(&self) -> &BitString {
         self.source
     }
+
+    /// Copies the bits in this view into a new owned [`BitString`].
+    ///
+    /// Delegates to [`BitString::slice`] which performs a word-level
+    /// copy from the source.
+    #[inline]
+    pub fn to_bit_string(&self) -> BitString {
+        if self.bit_len == 0 {
+            return BitString::new();
+        }
+        self.source
+            .slice(UsizeCO::checked_from_start_len(self.start, self.bit_len).unwrap())
+    }
 }
+
+#[cfg(test)]
+mod tests_for_to_bit_string;
