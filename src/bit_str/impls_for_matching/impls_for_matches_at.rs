@@ -10,7 +10,7 @@ impl<'bs> BitStr<'bs> {
     /// SIMD word-equality via [`BitsEq::eq_words`].  Otherwise falls
     /// back to a scalar word-at-a-time comparison.
     #[inline]
-    pub(crate) fn bits_equal_at(&self, offset: usize, needle: &BitStr<'_>) -> bool {
+    pub(crate) fn bits_equal_at(&self, offset: usize, needle: BitStr<'_>) -> bool {
         let n = needle.bit_len;
         if n == 0 {
             return true;
@@ -77,7 +77,7 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns `true` if `pattern` matches the bits starting at `index`.
     #[inline]
-    pub fn matches_at(&self, index: usize, pattern: &BitStr<'_>) -> bool {
+    pub fn matches_at(&self, index: usize, pattern: BitStr<'_>) -> bool {
         if index > self.bit_len {
             return false;
         }
@@ -89,13 +89,13 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns `true` if `prefix` is a prefix of `self`.
     #[inline]
-    pub fn starts_with(&self, prefix: &BitStr<'_>) -> bool {
+    pub fn starts_with(&self, prefix: BitStr<'_>) -> bool {
         self.matches_at(0, prefix)
     }
 
     /// Returns `true` if `suffix` is a suffix of `self`.
     #[inline]
-    pub fn ends_with(&self, suffix: &BitStr<'_>) -> bool {
+    pub fn ends_with(&self, suffix: BitStr<'_>) -> bool {
         if suffix.bit_len == 0 {
             return true;
         }
@@ -107,4 +107,13 @@ impl<'bs> BitStr<'bs> {
 }
 
 #[cfg(test)]
+mod tests_for_bits_equal_at;
+
+#[cfg(test)]
+mod tests_for_ends_with;
+
+#[cfg(test)]
 mod tests_for_matches_at;
+
+#[cfg(test)]
+mod tests_for_starts_with;

@@ -11,7 +11,7 @@ use crate::low_mask;
 #[test]
 fn aligned_chunk_from_start() {
     let s = BitString::try_from("1").unwrap();
-    let v = s.as_bitstr();
+    let v = s.as_bit_str();
     assert_eq!(v.get_chunk(0), 1);
 }
 
@@ -21,7 +21,7 @@ fn aligned_chunk_spanning_two_words() {
     s.set(63, true); // last bit of word 0
     s.set(64, true); // first bit of word 1
 
-    let v = s.as_bitstr();
+    let v = s.as_bit_str();
 
     let chunk = v.get_chunk(63);
     assert_eq!(chunk & 1, 1); // bit 63 → LSB of chunk
@@ -41,7 +41,7 @@ fn unaligned_chunk_in_offset_view() {
     s.set(63, true);
     s.set(64, true); // crosses into word 1
 
-    let v = s.as_bitstr().slice(UsizeCO::try_new(61, 66).unwrap()); // 5 bits
+    let v = s.as_bit_str().slice(UsizeCO::try_new(61, 66).unwrap()); // 5 bits
 
     // Bits 61..65: 1,1,1,1,0 → 0b01111 = 15
     assert_eq!(v.get_chunk(0), 0b01111);
@@ -56,7 +56,7 @@ fn unaligned_chunk_in_offset_view() {
 #[test]
 fn chunk_at_bit_len_returns_zero() {
     let s = BitString::try_from("11111111").unwrap();
-    let v = s.as_bitstr().slice(UsizeCO::try_new(2, 5).unwrap()); // 3 bits
+    let v = s.as_bit_str().slice(UsizeCO::try_new(2, 5).unwrap()); // 3 bits
 
     assert_eq!(v.get_chunk(3), 0); // exactly bit_len
     assert_eq!(v.get_chunk(4), 0); // beyond
@@ -67,7 +67,7 @@ fn chunk_at_bit_len_returns_zero() {
 #[test]
 fn chunk_does_not_leak_bits_beyond_view() {
     let s = BitString::ones(130);
-    let v = s.as_bitstr().slice(UsizeCO::try_new(60, 70).unwrap()); // 10 bits
+    let v = s.as_bit_str().slice(UsizeCO::try_new(60, 70).unwrap()); // 10 bits
 
     let chunk = v.get_chunk(5); // 5 remaining valid bits
     assert_eq!(chunk, low_mask(5)); // exactly 5 ones, nothing leaked
@@ -78,7 +78,7 @@ fn chunk_does_not_leak_bits_beyond_view() {
 fn chunk_at_last_bit() {
     let mut s = BitString::zeros(130);
     s.set(129, true);
-    let v = s.as_bitstr().slice(UsizeCO::try_new(128, 130).unwrap()); // 2 bits
+    let v = s.as_bit_str().slice(UsizeCO::try_new(128, 130).unwrap()); // 2 bits
 
     assert_eq!(v.get_chunk(1), 1); // just bit 129
     assert_eq!(v.get_chunk(2), 0); // beyond view

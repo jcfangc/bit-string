@@ -31,7 +31,7 @@ proptest! {
             haystack.bit_len(),
             needle.words(),
             needle.bit_len(),
-            &mut |pos| haystack.bits_equal_at(pos, &needle),
+            &mut |pos| haystack.as_bit_str().bits_equal_at(pos, needle.as_bit_str()),
         );
 
         // Brute-force: find rightmost match.
@@ -70,7 +70,7 @@ proptest! {
             haystack.bit_len(),
             needle.words(),
             needle.bit_len(),
-            &mut |pos| haystack.bits_equal_at(pos, &needle),
+            &mut |pos| haystack.as_bit_str().bits_equal_at(pos, needle.as_bit_str()),
         );
 
         let max_pos = haystack.bit_len().saturating_sub(needle.bit_len());

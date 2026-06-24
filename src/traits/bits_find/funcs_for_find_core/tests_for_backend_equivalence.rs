@@ -31,7 +31,7 @@ proptest! {
         let haystack_len = haystack.bit_len();
         let needle_len = needle.bit_len();
 
-        let result = haystack.find(&needle);
+        let result = haystack.find(needle.as_bit_str());
 
         // Brute-force reference.
         let mut expected = None;

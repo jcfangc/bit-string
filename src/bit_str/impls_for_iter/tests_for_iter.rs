@@ -6,7 +6,7 @@ use crate::BitString;
 #[test]
 fn iterates_bits_in_order() {
     let bits = BitString::try_from("101001").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let values: Vec<_> = v.iter().collect();
 
@@ -17,7 +17,7 @@ fn iterates_bits_in_order() {
 fn iterates_empty_view() {
     let bits = BitString::try_from("10110").unwrap();
     // Out-of-bounds slice clamps to empty.
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(10, 20).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(10, 20).unwrap());
     let mut iter = v.iter();
 
     assert_eq!(iter.next(), None);
@@ -29,7 +29,7 @@ fn iterates_empty_view() {
 #[test]
 fn supports_double_ended_iteration() {
     let bits = BitString::try_from("101001").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
     let mut iter = v.iter();
 
     assert_eq!(iter.next(), Some(true));
@@ -45,7 +45,7 @@ fn supports_double_ended_iteration() {
 #[test]
 fn size_hint_tracks_remaining_bits() {
     let bits = BitString::try_from("101001").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
     let mut iter = v.iter();
 
     assert_eq!(iter.size_hint(), (6, Some(6)));
@@ -63,7 +63,7 @@ fn size_hint_tracks_remaining_bits() {
 #[test]
 fn remains_fused_after_exhaustion() {
     let bits = BitString::try_from("10").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
     let mut iter = v.iter();
 
     assert_eq!(iter.next(), Some(true));
@@ -77,7 +77,7 @@ fn remains_fused_after_exhaustion() {
 #[test]
 fn borrowed_into_iter_uses_bit_iterator() {
     let bits = BitString::try_from("1001").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let values: Vec<_> = (&v).into_iter().collect();
 
@@ -94,7 +94,7 @@ fn works_across_word_boundaries() {
     bits.set(65, true);
     bits.set(129, true);
 
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
     let values: Vec<_> = v.iter().enumerate().map(|(i, b)| (i, b)).collect();
 
     assert_eq!(values.len(), 130);
@@ -115,7 +115,7 @@ fn iterates_offset_view() {
     let bits = BitString::try_from("101100").unwrap();
     // bits: 1 0 1 1 0 0
     // view bits 1..5 → 0 1 1 0
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(1, 5).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(1, 5).unwrap());
 
     let values: Vec<_> = v.iter().collect();
     assert_eq!(values, [false, true, true, false]);
@@ -125,7 +125,7 @@ fn iterates_offset_view() {
 fn double_ended_on_offset_view() {
     let bits = BitString::try_from("101100").unwrap();
     // view bits 2..6 → 1 1 0 0
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(2, 6).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(2, 6).unwrap());
     let mut iter = v.iter();
 
     assert_eq!(iter.next(), Some(true));
@@ -138,7 +138,7 @@ fn double_ended_on_offset_view() {
 #[test]
 fn into_iter_on_offset_view() {
     let bits = BitString::try_from("101100").unwrap();
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(1, 4).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(1, 4).unwrap());
 
     let values: Vec<_> = (&v).into_iter().collect();
     assert_eq!(values, [false, true, true]);
@@ -147,7 +147,7 @@ fn into_iter_on_offset_view() {
 #[test]
 fn to_bool_vec_on_full_view() {
     let bits = BitString::try_from("11010").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     assert_eq!(v.to_bool_vec(), [true, true, false, true, false]);
 }
@@ -156,7 +156,7 @@ fn to_bool_vec_on_full_view() {
 fn to_bool_vec_on_offset_view() {
     let bits = BitString::try_from("11010").unwrap();
     // view bits 1..4 → 1 0 1
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(1, 4).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(1, 4).unwrap());
 
     assert_eq!(v.to_bool_vec(), [true, false, true]);
 }
@@ -164,7 +164,7 @@ fn to_bool_vec_on_offset_view() {
 #[test]
 fn for_loop_over_view() {
     let bits = BitString::try_from("101").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let mut acc = Vec::new();
     for b in &v {
@@ -176,7 +176,7 @@ fn for_loop_over_view() {
 #[test]
 fn exact_size_is_correct() {
     let bits = BitString::try_from("1010011100").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let mut iter = v.iter();
     assert_eq!(iter.len(), 10);

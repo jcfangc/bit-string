@@ -24,7 +24,7 @@ proptest! {
         let haystack = BitString::from_bool_iter((0..h_len).map(|i| (i * 17 + 3) % 5 == 0));
         let prefix = BitString::from_bool_iter((0..p_len).map(|i| (i * 17 + 3) % 5 == 0));
 
-        let result = haystack.starts_with(&prefix);
+        let result = haystack.starts_with(prefix.as_bit_str());
 
         let expected = (0..p_len).all(|j| haystack.get(j) == prefix.get(j));
         assert_eq!(result, expected);
@@ -38,7 +38,7 @@ proptest! {
         let haystack = BitString::from_bool_iter(h_bits);
         let prefix = BitString::from_bool_iter(p_bits);
 
-        let result = haystack.starts_with(&prefix);
+        let result = haystack.starts_with(prefix.as_bit_str());
         let expected = prefix.bit_len() <= haystack.bit_len()
             && (0..prefix.bit_len()).all(|j| haystack.get(j) == prefix.get(j));
 

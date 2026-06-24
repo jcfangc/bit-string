@@ -6,7 +6,7 @@ use crate::BitStr;
 impl<'bs> BitStr<'bs> {
     /// Returns `true` if `needle` is contained within `self`.
     #[inline]
-    pub fn contains(&self, needle: &BitStr<'_>) -> bool {
+    pub fn contains(&self, needle: BitStr<'_>) -> bool {
         if needle.bit_len == 0 {
             return true;
         }
@@ -52,7 +52,7 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns the index of the first occurrence of `needle`, or `None`.
     #[inline]
-    pub fn find(&self, needle: &BitStr<'_>) -> Option<usize> {
+    pub fn find(&self, needle: BitStr<'_>) -> Option<usize> {
         if needle.bit_len == 0 {
             return Some(0);
         }
@@ -112,7 +112,7 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns the index of the last occurrence of `needle`, or `None`.
     #[inline]
-    pub fn rfind(&self, needle: &BitStr<'_>) -> Option<usize> {
+    pub fn rfind(&self, needle: BitStr<'_>) -> Option<usize> {
         if needle.bit_len == 0 {
             return Some(self.bit_len);
         }

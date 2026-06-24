@@ -9,7 +9,7 @@ use crate::BitString;
 #[test]
 fn slice_full_range_returns_identical_view() {
     let bits = BitString::try_from("1010011100").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
     let s = v.slice(UsizeCO::try_new(0, 10).unwrap());
 
     assert_eq!(s.bit_len(), v.bit_len());
@@ -23,7 +23,7 @@ fn slice_full_range_returns_identical_view() {
 #[test]
 fn slice_subrange_within_bounds() {
     let bits = BitString::try_from("11110000").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     // Slice bits 2..6 → "1100"
     let s = v.slice(UsizeCO::try_new(2, 6).unwrap());
@@ -37,7 +37,7 @@ fn slice_subrange_within_bounds() {
 #[test]
 fn slice_end_beyond_view_is_clamped() {
     let bits = BitString::try_from("10110").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     // [2, 100) → clamped to [2, 5)
     let s = v.slice(UsizeCO::try_new(2, 100).unwrap());
@@ -50,7 +50,7 @@ fn slice_end_beyond_view_is_clamped() {
 #[test]
 fn slice_start_beyond_view_is_empty() {
     let bits = BitString::try_from("10110").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     // [10, 20) → start clamped to 5, end clamped to 5 → empty
     let s = v.slice(UsizeCO::try_new(10, 20).unwrap());
@@ -60,7 +60,7 @@ fn slice_start_beyond_view_is_empty() {
 #[test]
 fn slice_single_bit() {
     let bits = BitString::try_from("10110").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let s = v.slice(UsizeCO::try_new(0, 1).unwrap());
     assert_eq!(s.bit_len(), 1);
@@ -70,7 +70,7 @@ fn slice_single_bit() {
 #[test]
 fn slice_last_bit() {
     let bits = BitString::try_from("10110").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let s = v.slice(UsizeCO::try_new(4, 5).unwrap());
     assert_eq!(s.bit_len(), 1);
@@ -80,7 +80,7 @@ fn slice_last_bit() {
 #[test]
 fn slice_chaining() {
     let bits = BitString::try_from("11110000").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     // First slice bits 2..7 → "11000"
     let s1 = v.slice(UsizeCO::try_new(2, 7).unwrap());
@@ -101,7 +101,7 @@ fn slice_chaining() {
 #[test]
 fn slice_from_zero_returns_identical_view() {
     let bits = BitString::try_from("1010011100").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
     let s = v.slice_from(0);
 
     assert_eq!(s.bit_len(), v.bit_len());
@@ -111,7 +111,7 @@ fn slice_from_zero_returns_identical_view() {
 #[test]
 fn slice_from_mid() {
     let bits = BitString::try_from("11110000").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let s = v.slice_from(4);
     assert_eq!(s.bit_len(), 4);
@@ -124,7 +124,7 @@ fn slice_from_mid() {
 #[test]
 fn slice_from_returns_empty_at_boundary() {
     let bits = BitString::try_from("10110").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let s = v.slice_from(5);
     assert_eq!(s.bit_len(), 0);
@@ -133,7 +133,7 @@ fn slice_from_returns_empty_at_boundary() {
 #[test]
 fn slice_from_beyond_boundary_returns_empty() {
     let bits = BitString::try_from("10110").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let s = v.slice_from(100);
     assert_eq!(s.bit_len(), 0);
@@ -142,7 +142,7 @@ fn slice_from_beyond_boundary_returns_empty() {
 #[test]
 fn slice_from_chaining() {
     let bits = BitString::try_from("11110000").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     // slice_from(2) → bits 2..8 → "110000"
     let s1 = v.slice_from(2);
@@ -163,7 +163,7 @@ fn slice_from_chaining() {
 #[test]
 fn slice_until_full_returns_identical_view() {
     let bits = BitString::try_from("1010011100").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
     let s = v.slice_until(10);
 
     assert_eq!(s.bit_len(), v.bit_len());
@@ -173,7 +173,7 @@ fn slice_until_full_returns_identical_view() {
 #[test]
 fn slice_until_mid() {
     let bits = BitString::try_from("11110000").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let s = v.slice_until(4);
     assert_eq!(s.bit_len(), 4);
@@ -186,7 +186,7 @@ fn slice_until_mid() {
 #[test]
 fn slice_until_zero_returns_empty() {
     let bits = BitString::try_from("10110").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let s = v.slice_until(0);
     assert_eq!(s.bit_len(), 0);
@@ -195,7 +195,7 @@ fn slice_until_zero_returns_empty() {
 #[test]
 fn slice_until_beyond_boundary_is_clamped() {
     let bits = BitString::try_from("10110").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let s = v.slice_until(100);
     assert_eq!(s.bit_len(), 5);
@@ -204,7 +204,7 @@ fn slice_until_beyond_boundary_is_clamped() {
 #[test]
 fn slice_until_chaining() {
     let bits = BitString::try_from("11110000").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     // slice_until(6) → bits 0..6 → "111100"
     let s1 = v.slice_until(6);
@@ -225,7 +225,7 @@ fn slice_until_chaining() {
 #[test]
 fn mixed_slice_and_slice_from() {
     let bits = BitString::try_from("1011010011").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     // slice(2..8) → bits 2..8 → "110100"
     let s1 = v.slice(UsizeCO::try_new(2, 8).unwrap());
@@ -239,7 +239,7 @@ fn mixed_slice_and_slice_from() {
 #[test]
 fn mixed_slice_and_slice_until() {
     let bits = BitString::try_from("1011010011").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     // slice(2..8) → bits 2..8 → "110100"
     let s1 = v.slice(UsizeCO::try_new(2, 8).unwrap());
@@ -256,7 +256,7 @@ fn mixed_slice_and_slice_until() {
 #[test]
 fn slice_on_already_offset_view() {
     let bits = BitString::try_from("111100001010").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     // Offset view from bit 3
     let off = v.slice(UsizeCO::try_new(3, 12).unwrap());
@@ -276,7 +276,7 @@ fn slice_on_already_offset_view() {
 #[test]
 fn slice_from_on_already_offset_view() {
     let bits = BitString::try_from("111100001010").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let off = v.slice(UsizeCO::try_new(3, 12).unwrap());
     let s = off.slice_from(4);
@@ -286,7 +286,7 @@ fn slice_from_on_already_offset_view() {
 #[test]
 fn slice_until_on_already_offset_view() {
     let bits = BitString::try_from("111100001010").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     let off = v.slice(UsizeCO::try_new(3, 12).unwrap());
     let s = off.slice_until(4);

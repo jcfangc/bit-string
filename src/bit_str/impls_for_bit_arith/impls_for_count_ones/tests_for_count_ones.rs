@@ -7,7 +7,7 @@ use crate::BitString;
 fn counts_empty_view() {
     let bits = BitString::try_from("10110").unwrap();
     // Create an empty view by slicing beyond the source length.
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(10, 20).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(10, 20).unwrap());
 
     assert_eq!(v.count_ones(), 0);
     assert_eq!(v.count_zeros(), 0);
@@ -21,12 +21,12 @@ fn word_aligned_fast_path() {
         bits.set(i, true);
     }
     // Full view: bit_len=130, aligned, 7 ones.
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
     assert_eq!(v.count_ones(), 7);
     assert_eq!(v.count_zeros(), 123);
 
     // Slice from word-aligned boundary (64..130), 6 ones.
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(64, 130).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(64, 130).unwrap());
     assert_eq!(v.count_ones(), 5);
 }
 
@@ -39,7 +39,7 @@ fn unaligned_start() {
     bits.set(66, true);
 
     // View from bit 1 to bit 130 → len 129, unaligned start.
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(1, 130).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(1, 130).unwrap());
     assert_eq!(v.count_ones(), 2);
     assert_eq!(v.count_zeros(), 127);
 }
@@ -49,7 +49,7 @@ fn unaligned_start() {
 fn all_ones_at_various_lengths() {
     for len in [1, 63, 64, 65, 127, 128, 129, 130] {
         let bits = BitString::ones(len);
-        let v = bits.as_bitstr();
+        let v = bits.as_bit_str();
         assert_eq!(v.count_ones(), len, "len={len}");
         assert_eq!(v.count_zeros(), 0, "len={len}");
     }
@@ -60,7 +60,7 @@ fn all_ones_at_various_lengths() {
 fn all_zeros_at_various_lengths() {
     for len in [1, 63, 64, 65, 127, 128, 129, 130] {
         let bits = BitString::zeros(len);
-        let v = bits.as_bitstr();
+        let v = bits.as_bit_str();
         assert_eq!(v.count_ones(), 0, "len={len}");
         assert_eq!(v.count_zeros(), len, "len={len}");
     }
@@ -70,7 +70,7 @@ fn all_zeros_at_various_lengths() {
 #[test]
 fn counts_mixed_bits_from_string() {
     let bits = BitString::try_from("1010011100").unwrap();
-    let v = bits.as_bitstr();
+    let v = bits.as_bit_str();
 
     assert_eq!(v.count_ones(), 5);
     assert_eq!(v.count_zeros(), 5);
@@ -83,12 +83,12 @@ fn unaligned_single_word() {
     // bits: 1 1 1 1 0 0 0 0
 
     // View bits 1..7 → "111000"
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(1, 7).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(1, 7).unwrap());
     assert_eq!(v.count_ones(), 3);
     assert_eq!(v.count_zeros(), 3);
 
     // View bits 2..6 → "1100"
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(2, 6).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(2, 6).unwrap());
     assert_eq!(v.count_ones(), 2);
     assert_eq!(v.count_zeros(), 2);
 }
@@ -100,7 +100,7 @@ fn invariant_ones_plus_zeros_equals_bit_len() {
     for i in (0..200).step_by(7) {
         bits.set(i, true);
     }
-    let full = bits.as_bitstr();
+    let full = bits.as_bit_str();
 
     for start in [0, 1, 5, 63, 64, 65, 127, 128] {
         for len in [10, 63, 64, 65, 128, 129] {
@@ -131,7 +131,7 @@ fn unaligned_many_words() {
 
     // View from bit 1 (unaligned) covering bits 1..300 → 299 bits length.
     // Bit 1 is included; all 11 bits are in range [1, 300).
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(1, 300).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(1, 300).unwrap());
     assert_eq!(v.count_ones(), 11);
     assert_eq!(v.count_zeros(), 288);
 }
@@ -144,12 +144,12 @@ fn aligned_one_word() {
     bits.set(63, true);
 
     // View word 0 (bits 0..64)
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(0, 64).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(0, 64).unwrap());
     assert_eq!(v.count_ones(), 2);
     assert_eq!(v.count_zeros(), 62);
 
     // View word 1 (bits 64..128)
-    let v = bits.as_bitstr().slice(UsizeCO::try_new(64, 128).unwrap());
+    let v = bits.as_bit_str().slice(UsizeCO::try_new(64, 128).unwrap());
     assert_eq!(v.count_ones(), 0);
     assert_eq!(v.count_zeros(), 64);
 }

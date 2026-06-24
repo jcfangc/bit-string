@@ -25,7 +25,7 @@ impl BitString {
 
     /// Returns a zero-copy [`BitStr`] view of the entire bit string.
     #[inline]
-    pub fn as_bitstr(&self) -> crate::BitStr<'_> {
+    pub fn as_bit_str(&self) -> crate::BitStr<'_> {
         crate::BitStr {
             source: self,
             start: 0,

@@ -1,13 +1,17 @@
 use super::*;
 
 impl BitString {
-    pub fn strip_prefix(&self, prefix: &Self) -> Option<Self> {
-        self.starts_with(prefix)
+    #[inline]
+    pub fn strip_prefix(&self, prefix: crate::BitStr<'_>) -> Option<Self> {
+        self.as_bit_str()
+            .starts_with(prefix)
             .then(|| self.slice_from(prefix.bit_len))
     }
 
-    pub fn strip_suffix(&self, suffix: &Self) -> Option<Self> {
-        self.ends_with(suffix)
+    #[inline]
+    pub fn strip_suffix(&self, suffix: crate::BitStr<'_>) -> Option<Self> {
+        self.as_bit_str()
+            .ends_with(suffix)
             .then(|| self.slice_until(self.bit_len - suffix.bit_len))
     }
 }
