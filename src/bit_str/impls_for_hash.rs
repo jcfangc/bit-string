@@ -13,29 +13,28 @@ impl Hash for BitStr<'_> {
         }
 
         let words = self.source.words();
-        let (sw, s) = (self.start / WORD_BITS, self.start % WORD_BITS);
+        let full_words = self.bit_len / WORD_BITS;
+        let rem = self.bit_len % WORD_BITS;
 
-        if s == 0 {
-            // Fully word-aligned: bulk-hash full words as a slice.
-            let full_words = self.bit_len / WORD_BITS;
-            words[sw..][..full_words].hash(state);
+        if self.start % WORD_BITS == 0 {
+            // Aligned: hash full words element-by-element (not as a [u64]
+            // slice, which would inject a length prefix that the unaligned
+            // path doesn't emit).
+            let sw = self.start / WORD_BITS;
+            for w in &words[sw..][..full_words] {
+                w.hash(state);
+            }
         } else {
-            // First partial word from the source word at `sw`.
-            let first_len = (WORD_BITS - s).min(self.bit_len);
-            (words.read_word_at(self.start) & low_mask(first_len)).hash(state);
-
-            let remaining = self.bit_len - first_len;
-            let mid_words = remaining / WORD_BITS;
-            if mid_words > 0 {
-                // Middle words are aligned — hash as a contiguous slice.
-                words[sw + 1..][..mid_words].hash(state);
+            // Unaligned: each view-word straddles a source-word boundary,
+            // so we must go through read_word_at word by word.
+            for i in 0..full_words {
+                let w = words.read_word_at(self.start + i * WORD_BITS);
+                w.hash(state);
             }
         }
 
-        // Tail partial word (always unaligned within the source).
-        let rem = self.bit_len % WORD_BITS;
         if rem > 0 {
-            let tail_start = self.start + (self.bit_len / WORD_BITS) * WORD_BITS;
+            let tail_start = self.start + full_words * WORD_BITS;
             (words.read_word_at(tail_start) & low_mask(rem)).hash(state);
         }
     }

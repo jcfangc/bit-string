@@ -82,3 +82,24 @@ fn views_across_word_boundaries() {
 
     assert_eq!(hash_one(&a.as_bit_str()), hash_one(&b.as_bit_str()));
 }
+
+/// Unaligned views must hash identically to aligned views with the same content.
+#[test]
+fn unaligned_view_hashes_same_as_aligned_with_same_content() {
+    let mut source = BitString::zeros(200);
+    // Set bits that span the tail region — the buggy old code computed the
+    // wrong tail_start (off by s bits) and wrong tail_bits (bit_len%WORD_BITS
+    // instead of remaining%WORD_BITS) for unaligned views.
+    source.set(192, true); // lives in the tail of a bit_len=194, s=3 view
+    source.set(193, true);
+
+    // Unaligned: start=3, bit_len=194  (first: 61, mid: 2×64=128, tail: 5)
+    let unaligned = source.as_bit_str().slice_from(3).slice_until(197);
+
+    // Aligned equivalent via roundtrip.
+    let owned = unaligned.to_bit_string();
+    let aligned = owned.as_bit_str();
+
+    assert_eq!(unaligned, aligned);
+    assert_eq!(hash_one(&unaligned), hash_one(&aligned));
+}
