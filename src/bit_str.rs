@@ -31,6 +31,7 @@ mod impls_for_iter;
 mod impls_for_matching;
 mod impls_for_predicates;
 mod impls_for_slice;
+mod impls_for_to_bit_string;
 
 // ---------------------------------------------------------------------------
 // Getters
