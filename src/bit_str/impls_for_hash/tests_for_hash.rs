@@ -83,6 +83,37 @@ fn views_across_word_boundaries() {
     assert_eq!(hash_one(&a.as_bit_str()), hash_one(&b.as_bit_str()));
 }
 
+// ---------------------------------------------------------------------------
+// BitString ↔ BitStr hash consistency (BitString delegates to as_bit_str)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn bit_string_hash_equals_bit_str_hash() {
+    let bs = BitString::try_from("101100101").unwrap();
+    assert_eq!(hash_one(&bs), hash_one(&bs.as_bit_str()));
+}
+
+#[test]
+fn large_bit_string_matches_bit_str() {
+    let mut bs = BitString::zeros(1024);
+    for i in (0..1024).step_by(128) {
+        bs.set(i, true);
+    }
+    assert_eq!(hash_one(&bs), hash_one(&bs.as_bit_str()));
+}
+
+#[test]
+fn slice_to_bit_string_roundtrip_preserves_hash() {
+    let source = BitString::try_from("110010101111").unwrap();
+    let v = source.as_bit_str().slice_from(2).slice_until(8);
+    let owned = v.to_bit_string();
+    assert_eq!(hash_one(&v), hash_one(&owned));
+}
+
+// ---------------------------------------------------------------------------
+// Unaligned views
+// ---------------------------------------------------------------------------
+
 /// Unaligned views must hash identically to aligned views with the same content.
 #[test]
 fn unaligned_view_hashes_same_as_aligned_with_same_content() {
