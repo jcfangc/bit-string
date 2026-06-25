@@ -32,6 +32,7 @@ mod impls_for_fmt;
 mod impls_for_hash;
 mod impls_for_iter;
 mod impls_for_matching;
+mod impls_for_ord;
 mod impls_for_predicates;
 mod impls_for_slice;
 
