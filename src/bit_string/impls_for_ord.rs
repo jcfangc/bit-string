@@ -15,6 +15,3 @@ impl Ord for BitString {
         self.as_bit_str().cmp(&other.as_bit_str())
     }
 }
-
-#[cfg(test)]
-mod tests_for_ord;

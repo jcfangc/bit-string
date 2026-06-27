@@ -19,6 +19,7 @@ mod impls_for_insert_remove;
 mod impls_for_push_pop;
 mod impls_for_replace;
 mod impls_for_retain;
+mod impls_for_reverse_bits;
 mod impls_for_set;
 mod impls_for_slice;
 mod impls_for_truncate;

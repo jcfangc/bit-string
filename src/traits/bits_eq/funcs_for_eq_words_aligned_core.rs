@@ -32,11 +32,11 @@ pub(super) fn eq_words_aligned(src: &[u64], other: &[u64], count: usize) -> bool
 
     #[cfg(all(
         any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2",
+        target_feature = "sse4.1",
         not(target_feature = "avx2")
     ))]
     {
-        return unsafe { sse2::eq_words(src, other, count) };
+        return unsafe { sse41::eq_words(src, other, count) };
     }
 
     #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
@@ -87,13 +87,13 @@ mod avx2 {
 
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-mod sse2 {
+mod sse41 {
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{__m128i, _mm_cmpeq_epi64, _mm_loadu_si128, _mm_movemask_epi8};
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::{__m128i, _mm_cmpeq_epi64, _mm_loadu_si128, _mm_movemask_epi8};
 
-    #[target_feature(enable = "sse2")]
+    #[target_feature(enable = "sse4.1")]
     pub(super) unsafe fn eq_words(src: &[u64], other: &[u64], len: usize) -> bool {
         let mut i = 0;
         while i + 2 <= len {

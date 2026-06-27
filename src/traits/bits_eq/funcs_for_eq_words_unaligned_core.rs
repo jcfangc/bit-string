@@ -36,11 +36,11 @@ pub(super) fn eq_words_unaligned(src: &[u64], other: &[u64], count: usize, shift
 
     #[cfg(all(
         any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2",
+        target_feature = "sse4.1",
         not(target_feature = "avx2")
     ))]
     {
-        return unsafe { sse2::eq_words_unaligned(src, other, count, shift) };
+        return unsafe { sse41::eq_words_unaligned(src, other, count, shift) };
     }
 
     #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
@@ -114,7 +114,7 @@ mod avx2 {
 
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-mod sse2 {
+mod sse41 {
     use crate::WORD_BITS;
 
     #[cfg(target_arch = "x86")]
@@ -128,7 +128,7 @@ mod sse2 {
         _mm_set1_epi64x, _mm_sll_epi64, _mm_srl_epi64,
     };
 
-    #[target_feature(enable = "sse2")]
+    #[target_feature(enable = "sse4.1")]
     pub(super) unsafe fn eq_words_unaligned(
         src: &[u64],
         other: &[u64],

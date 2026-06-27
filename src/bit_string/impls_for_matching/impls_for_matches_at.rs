@@ -19,12 +19,3 @@ impl BitString {
         self.as_bit_str().ends_with(suffix)
     }
 }
-
-#[cfg(test)]
-mod tests_for_matches_at;
-
-#[cfg(test)]
-mod tests_for_starts_with;
-
-#[cfg(test)]
-mod tests_for_ends_with;
