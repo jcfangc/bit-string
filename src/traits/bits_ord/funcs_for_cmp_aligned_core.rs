@@ -24,11 +24,11 @@ pub(super) fn cmp_aligned_words(src: &[u64], other: &[u64], count: usize) -> Opt
 
     #[cfg(all(
         any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2",
+        target_feature = "sse4.1",
         not(target_feature = "avx2")
     ))]
     {
-        return unsafe { sse2::cmp_aligned(src, other, count) };
+        return unsafe { sse41::cmp_aligned(src, other, count) };
     }
 
     #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
@@ -96,7 +96,7 @@ mod avx2 {
 
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-mod sse2 {
+mod sse41 {
     use core::cmp::Ordering;
 
     use crate::traits::BitOrd;
@@ -106,7 +106,7 @@ mod sse2 {
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::{__m128i, _mm_cmpeq_epi64, _mm_loadu_si128, _mm_movemask_epi8};
 
-    #[target_feature(enable = "sse2")]
+    #[target_feature(enable = "sse4.1")]
     pub(super) unsafe fn cmp_aligned(src: &[u64], other: &[u64], len: usize) -> Option<Ordering> {
         let mut i = 0;
         while i + 2 <= len {

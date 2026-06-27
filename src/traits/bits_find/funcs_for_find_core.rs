@@ -41,12 +41,12 @@ where
 
     #[cfg(all(
         any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2",
+        target_feature = "sse4.1",
         not(target_feature = "avx2")
     ))]
     {
         unsafe {
-            return sse2::find(haystack, needle_first, needle_mask, last_start, verify);
+            return sse41::find(haystack, needle_first, needle_mask, last_start, verify);
         }
     }
 
@@ -102,7 +102,7 @@ where
 
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-mod sse2 {
+mod sse41 {
     use super::*;
 
     #[cfg(target_arch = "x86")]
@@ -116,7 +116,7 @@ mod sse2 {
         _mm_set1_epi64x,
     };
 
-    #[target_feature(enable = "sse2")]
+    #[target_feature(enable = "sse4.1")]
     pub(super) unsafe fn find<F>(
         haystack: &[u64],
         needle_first: u64,

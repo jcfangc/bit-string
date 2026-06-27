@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use super::BitsArith;
 use super::funcs_for_binary_core::{OP_AND, OP_OR, OP_XOR, assign, owned};
 use super::funcs_for_count_ones;
-use super::funcs_for_leading_zero_words;
+use super::funcs_for_leading_value_words;
 use super::funcs_for_not_core;
 use super::funcs_for_shl_core;
 use super::funcs_for_shr_core;
@@ -76,6 +76,11 @@ impl BitsArith for [u64] {
 
     #[inline]
     fn leading_zero_words(&self) -> usize {
-        funcs_for_leading_zero_words::leading_zero_words(self)
+        funcs_for_leading_value_words::leading_value_words(self, 0)
+    }
+
+    #[inline]
+    fn leading_one_words(&self) -> usize {
+        funcs_for_leading_value_words::leading_value_words(self, !0)
     }
 }

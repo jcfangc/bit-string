@@ -23,9 +23,9 @@ jobs:
             os: ubuntu-latest
             rustflags: ""
 
-          - name: linux-x64-ssse3
+          - name: linux-x64-sse4.1
             os: ubuntu-latest
-            rustflags: "-C target-feature=+ssse3"
+            rustflags: "-C target-feature=+sse4.1"
 
           - name: linux-x64-avx2
             os: ubuntu-latest

@@ -69,12 +69,12 @@ where
 
     #[cfg(all(
         any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2",
+        target_feature = "sse4.1",
         not(target_feature = "avx2")
     ))]
     {
         unsafe {
-            return sse2::find_any(
+            return sse41::find_any(
                 haystack,
                 needle_first,
                 needle_mask,
@@ -154,7 +154,7 @@ where
 
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-mod sse2 {
+mod sse41 {
     use super::*;
 
     #[cfg(target_arch = "x86")]
@@ -170,10 +170,10 @@ mod sse2 {
 
     const LANES: usize = 2;
 
-    /// SSE2 backend: loads 2 consecutive words, computes a sliding
+    /// SSE4.1 backend: loads 2 consecutive words, computes a sliding
     /// window for the current shift, and compares against the broadcast
     /// needle word.  `movemask` extracts match lanes.
-    #[target_feature(enable = "sse2")]
+    #[target_feature(enable = "sse4.1")]
     pub(super) unsafe fn find_any<F>(
         haystack: &[u64],
         needle_first: u64,
