@@ -1,5 +1,6 @@
 mod impls_for_and;
 mod impls_for_count_ones;
+mod impls_for_leading_zeros;
 mod impls_for_not;
 mod impls_for_or;
 mod impls_for_shl;
