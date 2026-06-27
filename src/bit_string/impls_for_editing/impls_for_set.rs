@@ -37,6 +37,8 @@ impl BitString {
                 *w |= value >> (WORD_BITS - shift);
             }
         }
+
+        self.words.mask_unused_bits(self.bit_len);
     }
 }
 

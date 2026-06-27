@@ -24,7 +24,7 @@ impl<'bs> BitStr<'bs> {
         // SIMD on the aligned remainder.
         if so != 0 {
             let first_bits = (WORD_BITS - so).min(self.bit_len);
-            let max = first_bits.saturating_sub(needle_len);
+            let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
             for p in 0..=max {
                 if self.bits_equal_at(p, needle) {
                     return true;
@@ -78,7 +78,7 @@ impl<'bs> BitStr<'bs> {
 
         // Unaligned: scan the first partial word, then SIMD for the rest.
         let first_bits = (WORD_BITS - so).min(self.bit_len);
-        let max = first_bits.saturating_sub(needle_len);
+        let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
         for p in 0..=max {
             if self.bits_equal_at(p, needle) {
                 return Some(p);
@@ -144,13 +144,18 @@ impl<'bs> BitStr<'bs> {
         if remaining > 0 {
             let aligned = &words[sw + 1..];
 
-            if aligned.len() >= SMALL_WORDS
-                && aligned
+            // Quick rejection via SIMD candidate scan — only when the
+            // aligned portion is large enough to amortize setup cost.
+            // When it's too small we skip the gate and scan directly
+            // (find_last_word has its own scalar fallback).
+            let maybe_candidate = aligned.len() < SMALL_WORDS
+                || aligned
                     .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
                         self.bits_equal_at(pos + first_bits, needle)
                     })
-                    .is_some()
-            {
+                    .is_some();
+
+            if maybe_candidate {
                 if let Some(pos) =
                     aligned.find_last_word(remaining, needle_words, needle_len, &mut |pos| {
                         self.bits_equal_at(pos + first_bits, needle)
@@ -162,7 +167,7 @@ impl<'bs> BitStr<'bs> {
         }
 
         // Check the first partial word.
-        let max = first_bits.saturating_sub(needle_len);
+        let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
         for p in (0..=max).rev() {
             if self.bits_equal_at(p, needle) {
                 return Some(p);
