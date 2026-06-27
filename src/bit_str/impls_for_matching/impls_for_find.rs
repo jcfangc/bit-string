@@ -24,7 +24,7 @@ impl<'bs> BitStr<'bs> {
         // SIMD on the aligned remainder.
         if so != 0 {
             let first_bits = (WORD_BITS - so).min(self.bit_len);
-            let max = first_bits.saturating_sub(needle_len);
+            let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
             for p in 0..=max {
                 if self.bits_equal_at(p, needle) {
                     return true;
@@ -78,7 +78,7 @@ impl<'bs> BitStr<'bs> {
 
         // Unaligned: scan the first partial word, then SIMD for the rest.
         let first_bits = (WORD_BITS - so).min(self.bit_len);
-        let max = first_bits.saturating_sub(needle_len);
+        let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
         for p in 0..=max {
             if self.bits_equal_at(p, needle) {
                 return Some(p);
@@ -162,7 +162,7 @@ impl<'bs> BitStr<'bs> {
         }
 
         // Check the first partial word.
-        let max = first_bits.saturating_sub(needle_len);
+        let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
         for p in (0..=max).rev() {
             if self.bits_equal_at(p, needle) {
                 return Some(p);

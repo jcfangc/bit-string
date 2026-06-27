@@ -1,5 +1,6 @@
 use crate::SMALL_WORDS;
 use crate::WORD_BITS;
+use crate::low_mask;
 
 #[inline]
 pub(super) fn count_ones(bits: &[u64], bit_len: usize) -> usize {
@@ -8,15 +9,13 @@ pub(super) fn count_ones(bits: &[u64], bit_len: usize) -> usize {
 
     // Fast path: for inputs too short to amortize SIMD setup, loop over
     // the words directly with scalar popcnt, skipping dispatch entirely.
-    // No mask needed on the last word: mask_unused() is called after every
-    // mutation, so bits beyond `bit_len` are always zero.
     if full_words < SMALL_WORDS {
         let mut count = 0usize;
         for i in 0..full_words {
             count += bits[i].count_ones() as usize;
         }
         if rem != 0 {
-            count += bits[full_words].count_ones() as usize;
+            count += (bits[full_words] & low_mask(rem)).count_ones() as usize;
         }
         return count;
     }
@@ -24,7 +23,7 @@ pub(super) fn count_ones(bits: &[u64], bit_len: usize) -> usize {
     let mut count = count_full_words(&bits[..full_words]);
 
     if rem != 0 {
-        count += bits[full_words].count_ones() as usize;
+        count += (bits[full_words] & low_mask(rem)).count_ones() as usize;
     }
 
     count

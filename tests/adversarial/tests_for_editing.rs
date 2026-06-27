@@ -174,7 +174,6 @@ fn attack_set_chunk_cross_word() {
 }
 
 #[test]
-#[ignore = "BUG: set_chunk doesn't mask unused high bits after writing (marker: B1)"]
 fn attack_set_chunk_beyond_len() {
     let mut bits = bs("111");
     // Write beyond the length — should be a no-op for the out-of-range part

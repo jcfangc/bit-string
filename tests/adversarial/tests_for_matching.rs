@@ -89,7 +89,6 @@ fn attack_find_pattern_at_word_edge() {
 }
 
 #[test]
-#[ignore = "BUG: BitStr::find misses occurrences straddling unaligned->aligned word boundary (marker: B3)"]
 fn attack_find_multiple_occurrences() {
     let bits = bs(&("101".to_owned() + &"0".repeat(60) + "101" + &"0".repeat(60) + "101"));
     let binding5 = bs("101");

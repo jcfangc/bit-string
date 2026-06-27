@@ -95,7 +95,6 @@ fn attack_bitstr_view_leading_trailing() {
 }
 
 #[test]
-#[ignore = "BUG: BitStr::count_ones doesn't mask last partial word (marker: B2)"]
 fn attack_bitstr_count_ones_misaligned() {
     // Test count_ones on BitStr views with unaligned starts
     let bits = bs(&("0".repeat(200) + "1" + &"0".repeat(63)));
@@ -122,7 +121,6 @@ fn attack_bitstr_count_ones_misaligned() {
 }
 
 #[test]
-#[ignore = "BUG: BitStr::count_ones doesn't mask last partial word (marker: B2)"]
 fn attack_count_ones_at_all_offsets() {
     // Systematic test: pattern "010101..." at every offset for every length
     let pattern = "01".repeat(10); // 20 bits
