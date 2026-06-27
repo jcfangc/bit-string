@@ -48,10 +48,17 @@ pub(crate) trait BitsArith {
     /// Bits beyond `bit_len` are assumed to already be zero (masked by
     /// prior calls to [`BitsEdit::mask_unused_bits`]).
     fn count_ones(&self, bit_len: usize) -> usize;
+
+    /// Returns the number of consecutive zero words at the start of `self`.
+    ///
+    /// All words up to (but not including) the returned index are zero.  If
+    /// the return value equals `self.len()`, every word is zero.
+    fn leading_zero_words(&self) -> usize;
 }
 
 pub(crate) mod funcs_for_binary_core;
 pub(crate) mod funcs_for_count_ones;
+pub(crate) mod funcs_for_leading_zero_words;
 pub(crate) mod funcs_for_not_core;
 pub(crate) mod funcs_for_shl_core;
 pub(crate) mod funcs_for_shr_core;
