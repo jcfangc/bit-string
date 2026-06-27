@@ -1,18 +1,8 @@
-use alloc::vec::Vec;
+use crate::traits::*;
 
 use super::*;
 
 impl BitString {
-    #[inline]
-    pub fn bit_len(&self) -> usize {
-        self.bit_len
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.bit_len == 0
-    }
-
     #[inline]
     pub fn get(&self, index: usize) -> Option<bool> {
         (index < self.bit_len).then(|| {
@@ -21,62 +11,10 @@ impl BitString {
             word & mask != 0
         })
     }
-}
-
-impl BitString {
-    #[inline]
-    pub fn any(&self) -> bool {
-        self.count_ones() != 0
-    }
-
-    #[inline]
-    pub fn all(&self) -> bool {
-        self.count_ones() == self.bit_len
-    }
-
-    #[inline]
-    pub fn is_all_zeros(&self) -> bool {
-        !self.any()
-    }
-
-    #[inline]
-    pub fn is_all_ones(&self) -> bool {
-        self.all()
-    }
-}
-
-impl BitString {
-    /// Returns the internal little-endian words.
-    ///
-    /// Bit index `i` is stored in word `i / 64`, bit offset `i % 64`.
-    /// Unused high bits in the last word are guaranteed to be zero.
-    #[inline]
-    pub fn as_words(&self) -> &[u64] {
-        &self.words
-    }
 
     #[inline]
     pub fn first(&self) -> Option<bool> {
         self.get(0)
-    }
-
-    /// Reads up to 64 bits starting at `bit_start`, returning them in the
-    /// low bits of a `u64`.
-    ///
-    /// Bits beyond `self.len()` are treated as zero.
-    #[inline]
-    pub fn get_chunk(&self, bit_start: usize) -> u64 {
-        let word = bit_start / WORD_BITS;
-        let shift = bit_start % WORD_BITS;
-
-        let lo = self.words.get(word).copied().unwrap_or(0) >> shift;
-
-        if shift == 0 {
-            lo
-        } else {
-            let hi = self.words.get(word + 1).copied().unwrap_or(0);
-            lo | (hi << (WORD_BITS - shift))
-        }
     }
 
     #[inline]
@@ -86,9 +24,13 @@ impl BitString {
             .and_then(|index| self.get(index))
     }
 
+    /// Reads up to 64 bits starting at `bit_start`, returning them in the
+    /// low bits of a `u64`.
+    ///
+    /// Bits beyond `self.len()` are treated as zero.
     #[inline]
-    pub fn to_bool_vec(&self) -> Vec<bool> {
-        self.iter().collect()
+    pub fn get_chunk(&self, bit_start: usize) -> u64 {
+        self.words.read_word_at(bit_start)
     }
 }
 

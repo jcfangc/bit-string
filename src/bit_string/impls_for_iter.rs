@@ -9,6 +9,11 @@ impl BitString {
             back: self.bit_len,
         }
     }
+
+    #[inline]
+    pub fn to_bool_vec(&self) -> Vec<bool> {
+        self.iter().collect()
+    }
 }
 
 pub struct Iter<'a> {

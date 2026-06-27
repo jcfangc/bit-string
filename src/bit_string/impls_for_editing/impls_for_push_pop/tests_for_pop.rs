@@ -39,11 +39,11 @@ fn pops_bits_from_back_in_order() {
 fn shrinks_when_crossing_word_boundary() {
     let mut bits = BitString::ones(65);
 
-    assert_eq!(bits.as_words().len(), 2);
+    assert_eq!(bits.words().len(), 2);
     assert_eq!(bits.pop(), Some(true));
 
     assert_eq!(bits.bit_len(), 64);
-    assert_eq!(bits.as_words().len(), 1);
+    assert_eq!(bits.words().len(), 1);
     assert_eq!(bits.count_ones(), 64);
     assert_eq!(bits.to_string(), "1".repeat(64));
 }
@@ -82,6 +82,6 @@ fn repeated_pop_eventually_clears_storage() {
 
     assert_eq!(bits.pop(), None);
     assert_eq!(bits.bit_len(), 0);
-    assert_eq!(bits.as_words().len(), 0);
+    assert_eq!(bits.words().len(), 0);
     assert_eq!(bits.to_string(), "");
 }

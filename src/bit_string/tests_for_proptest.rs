@@ -57,7 +57,7 @@ fn bs_with_index() -> impl Strategy<Value = (BitString, usize)> {
 fn assert_all_invariants(bits: &BitString) {
     let bit_len = bits.bit_len();
     let expected_words = crate::word_len(bit_len);
-    let actual_words = bits.as_words().len();
+    let actual_words = bits.words().len();
     assert_eq!(
         actual_words, expected_words,
         "word-count invariant: bit_len={bit_len}, words={actual_words}, expected={expected_words}",
@@ -66,7 +66,7 @@ fn assert_all_invariants(bits: &BitString) {
     // Unused high bits in last word must be zero.
     let rem = bit_len % crate::WORD_BITS;
     if rem != 0 {
-        if let Some(&last) = bits.as_words().last() {
+        if let Some(&last) = bits.words().last() {
             assert_eq!(
                 last >> rem,
                 0,

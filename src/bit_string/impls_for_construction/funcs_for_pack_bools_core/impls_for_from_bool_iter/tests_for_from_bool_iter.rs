@@ -79,5 +79,5 @@ fn leaves_unused_tail_bits_zero() {
     let bits = BitString::from_bool_iter([true]);
 
     assert_eq!(bits.bit_len(), 1);
-    assert_eq!(bits.as_words(), &[1]);
+    assert_eq!(bits.words(), &[1]);
 }

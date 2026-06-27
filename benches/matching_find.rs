@@ -79,7 +79,7 @@ fn f65536xs(bencher: Bencher) {
 }
 
 fn bench_bit_string(bencher: Bencher, case: NeedleCase) {
-    bencher.bench(|| black_box(&case.haystack_bits).find(black_box(&case.needle_bits)));
+    bencher.bench(|| black_box(&case.haystack_bits).find(black_box(case.needle_bits.as_bit_str())));
 }
 
 fn bench_string(bencher: Bencher, case: NeedleCase) {

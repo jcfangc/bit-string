@@ -88,7 +88,7 @@ fn assign_drains_entire_bit_string() {
     assert_eq!(removed.to_string(), "101001");
     assert_eq!(bits.bit_len(), 0);
     assert_eq!(bits.to_string(), "");
-    assert_eq!(bits.as_words().len(), 0);
+    assert_eq!(bits.words().len(), 0);
 }
 
 #[test]

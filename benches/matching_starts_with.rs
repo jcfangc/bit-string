@@ -78,7 +78,7 @@ fn s6ns(b: Bencher) {
 }
 
 fn b_bit(b: Bencher, c: Case) {
-    b.bench(|| black_box(&c.haystack_bits).starts_with(black_box(&c.prefix_bits)));
+    b.bench(|| black_box(&c.haystack_bits).starts_with(black_box(c.prefix_bits.as_bit_str())));
 }
 fn b_str(b: Bencher, c: Case) {
     b.bench(|| black_box(&c.haystack_string).starts_with(black_box(&c.prefix_string)));

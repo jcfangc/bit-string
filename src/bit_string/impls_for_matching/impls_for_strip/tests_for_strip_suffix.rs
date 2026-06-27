@@ -7,7 +7,7 @@ fn strips_empty_suffix_by_returning_self_copy() {
     let bits = BitString::try_from("101001").unwrap();
     let suffix = BitString::new();
 
-    let stripped = bits.strip_suffix(&suffix).unwrap();
+    let stripped = bits.strip_suffix(suffix.as_bit_str()).unwrap();
 
     assert_eq!(stripped.to_string(), "101001");
 }
@@ -17,7 +17,7 @@ fn strips_matching_suffix() {
     let bits = BitString::try_from("101001").unwrap();
     let suffix = BitString::try_from("001").unwrap();
 
-    let stripped = bits.strip_suffix(&suffix).unwrap();
+    let stripped = bits.strip_suffix(suffix.as_bit_str()).unwrap();
 
     assert_eq!(stripped.to_string(), "101");
 }
@@ -27,7 +27,7 @@ fn strips_full_self_suffix_to_empty() {
     let bits = BitString::try_from("101001").unwrap();
     let suffix = BitString::try_from("101001").unwrap();
 
-    let stripped = bits.strip_suffix(&suffix).unwrap();
+    let stripped = bits.strip_suffix(suffix.as_bit_str()).unwrap();
 
     assert!(stripped.is_empty());
     assert_eq!(stripped.to_string(), "");
@@ -38,7 +38,7 @@ fn returns_none_for_non_matching_suffix() {
     let bits = BitString::try_from("101001").unwrap();
     let suffix = BitString::try_from("101").unwrap();
 
-    assert_eq!(bits.strip_suffix(&suffix), None);
+    assert_eq!(bits.strip_suffix(suffix.as_bit_str()), None);
 }
 
 #[test]
@@ -46,7 +46,7 @@ fn returns_none_when_suffix_is_longer_than_self() {
     let bits = BitString::try_from("101").unwrap();
     let suffix = BitString::try_from("0101").unwrap();
 
-    assert_eq!(bits.strip_suffix(&suffix), None);
+    assert_eq!(bits.strip_suffix(suffix.as_bit_str()), None);
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn result_is_independent_from_original() {
     let mut bits = BitString::try_from("101001").unwrap();
     let suffix = BitString::try_from("001").unwrap();
 
-    let mut stripped = bits.strip_suffix(&suffix).unwrap();
+    let mut stripped = bits.strip_suffix(suffix.as_bit_str()).unwrap();
 
     bits.set(0, false);
     stripped.set(0, false);
@@ -79,7 +79,7 @@ fn works_across_word_boundaries() {
     suffix.set(2, true);
     suffix.set(66, true);
 
-    let stripped = bits.strip_suffix(&suffix).unwrap();
+    let stripped = bits.strip_suffix(suffix.as_bit_str()).unwrap();
 
     assert_eq!(stripped.bit_len(), 63);
     assert_eq!(stripped.get(0), Some(true));
@@ -101,5 +101,5 @@ fn returns_none_for_almost_matching_cross_word_suffix() {
     suffix.set(2, true);
     suffix.set(65, true);
 
-    assert_eq!(bits.strip_suffix(&suffix), None);
+    assert_eq!(bits.strip_suffix(suffix.as_bit_str()), None);
 }
