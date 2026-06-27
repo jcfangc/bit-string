@@ -1,4 +1,5 @@
 use super::*;
+use int_interval::UsizeCO;
 
 #[test]
 fn attack_matches_at_oob() {
@@ -131,4 +132,186 @@ fn attack_strip_prefix_suffix() {
 
     let stripped = bits.strip_suffix(bs("01").as_bit_str()).unwrap();
     assert_eq!(stripped.to_string(), "101");
+}
+
+// ===========================================================================
+// B. Unaligned find / contains / rfind
+// ===========================================================================
+
+#[test]
+fn attack_find_on_unaligned_haystack_aligned_needle() {
+    let a = bs(&cat(&[
+        "0".repeat(10).as_str(),
+        "101",
+        "0".repeat(10).as_str(),
+    ]));
+    let view = a
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(3, 20).unwrap());
+    let needle = bs("101");
+    assert_eq!(view.find(needle.as_bit_str()), Some(7));
+    assert_eq!(view.rfind(needle.as_bit_str()), Some(7));
+    assert!(view.contains(needle.as_bit_str()));
+}
+
+#[test]
+fn attack_find_on_unaligned_haystack_unaligned_needle() {
+    let src = bs(&cat(&[
+        "0".repeat(9).as_str(),
+        "110011",
+        "0".repeat(30).as_str(),
+    ]));
+    let needle_view = src
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(10, 4).unwrap());
+    let hay = bs(&cat(&[
+        "1".repeat(5).as_str(),
+        "1001",
+        "0".repeat(10).as_str(),
+    ]));
+    let hay_view = hay
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(1, 18).unwrap());
+    assert_eq!(hay_view.find(needle_view), Some(4));
+    assert!(hay_view.contains(needle_view));
+}
+
+#[test]
+fn attack_find_unaligned_multiple_occurrences() {
+    let s = cat(&[
+        "0".repeat(5).as_str(),
+        "101",
+        "0".repeat(60).as_str(),
+        "101",
+        "0".repeat(60).as_str(),
+        "101",
+    ]);
+    let bits = bs(&s);
+    let view = bits
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(2, 132).unwrap());
+    let needle = bs("101");
+    assert_eq!(view.find(needle.as_bit_str()), Some(3));
+    assert_eq!(view.rfind(needle.as_bit_str()), Some(129));
+    let mut pos = 0;
+    let mut count = 0;
+    while let Some(p) = view.slice_from(pos).find(needle.as_bit_str()) {
+        count += 1;
+        pos += p + 3;
+    }
+    assert_eq!(count, 3);
+}
+
+#[test]
+fn attack_contains_on_unaligned_short_haystack() {
+    let a = bs(&cat(&[
+        "0".repeat(40).as_str(),
+        "101",
+        "0".repeat(40).as_str(),
+    ]));
+    let view = a
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(37, 20).unwrap());
+    assert!(view.contains(bs("101").as_bit_str()));
+    assert!(!view.contains(bs("111").as_bit_str()));
+}
+
+// ===========================================================================
+// F. strip_prefix / strip_suffix on unaligned views
+// ===========================================================================
+
+#[test]
+fn attack_strip_prefix_unaligned() {
+    let a = bs(&cat(&[
+        "0".repeat(10).as_str(),
+        "11001100",
+        "0".repeat(10).as_str(),
+    ]));
+    let view = a
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(3, 20).unwrap());
+    let result = view.strip_prefix(bs("0000000").as_bit_str());
+    assert!(result.is_some());
+    assert_eq!(result.unwrap().to_bit_string().to_string(), "1100110000000");
+}
+
+#[test]
+fn attack_strip_suffix_unaligned() {
+    let a = bs(&cat(&[
+        "0".repeat(10).as_str(),
+        "101101",
+        "0".repeat(10).as_str(),
+    ]));
+    let view = a
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(7, 15).unwrap());
+    let result = view.strip_suffix(bs("000000").as_bit_str());
+    assert!(result.is_some());
+    assert_eq!(result.unwrap().to_bit_string().to_string(), "000101101");
+}
+
+// ===========================================================================
+// G. matches_at / starts_with / ends_with both-unaligned
+// ===========================================================================
+
+#[test]
+fn attack_matches_at_both_unaligned() {
+    // Source: "0"*10 + "11001100" + "0"*30.  "11001100" at [10,18).
+    // Haystack view at offset 5, len 20: positions 5-24 = "00000" + "11001100" + "0000000"
+    //   "0011" is at relative offset 7 within this view (positions 12-15 of source).
+    let src = bs(&cat(&[
+        "0".repeat(10).as_str(),
+        "11001100",
+        "0".repeat(30).as_str(),
+    ]));
+    let hay_view = src
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(5, 20).unwrap());
+
+    // Needle from a different unaligned view: "1001" at offset 6 of "11111" + "1001" + "11111"
+    // Source: "1"*5 + "1001" + "1"*5.  Offset 6, len 4 = "0011".
+    let needle_src = bs(&cat(&[
+        "1".repeat(5).as_str(),
+        "1001",
+        "1".repeat(5).as_str(),
+    ]));
+    let nd_view = needle_src
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(6, 4).unwrap()); // "0011"
+
+    // "0011" at relative offset 3 (source 8-11 = "0011") and offset 7 (source 12-15)
+    assert!(hay_view.matches_at(3, nd_view));
+    assert!(hay_view.matches_at(7, nd_view));
+    // Wrong position: "1100" at offset 5
+    assert!(!hay_view.matches_at(5, nd_view));
+}
+
+#[test]
+fn attack_starts_with_both_unaligned() {
+    let src = bs("110011001100");
+    let view = src
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(3, 6).unwrap());
+    let nd_src = bs(&cat(&[
+        "0".repeat(2).as_str(),
+        "0110",
+        "0".repeat(2).as_str(),
+    ]));
+    let nd_view = nd_src
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(2, 4).unwrap());
+    assert!(view.starts_with(nd_view));
+}
+
+#[test]
+fn attack_ends_with_both_unaligned() {
+    let src = bs("110011001100");
+    let view = src
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(2, 8).unwrap());
+    let nd_src = bs(&("1".repeat(3) + "0011"));
+    let nd_view = nd_src
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(3, 4).unwrap());
+    assert!(view.ends_with(nd_view));
 }

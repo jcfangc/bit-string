@@ -47,6 +47,12 @@ pub(crate) fn view_has_same_invariants(bits: &BitString) -> bool {
     true
 }
 
+/// Concatenate string slices into an owned String — used by tests that
+/// build long bit patterns from repeated segments.
+pub(crate) fn cat(parts: &[&str]) -> String {
+    parts.iter().copied().collect()
+}
+
 // ---------------------------------------------------------------------------
 // Module declarations
 // ---------------------------------------------------------------------------
@@ -81,8 +87,6 @@ mod tests_for_predicates;
 mod tests_for_replace;
 #[path = "adversarial/tests_for_retain.rs"]
 mod tests_for_retain;
-#[path = "adversarial/tests_for_round2.rs"]
-mod tests_for_round2;
 #[path = "adversarial/tests_for_shift.rs"]
 mod tests_for_shift;
 #[path = "adversarial/tests_for_slice_drain.rs"]

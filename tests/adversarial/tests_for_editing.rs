@@ -239,3 +239,60 @@ fn attack_clear() {
     assert!(bits.words().is_empty());
     assert!(view_has_same_invariants(&bits));
 }
+
+// ===========================================================================
+// I. set_chunk edge cases
+// ===========================================================================
+
+#[test]
+fn attack_set_chunk_len_zero() {
+    let mut bits = bs("10101");
+    let before = bits.to_string();
+    bits.set_chunk(0, u64::MAX, 0);
+    assert_eq!(bits.to_string(), before);
+    assert!(view_has_same_invariants(&bits));
+}
+
+#[test]
+fn attack_set_chunk_at_word_boundary() {
+    let mut bits = BitString::zeros(128);
+    bits.set_chunk(64, 0xAAAA, 16);
+    assert!(view_has_same_invariants(&bits));
+    let chunk = bits.get_chunk(64);
+    assert_eq!(chunk & 0xFFFF, 0xAAAA);
+    for i in 0..64 {
+        assert_eq!(bits.get(i), Some(false));
+    }
+    for i in 80..128 {
+        assert_eq!(bits.get(i), Some(false));
+    }
+}
+
+// ===========================================================================
+// M. push/pop/set_chunk at word boundaries
+// ===========================================================================
+
+#[test]
+fn attack_push_pop_at_all_word_boundaries() {
+    for target_len in [63, 64, 65, 127, 128, 129] {
+        let mut bits = BitString::zeros(target_len);
+        bits.push(true);
+        assert_eq!(bits.bit_len(), target_len + 1);
+        assert!(view_has_same_invariants(&bits));
+        assert_eq!(bits.get(target_len), Some(true));
+        assert_eq!(bits.pop(), Some(true));
+        assert_eq!(bits.bit_len(), target_len);
+        assert!(view_has_same_invariants(&bits));
+    }
+}
+
+#[test]
+fn attack_set_chunk_exactly_filling_word() {
+    let mut bits = BitString::zeros(64);
+    bits.set_chunk(0, u64::MAX, 64);
+    assert_eq!(bits, BitString::ones(64));
+    assert!(view_has_same_invariants(&bits));
+    bits.set_chunk(64, u64::MAX, 64);
+    assert_eq!(bits, BitString::ones(64));
+    assert!(view_has_same_invariants(&bits));
+}

@@ -140,3 +140,49 @@ fn attack_count_ones_at_all_offsets() {
         }
     }
 }
+
+// ===========================================================================
+// D. trailing_zeros / trailing_ones on unaligned BitStr views
+// ===========================================================================
+
+#[test]
+fn attack_trailing_zeros_unaligned() {
+    let a = bs(&cat(&[
+        "1".repeat(30).as_str(),
+        "0".repeat(5).as_str(),
+        "1".repeat(30).as_str(),
+    ]));
+    let view = a
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(17, 30).unwrap());
+    assert_eq!(view.trailing_zeros(), 0);
+    assert_eq!(view.trailing_ones(), 12);
+}
+
+#[test]
+fn attack_trailing_zeros_unaligned_single_word() {
+    let a = bs(&cat(&[
+        "0".repeat(10).as_str(),
+        "1".repeat(5).as_str(),
+        "0".repeat(50).as_str(),
+    ]));
+    let view = a
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(13, 3).unwrap());
+    assert_eq!(view.trailing_zeros(), 1);
+    assert_eq!(view.trailing_ones(), 0);
+}
+
+#[test]
+fn attack_leading_zeros_unaligned_single_word() {
+    let a = bs(&cat(&[
+        "0".repeat(10).as_str(),
+        "001",
+        "1".repeat(50).as_str(),
+    ]));
+    let view = a
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(10, 3).unwrap());
+    assert_eq!(view.leading_zeros(), 2);
+    assert_eq!(view.leading_ones(), 0);
+}

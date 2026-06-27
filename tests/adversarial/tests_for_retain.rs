@@ -30,3 +30,28 @@ fn attack_retain_alternating() {
     assert_eq!(bits.count_ones(), 200);
     assert!(view_has_same_invariants(&bits));
 }
+
+// ===========================================================================
+// H. retain at word boundaries
+// ===========================================================================
+
+#[test]
+fn attack_retain_crossing_word_boundary() {
+    let mut bits = BitString::zeros(200);
+    for i in (63..200).step_by(3) {
+        bits.set(i, true);
+    }
+    let ones_count_before = bits.count_ones();
+    bits.retain(|b| b);
+    assert_eq!(bits.count_ones(), ones_count_before);
+    assert!(view_has_same_invariants(&bits));
+    assert!(bits.is_all_ones());
+}
+
+#[test]
+fn attack_retain_all_false_clears_long() {
+    let mut bits = BitString::ones(130);
+    bits.retain(|_| false);
+    assert!(bits.is_empty());
+    assert!(view_has_same_invariants(&bits));
+}

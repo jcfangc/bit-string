@@ -1,4 +1,5 @@
 use super::*;
+use int_interval::UsizeCO;
 
 #[test]
 fn attack_get_out_of_bounds() {
@@ -52,4 +53,32 @@ fn attack_read_write_consistency() {
         assert_eq!(bits.get(i), Some(val));
     }
     assert!(view_has_same_invariants(&bits));
+}
+
+// ===========================================================================
+// E. get_chunk on unaligned BitStr views
+// ===========================================================================
+
+#[test]
+fn attack_get_chunk_unaligned_view() {
+    let a = bs(&cat(&[
+        "0".repeat(20).as_str(),
+        "1".repeat(20).as_str(),
+        "0".repeat(20).as_str(),
+    ]));
+    let view = a
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(17, 40).unwrap());
+    assert_eq!(view.get_chunk(0) & 0b111, 0b000);
+    assert_eq!(view.get_chunk(3) & ((1u64 << 17) - 1), (1u64 << 17) - 1);
+    assert_eq!(view.get_chunk(40), 0);
+}
+
+#[test]
+fn attack_get_chunk_partial_last_word() {
+    let a = bs(&cat(&["0".repeat(30).as_str(), "10101010"]));
+    let view = a
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(31, 4).unwrap());
+    assert_eq!(view.get_chunk(0) & 0xF, 0b1010);
 }
