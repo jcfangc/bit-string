@@ -81,6 +81,8 @@ mod tests_for_predicates;
 mod tests_for_replace;
 #[path = "adversarial/tests_for_retain.rs"]
 mod tests_for_retain;
+#[path = "adversarial/tests_for_round2.rs"]
+mod tests_for_round2;
 #[path = "adversarial/tests_for_shift.rs"]
 mod tests_for_shift;
 #[path = "adversarial/tests_for_slice_drain.rs"]
