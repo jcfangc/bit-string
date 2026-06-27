@@ -134,3 +134,85 @@ fn neon_matches_scalar_ones() {
     assert_backend_matches_scalar(neon::scan, !0);
     run_random(neon::scan, !0);
 }
+
+// ---------------------------------------------------------------------------
+// Trailing scan (reverse) — AVX2 / SSE4.1 / NEON
+// ---------------------------------------------------------------------------
+
+fn assert_trailing_backend_matches_scalar(backend: unsafe fn(&[u64], u64) -> usize, fill: u64) {
+    let cases: &[&[u64]] = if fill == 0 { CASES_ZERO } else { CASES_ONE };
+
+    for &src in cases {
+        let expected = scalar::scan_rev(src, fill);
+        let actual = unsafe { backend(src, fill) };
+        assert_eq!(actual, expected, "fill=0x{fill:x} src={src:?}");
+    }
+}
+
+fn run_random_trailing(backend: unsafe fn(&[u64], u64) -> usize, fill: u64) {
+    for run in [0, 1, 3, 5, 7, 9, 15, 16, 17, 31] {
+        let mut v = vec![fill; run];
+        for _ in 0..16 {
+            v.push(if fill == 0 { u64::MAX } else { 0 });
+        }
+        let expected = scalar::scan_rev(&v, fill);
+        let actual = unsafe { backend(&v, fill) };
+        assert_eq!(actual, expected, "fill=0x{fill:x} run={run}");
+    }
+}
+
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
+#[test]
+fn avx2_trailing_matches_scalar_zeros() {
+    assert_trailing_backend_matches_scalar(avx2::scan_rev, 0);
+    run_random_trailing(avx2::scan_rev, 0);
+}
+
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
+#[test]
+fn avx2_trailing_matches_scalar_ones() {
+    assert_trailing_backend_matches_scalar(avx2::scan_rev, !0);
+    run_random_trailing(avx2::scan_rev, !0);
+}
+
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "sse4.1",
+    not(target_feature = "avx2")
+))]
+#[test]
+fn sse41_trailing_matches_scalar_zeros() {
+    assert_trailing_backend_matches_scalar(sse41::scan_rev, 0);
+    run_random_trailing(sse41::scan_rev, 0);
+}
+
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "sse4.1",
+    not(target_feature = "avx2")
+))]
+#[test]
+fn sse41_trailing_matches_scalar_ones() {
+    assert_trailing_backend_matches_scalar(sse41::scan_rev, !0);
+    run_random_trailing(sse41::scan_rev, !0);
+}
+
+#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+#[test]
+fn neon_trailing_matches_scalar_zeros() {
+    assert_trailing_backend_matches_scalar(neon::scan_rev, 0);
+    run_random_trailing(neon::scan_rev, 0);
+}
+
+#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+#[test]
+fn neon_trailing_matches_scalar_ones() {
+    assert_trailing_backend_matches_scalar(neon::scan_rev, !0);
+    run_random_trailing(neon::scan_rev, !0);
+}

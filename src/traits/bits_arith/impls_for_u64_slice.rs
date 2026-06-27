@@ -83,4 +83,14 @@ impl BitsArith for [u64] {
     fn leading_one_words(&self) -> usize {
         funcs_for_leading_value_words::leading_value_words(self, !0)
     }
+
+    #[inline]
+    fn trailing_zero_words(&self) -> usize {
+        funcs_for_leading_value_words::trailing_value_words(self, 0)
+    }
+
+    #[inline]
+    fn trailing_one_words(&self) -> usize {
+        funcs_for_leading_value_words::trailing_value_words(self, !0)
+    }
 }
