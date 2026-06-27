@@ -8,7 +8,7 @@ repository = "https://github.com/jcfangc/bit-string"
 license = "MIT OR Apache-2.0"
 keywords = ["bitstring", "bits", "bitset", "sequence"]
 categories = ["data-structures", "no-std"]
-exclude = ["/benches", "/src/**/tests_for_*"]
+exclude = ["/benches", "/src/**/tests_for_*", ".github/"]
 
 
 [dependencies]

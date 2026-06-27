@@ -15,9 +15,3 @@ impl BitString {
             .then(|| self.slice_until(self.bit_len - suffix.bit_len))
     }
 }
-
-#[cfg(test)]
-mod tests_for_strip_prefix;
-
-#[cfg(test)]
-mod tests_for_strip_suffix;

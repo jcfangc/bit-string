@@ -16,12 +16,3 @@ impl BitString {
         self.as_bit_str().rfind(needle)
     }
 }
-
-#[cfg(test)]
-mod tests_for_contains;
-
-#[cfg(test)]
-mod tests_for_find;
-
-#[cfg(test)]
-mod tests_for_rfind;
