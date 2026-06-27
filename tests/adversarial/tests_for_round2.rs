@@ -152,7 +152,6 @@ fn attack_find_on_unaligned_haystack_unaligned_needle() {
 }
 
 #[test]
-#[ignore = "BUG B4: rfind misses last occurrence when aligned portion < SMALL_WORDS words"]
 fn attack_find_unaligned_multiple_occurrences() {
     let s = cat(&[
         "0".repeat(5).as_str(),
@@ -168,7 +167,6 @@ fn attack_find_unaligned_multiple_occurrences() {
         .slice(UsizeCO::checked_from_start_len(2, 132).unwrap());
     let needle = bs("101");
     assert_eq!(view.find(needle.as_bit_str()), Some(3));
-    // BUG: rfind only scans first partial word when aligned portion < SMALL_WORDS
     assert_eq!(view.rfind(needle.as_bit_str()), Some(129));
     let mut pos = 0;
     let mut count = 0;
