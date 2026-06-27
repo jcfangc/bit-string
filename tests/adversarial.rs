@@ -2,12 +2,6 @@
 //! inputs, and adversarial combinations that might trigger panics, incorrect
 //! results, or invariant violations.
 
-// rustc flags for NEON cross-check
-#![cfg_attr(
-    all(target_arch = "aarch64", target_feature = "neon"),
-    feature(stdarch_aarch64_prefetch)
-)]
-
 use bit_string::BitString;
 use core::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
