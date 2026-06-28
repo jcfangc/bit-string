@@ -1,6 +1,6 @@
 use crate::BitStr;
-use crate::traits::WordsArith;
-use crate::{FILL_ONES, FILL_ZEROS, WORD_BITS};
+use crate::WORD_BITS;
+use crate::traits::WordsScan;
 
 impl<'bs> BitStr<'bs> {
     #[inline]

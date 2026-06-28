@@ -1,5 +1,4 @@
 use crate::BitStr;
-use crate::WORD_BITS;
 
 mod inner;
 

@@ -1,5 +1,5 @@
 use crate::BitStr;
-use crate::{WORD_BITS, low_mask};
+use crate::WORD_BITS;
 
 mod inner;
 

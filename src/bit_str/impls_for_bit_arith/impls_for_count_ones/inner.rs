@@ -1,4 +1,4 @@
-use crate::traits::WordsArith;
+use crate::traits::WordsScan;
 use crate::{WORD_BITS, low_mask};
 
 use crate::BitStr;
