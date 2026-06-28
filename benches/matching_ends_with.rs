@@ -79,8 +79,8 @@ fn e6ns(b: Bencher) {
 }
 
 fn b_bit(b: Bencher, c: Case) {
-    b.bench(|| black_box(&c.haystack_bits).ends_with(black_box(c.suffix_bits.as_bit_str())));
+    b.bench(|| black_box(&c.haystack_bits).ends_with_str(black_box(c.suffix_bits.as_bit_str())));
 }
 fn b_str(b: Bencher, c: Case) {
-    b.bench(|| black_box(&c.haystack_string).ends_with(black_box(&c.suffix_string)));
+    b.bench(|| black_box(&c.haystack_string).ends_with_str(black_box(&c.suffix_string)));
 }

@@ -133,7 +133,7 @@ fn m6nus(b: Bencher) {
 
 fn b_bit(b: Bencher, c: Case) {
     b.bench(|| {
-        black_box(&c.haystack_bits).matches_at(c.index, black_box(c.pattern_bits.as_bit_str()))
+        black_box(&c.haystack_bits).matches_at_str(c.index, black_box(c.pattern_bits.as_bit_str()))
     });
 }
 
@@ -141,6 +141,6 @@ fn b_str(b: Bencher, c: Case) {
     b.bench(|| {
         let h = black_box(&c.haystack_string);
         let p = black_box(&c.pattern_string);
-        h.as_bytes()[c.index..].starts_with(p.as_bytes())
+        h.as_bytes()[c.index..].starts_with_str(p.as_bytes())
     });
 }

@@ -93,12 +93,13 @@ fn rfind_len_65536_miss_string(bencher: Bencher) {
 }
 
 fn bench_bit_string(bencher: Bencher, case: NeedleCase) {
-    bencher
-        .bench(|| black_box(&case.haystack_bits).rfind(black_box(case.needle_bits.as_bit_str())));
+    bencher.bench(|| {
+        black_box(&case.haystack_bits).rfind_str(black_box(case.needle_bits.as_bit_str()))
+    });
 }
 
 fn bench_string(bencher: Bencher, case: NeedleCase) {
-    bencher.bench(|| black_box(&case.haystack_string).rfind(black_box(&case.needle_string)));
+    bencher.bench(|| black_box(&case.haystack_string).rfind_str(black_box(&case.needle_string)));
 }
 
 fn middle_case(len: usize) -> NeedleCase {

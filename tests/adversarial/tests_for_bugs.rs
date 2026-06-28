@@ -31,8 +31,8 @@ fn diagnostic_find_cross_boundary_needle() {
     let needle: BitString = "101".parse().unwrap();
     let needle_view = needle.as_bit_str();
 
-    assert_eq!(bits.find(needle_view), Some(0));
+    assert_eq!(bits.find_str(needle_view), Some(0));
 
     let remaining = bits.as_bit_str().slice_from(3);
-    assert_eq!(remaining.find(needle_view), Some(60));
+    assert_eq!(remaining.find_str(needle_view), Some(60));
 }

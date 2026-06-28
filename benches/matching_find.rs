@@ -79,11 +79,13 @@ fn f65536xs(bencher: Bencher) {
 }
 
 fn bench_bit_string(bencher: Bencher, case: NeedleCase) {
-    bencher.bench(|| black_box(&case.haystack_bits).find(black_box(case.needle_bits.as_bit_str())));
+    bencher.bench(|| {
+        black_box(&case.haystack_bits).find_str(black_box(case.needle_bits.as_bit_str()))
+    });
 }
 
 fn bench_string(bencher: Bencher, case: NeedleCase) {
-    bencher.bench(|| black_box(&case.haystack_string).find(black_box(&case.needle_string)));
+    bencher.bench(|| black_box(&case.haystack_string).find_str(black_box(&case.needle_string)));
 }
 
 fn middle_case(len: usize) -> NeedleCase {

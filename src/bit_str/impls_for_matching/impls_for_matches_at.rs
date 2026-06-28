@@ -35,8 +35,6 @@ impl<'bs> BitStr<'bs> {
         }
 
         // Multi-word, needle word-aligned — SIMD eq_words on haystack.
-        // When ND_WORD_ALIGNED is true, the `nd_base % WORD_BITS == 0`
-        // branch is unconditionally taken; LLVM eliminates the else.
         let nd_is_aligned = ND_WORD_ALIGNED || nd_base % WORD_BITS == 0;
         if nd_is_aligned {
             let full_words = n / WORD_BITS;
@@ -89,9 +87,13 @@ impl<'bs> BitStr<'bs> {
         self.bits_equal_at_inner::<false, false>(offset, needle)
     }
 
+    // -------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------
+
     /// Returns `true` if `pattern` matches the bits starting at `index`.
     #[inline]
-    pub fn matches_at(&self, index: usize, pattern: BitStr<'_>) -> bool {
+    pub fn matches_at_str(&self, index: usize, pattern: BitStr<'_>) -> bool {
         if index > self.bit_len {
             return false;
         }
@@ -103,7 +105,7 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns `true` if `prefix` is a prefix of `self`.
     #[inline]
-    pub fn starts_with(&self, prefix: BitStr<'_>) -> bool {
+    pub fn starts_with_str(&self, prefix: BitStr<'_>) -> bool {
         let hs_aligned = self.start % WORD_BITS == 0;
         let nd_aligned = prefix.start % WORD_BITS == 0;
         match (hs_aligned, nd_aligned) {
@@ -116,7 +118,7 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns `true` if `suffix` is a suffix of `self`.
     #[inline]
-    pub fn ends_with(&self, suffix: BitStr<'_>) -> bool {
+    pub fn ends_with_str(&self, suffix: BitStr<'_>) -> bool {
         if suffix.bit_len == 0 {
             return true;
         }
@@ -135,12 +137,44 @@ impl<'bs> BitStr<'bs> {
     }
 
     // -------------------------------------------------------------------
+    // _string methods — argument is &BitString (word-aligned)
+    // -------------------------------------------------------------------
+
+    /// `starts_with` when `prefix` is a [`BitString`](crate::BitString)
+    /// (always word-aligned).  Only the haystack alignment is checked.
+    #[inline]
+    pub fn starts_with_string(&self, prefix: &crate::BitString) -> bool {
+        let p = prefix.as_bit_str();
+        if self.start % WORD_BITS == 0 {
+            self.starts_with_inner::<true, true>(p)
+        } else {
+            self.starts_with_inner::<false, true>(p)
+        }
+    }
+
+    /// `ends_with` when `suffix` is a [`BitString`](crate::BitString).
+    #[inline]
+    pub fn ends_with_string(&self, suffix: &crate::BitString) -> bool {
+        let s = suffix.as_bit_str();
+        if s.bit_len == 0 {
+            return true;
+        }
+        if s.bit_len > self.bit_len {
+            return false;
+        }
+        let offset = self.bit_len - s.bit_len;
+        if self.start % WORD_BITS == 0 {
+            self.ends_with_inner::<true, true>(s, offset)
+        } else {
+            self.ends_with_inner::<false, true>(s, offset)
+        }
+    }
+
+    // -------------------------------------------------------------------
     // Inner helpers with alignment const-generics
     // -------------------------------------------------------------------
 
     /// `starts_with` with compile-time alignment signals.
-    ///
-    /// Bounds-checks `prefix` length against `self`.
     #[inline]
     pub(crate) fn starts_with_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
         &self,
@@ -153,9 +187,6 @@ impl<'bs> BitStr<'bs> {
     }
 
     /// `ends_with` with compile-time alignment signals.
-    ///
-    /// `offset` must equal `self.bit_len - suffix.bit_len`.
-    /// Bounds-checks are the caller's responsibility.
     #[inline]
     pub(crate) fn ends_with_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
         &self,
@@ -165,8 +196,7 @@ impl<'bs> BitStr<'bs> {
         self.bits_equal_at_inner::<HS_WORD_ALIGNED, ND_WORD_ALIGNED>(offset, suffix)
     }
 
-    /// Like [`matches_at`](Self::matches_at) but with compile-time
-    /// alignment signals for both haystack and needle.
+    /// Like `matches_at_str` but with compile-time alignment signals.
     #[inline]
     pub(crate) fn matches_at_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
         &self,

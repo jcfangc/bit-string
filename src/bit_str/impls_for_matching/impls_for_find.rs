@@ -6,7 +6,7 @@ use crate::BitStr;
 impl<'bs> BitStr<'bs> {
     /// Returns `true` if `needle` is contained within `self`.
     #[inline]
-    pub fn contains(&self, needle: BitStr<'_>) -> bool {
+    pub fn contains_str(&self, needle: BitStr<'_>) -> bool {
         let hs_aligned = self.start % WORD_BITS == 0;
         let nd_aligned = needle.start % WORD_BITS == 0;
         match (hs_aligned, nd_aligned) {
@@ -19,7 +19,7 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns the index of the first occurrence of `needle`, or `None`.
     #[inline]
-    pub fn find(&self, needle: BitStr<'_>) -> Option<usize> {
+    pub fn find_str(&self, needle: BitStr<'_>) -> Option<usize> {
         if needle.bit_len == 0 {
             return Some(0);
         }
@@ -79,7 +79,7 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns the index of the last occurrence of `needle`, or `None`.
     #[inline]
-    pub fn rfind(&self, needle: BitStr<'_>) -> Option<usize> {
+    pub fn rfind_str(&self, needle: BitStr<'_>) -> Option<usize> {
         if needle.bit_len == 0 {
             return Some(self.bit_len);
         }
@@ -142,6 +142,21 @@ impl<'bs> BitStr<'bs> {
         }
 
         None
+    }
+
+    // -------------------------------------------------------------------
+    // _string methods — argument is &BitString (word-aligned)
+    // -------------------------------------------------------------------
+
+    /// `contains` when `needle` is a [`BitString`](crate::BitString).
+    #[inline]
+    pub fn contains_string(&self, needle: &crate::BitString) -> bool {
+        let n = needle.as_bit_str();
+        if self.start % WORD_BITS == 0 {
+            self.contains_inner::<true, true>(n)
+        } else {
+            self.contains_inner::<false, true>(n)
+        }
     }
 
     // -------------------------------------------------------------------
