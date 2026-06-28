@@ -1,4 +1,4 @@
-use crate::traits::BitsArith;
+use crate::traits::WordsArith;
 use crate::{FILL_ONES, FILL_ZEROS, WORD_BITS};
 
 use crate::BitStr;

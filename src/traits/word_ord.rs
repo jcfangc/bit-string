@@ -4,11 +4,11 @@ use core::cmp::Ordering;
 ///
 /// This is the word-level primitive used by [`BitsOrd`](super::BitsOrd)
 /// to resolve ordering once the first differing word has been found.
-pub(crate) trait BitOrd {
+pub(crate) trait WordOrd {
     fn bitwise_cmp(self, other: Self) -> Ordering;
 }
 
-impl BitOrd for u64 {
+impl WordOrd for u64 {
     #[inline]
     fn bitwise_cmp(self, other: u64) -> Ordering {
         debug_assert!(self != other);

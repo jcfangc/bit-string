@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use super::BitsArith;
+use super::WordsArith;
 use super::funcs_for_binary_core::{OP_AND, OP_OR, OP_XOR, assign, owned};
 use super::funcs_for_count_ones;
 use super::funcs_for_leading_core;
@@ -9,7 +9,7 @@ use super::funcs_for_shl_core;
 use super::funcs_for_shr_core;
 use super::funcs_for_trailing_core;
 
-impl BitsArith for [u64] {
+impl WordsArith for [u64] {
     #[inline]
     fn and(&self, rhs: &[u64]) -> Vec<u64> {
         owned::<OP_AND>(self, rhs)

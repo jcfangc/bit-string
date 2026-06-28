@@ -16,7 +16,7 @@ use core::cmp::Ordering;
 /// - NEON (aarch64, 2×u64 per iteration)
 ///
 /// Short inputs fall back to scalar in all backends.
-pub(crate) trait BitsOrd {
+pub(crate) trait WordsOrd {
     /// `self` is pre-trimmed haystack `words[base..]`.
     /// `needle` is always word-aligned (pre-trimmed by the caller).
     /// `full_words` is the number of complete u64 words to compare.

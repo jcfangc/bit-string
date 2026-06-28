@@ -12,80 +12,187 @@ struct NeedleCase {
     needle_string: String,
 }
 
-#[divan::bench(name = "find/len_65/front/bit_string")]
-fn f65fb(bencher: Bencher) {
-    bench_bit_string(bencher, make_case(65, 0));
+// -- find/len_65 ------------------------------------------------------------
+
+#[divan::bench(name = "find/len_65/front/ours_str")]
+fn f65f_str(b: Bencher) {
+    bench_find_str(b, make_case(65, 0));
+}
+#[divan::bench(name = "find/len_65/front/ours_string")]
+fn f65f_string(b: Bencher) {
+    bench_find_string(b, make_case(65, 0));
 }
 #[divan::bench(name = "find/len_65/front/string")]
-fn f65fs(bencher: Bencher) {
-    bench_string(bencher, make_case(65, 0));
+fn f65f_native(b: Bencher) {
+    bench_native_find(b, make_case(65, 0));
 }
-#[divan::bench(name = "find/len_65/middle/bit_string")]
-fn f65mb(bencher: Bencher) {
-    bench_bit_string(bencher, middle_case(65));
+
+#[divan::bench(name = "find/len_65/middle/ours_str")]
+fn f65m_str(b: Bencher) {
+    bench_find_str(b, middle_case(65));
+}
+#[divan::bench(name = "find/len_65/middle/ours_string")]
+fn f65m_string(b: Bencher) {
+    bench_find_string(b, middle_case(65));
 }
 #[divan::bench(name = "find/len_65/middle/string")]
-fn f65ms(bencher: Bencher) {
-    bench_string(bencher, middle_case(65));
+fn f65m_native(b: Bencher) {
+    bench_native_find(b, middle_case(65));
 }
-#[divan::bench(name = "find/len_65/end/bit_string")]
-fn f65eb(bencher: Bencher) {
-    bench_bit_string(bencher, end_case(65));
+
+#[divan::bench(name = "find/len_65/end/ours_str")]
+fn f65e_str(b: Bencher) {
+    bench_find_str(b, end_case(65));
+}
+#[divan::bench(name = "find/len_65/end/ours_string")]
+fn f65e_string(b: Bencher) {
+    bench_find_string(b, end_case(65));
 }
 #[divan::bench(name = "find/len_65/end/string")]
-fn f65es(bencher: Bencher) {
-    bench_string(bencher, end_case(65));
+fn f65e_native(b: Bencher) {
+    bench_native_find(b, end_case(65));
 }
-#[divan::bench(name = "find/len_65/miss/bit_string")]
-fn f65xb(bencher: Bencher) {
-    bench_bit_string(bencher, miss_case(65));
+
+#[divan::bench(name = "find/len_65/miss/ours_str")]
+fn f65x_str(b: Bencher) {
+    bench_find_str(b, miss_case(65));
+}
+#[divan::bench(name = "find/len_65/miss/ours_string")]
+fn f65x_string(b: Bencher) {
+    bench_find_string(b, miss_case(65));
 }
 #[divan::bench(name = "find/len_65/miss/string")]
-fn f65xs(bencher: Bencher) {
-    bench_string(bencher, miss_case(65));
+fn f65x_native(b: Bencher) {
+    bench_native_find(b, miss_case(65));
 }
 
-#[divan::bench(name = "find/len_65536/front/bit_string")]
-fn f65536fb(bencher: Bencher) {
-    bench_bit_string(bencher, make_case(65_536, 0));
+// -- find/len_65536 ---------------------------------------------------------
+
+#[divan::bench(name = "find/len_65536/front/ours_str")]
+fn f6f_str(b: Bencher) {
+    bench_find_str(b, make_case(65536, 0));
+}
+#[divan::bench(name = "find/len_65536/front/ours_string")]
+fn f6f_string(b: Bencher) {
+    bench_find_string(b, make_case(65536, 0));
 }
 #[divan::bench(name = "find/len_65536/front/string")]
-fn f65536fs(bencher: Bencher) {
-    bench_string(bencher, make_case(65_536, 0));
+fn f6f_native(b: Bencher) {
+    bench_native_find(b, make_case(65536, 0));
 }
-#[divan::bench(name = "find/len_65536/middle/bit_string")]
-fn f65536mb(bencher: Bencher) {
-    bench_bit_string(bencher, middle_case(65_536));
+
+#[divan::bench(name = "find/len_65536/middle/ours_str")]
+fn f6m_str(b: Bencher) {
+    bench_find_str(b, middle_case(65536));
+}
+#[divan::bench(name = "find/len_65536/middle/ours_string")]
+fn f6m_string(b: Bencher) {
+    bench_find_string(b, middle_case(65536));
 }
 #[divan::bench(name = "find/len_65536/middle/string")]
-fn f65536ms(bencher: Bencher) {
-    bench_string(bencher, middle_case(65_536));
+fn f6m_native(b: Bencher) {
+    bench_native_find(b, middle_case(65536));
 }
-#[divan::bench(name = "find/len_65536/end/bit_string")]
-fn f65536eb(bencher: Bencher) {
-    bench_bit_string(bencher, end_case(65_536));
+
+#[divan::bench(name = "find/len_65536/end/ours_str")]
+fn f6e_str(b: Bencher) {
+    bench_find_str(b, end_case(65536));
+}
+#[divan::bench(name = "find/len_65536/end/ours_string")]
+fn f6e_string(b: Bencher) {
+    bench_find_string(b, end_case(65536));
 }
 #[divan::bench(name = "find/len_65536/end/string")]
-fn f65536es(bencher: Bencher) {
-    bench_string(bencher, end_case(65_536));
+fn f6e_native(b: Bencher) {
+    bench_native_find(b, end_case(65536));
 }
-#[divan::bench(name = "find/len_65536/miss/bit_string")]
-fn f65536xb(bencher: Bencher) {
-    bench_bit_string(bencher, miss_case(65_536));
+
+#[divan::bench(name = "find/len_65536/miss/ours_str")]
+fn f6x_str(b: Bencher) {
+    bench_find_str(b, miss_case(65536));
+}
+#[divan::bench(name = "find/len_65536/miss/ours_string")]
+fn f6x_string(b: Bencher) {
+    bench_find_string(b, miss_case(65536));
 }
 #[divan::bench(name = "find/len_65536/miss/string")]
-fn f65536xs(bencher: Bencher) {
-    bench_string(bencher, miss_case(65_536));
+fn f6x_native(b: Bencher) {
+    bench_native_find(b, miss_case(65536));
 }
 
-fn bench_bit_string(bencher: Bencher, case: NeedleCase) {
-    bencher.bench(|| {
-        black_box(&case.haystack_bits).find_str(black_box(case.needle_bits.as_bit_str()))
-    });
+// -- contains/len_65 --------------------------------------------------------
+
+#[divan::bench(name = "contains/len_65/yes/ours_str")]
+fn c65y_str(b: Bencher) {
+    bench_contains_str(b, make_case(65, 0));
+}
+#[divan::bench(name = "contains/len_65/yes/ours_string")]
+fn c65y_string(b: Bencher) {
+    bench_contains_string(b, make_case(65, 0));
+}
+#[divan::bench(name = "contains/len_65/yes/string")]
+fn c65y_native(b: Bencher) {
+    bench_native_contains(b, make_case(65, 0));
 }
 
-fn bench_string(bencher: Bencher, case: NeedleCase) {
-    bencher.bench(|| black_box(&case.haystack_string).find_str(black_box(&case.needle_string)));
+#[divan::bench(name = "contains/len_65/no/ours_str")]
+fn c65n_str(b: Bencher) {
+    bench_contains_str(b, miss_case(65));
+}
+#[divan::bench(name = "contains/len_65/no/ours_string")]
+fn c65n_string(b: Bencher) {
+    bench_contains_string(b, miss_case(65));
+}
+#[divan::bench(name = "contains/len_65/no/string")]
+fn c65n_native(b: Bencher) {
+    bench_native_contains(b, miss_case(65));
+}
+
+#[divan::bench(name = "contains/len_65536/yes/ours_str")]
+fn c6y_str(b: Bencher) {
+    bench_contains_str(b, make_case(65536, 0));
+}
+#[divan::bench(name = "contains/len_65536/yes/ours_string")]
+fn c6y_string(b: Bencher) {
+    bench_contains_string(b, make_case(65536, 0));
+}
+#[divan::bench(name = "contains/len_65536/yes/string")]
+fn c6y_native(b: Bencher) {
+    bench_native_contains(b, make_case(65536, 0));
+}
+
+#[divan::bench(name = "contains/len_65536/no/ours_str")]
+fn c6n_str(b: Bencher) {
+    bench_contains_str(b, miss_case(65536));
+}
+#[divan::bench(name = "contains/len_65536/no/ours_string")]
+fn c6n_string(b: Bencher) {
+    bench_contains_string(b, miss_case(65536));
+}
+#[divan::bench(name = "contains/len_65536/no/string")]
+fn c6n_native(b: Bencher) {
+    bench_native_contains(b, miss_case(65536));
+}
+
+// -- helpers ----------------------------------------------------------------
+
+fn bench_find_str(b: Bencher, c: NeedleCase) {
+    b.bench(|| black_box(&c.haystack_bits).find_str(black_box(c.needle_bits.as_bit_str())));
+}
+fn bench_find_string(b: Bencher, c: NeedleCase) {
+    b.bench(|| black_box(&c.haystack_bits).find_string(black_box(&c.needle_bits)));
+}
+fn bench_contains_str(b: Bencher, c: NeedleCase) {
+    b.bench(|| black_box(&c.haystack_bits).contains_str(black_box(c.needle_bits.as_bit_str())));
+}
+fn bench_contains_string(b: Bencher, c: NeedleCase) {
+    b.bench(|| black_box(&c.haystack_bits).contains_string(black_box(&c.needle_bits)));
+}
+fn bench_native_find(b: Bencher, c: NeedleCase) {
+    b.bench(|| black_box(&c.haystack_string).find(black_box(&c.needle_string)));
+}
+fn bench_native_contains(b: Bencher, c: NeedleCase) {
+    b.bench(|| black_box(&c.haystack_string).contains(black_box(&c.needle_string)));
 }
 
 fn middle_case(len: usize) -> NeedleCase {
@@ -119,7 +226,6 @@ fn make_case(len: usize, position: usize) -> NeedleCase {
         needle_string: bools_to_string(&needle),
     }
 }
-#[inline]
 fn chunk_len(len: usize) -> usize {
     (len / 8).max(1)
 }
@@ -139,7 +245,6 @@ fn bools_to_string(values: &[bool]) -> String {
     }
     out
 }
-#[inline]
 fn mix64(mut value: u64) -> u64 {
     value = value.wrapping_add(0x9e37_79b9_7f4a_7c15);
     value = (value ^ (value >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);

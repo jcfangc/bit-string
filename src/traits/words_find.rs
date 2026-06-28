@@ -3,7 +3,7 @@
 /// All positions returned are relative to the start of `self`. Callers
 /// with an offset view (e.g. [`BitStr`](crate::BitStr)) must shift
 /// positions accordingly.
-pub(crate) trait BitsFind {
+pub(crate) trait WordsFind {
     /// Returns `Some(pos)` if any 64-bit window in the haystack matches
     /// the first word of `needle_words` AND `verify(pos)` succeeds.
     ///

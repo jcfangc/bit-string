@@ -16,6 +16,7 @@ impl<'bs> BitStr<'bs> {
     }
 
     /// `strip_prefix` with compile-time alignment signals.
+    #[allow(dead_code)]
     #[inline]
     pub(crate) fn strip_prefix_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
         &self,
@@ -40,6 +41,7 @@ impl<'bs> BitStr<'bs> {
     }
 
     /// `strip_suffix` with compile-time alignment signals.
+    #[allow(dead_code)]
     #[inline]
     pub(crate) fn strip_suffix_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
         &self,

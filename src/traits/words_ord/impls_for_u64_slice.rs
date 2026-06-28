@@ -1,10 +1,10 @@
 use core::cmp::Ordering;
 
-use super::BitsOrd;
+use super::WordsOrd;
 use super::funcs_for_cmp_aligned_core;
 use super::funcs_for_cmp_unaligned_core;
 
-impl BitsOrd for [u64] {
+impl WordsOrd for [u64] {
     #[inline]
     fn cmp_words<const HS_WORD_ALIGNED: bool>(
         &self,

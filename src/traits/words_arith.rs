@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 ///
 /// Owned methods allocate a new `Vec<u64>` and return it. Assign methods
 /// operate in place.
-pub(crate) trait BitsArith {
+pub(crate) trait WordsArith {
     /// Returns `self & rhs`, allocating a new result.
     fn and(&self, rhs: &[u64]) -> Vec<u64>;
     /// Performs `self &= rhs` in place.

@@ -6,7 +6,7 @@
 /// - `offset % WORD_BITS != 0` — unaligned shifted-window, uses [`funcs_for_eq_words_unaligned_core`].
 ///
 /// Short inputs fall back to scalar in both backends.
-pub(crate) trait BitsEq {
+pub(crate) trait WordsEq {
     /// Returns `true` if `other` matches `self` starting at `offset` bits.
     ///
     /// `count` is the number of full `u64` words to compare (computed from

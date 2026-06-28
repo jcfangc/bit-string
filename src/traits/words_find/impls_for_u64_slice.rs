@@ -1,9 +1,9 @@
-use super::BitsFind;
+use super::WordsFind;
 use super::funcs_for_contains_core;
 use super::funcs_for_find_core;
 use super::funcs_for_rfind_core;
 
-impl BitsFind for [u64] {
+impl WordsFind for [u64] {
     #[inline]
     fn find_any_candidate<F>(
         &self,

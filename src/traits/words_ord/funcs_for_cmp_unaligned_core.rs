@@ -6,7 +6,7 @@
 
 use core::cmp::Ordering;
 
-use crate::traits::BitOrd;
+use crate::traits::WordOrd;
 use crate::{SMALL_WORDS, WORD_BITS};
 
 /// Returns `Some(Ordering)` at the first differing word, or `None` when all
@@ -62,7 +62,7 @@ fn scalar_cmp_unaligned(
         let w1 = src[i + 1];
         let window = (w0 >> shift) | (w1 << (WORD_BITS - shift));
         if window != other[i] {
-            return Some(BitOrd::bitwise_cmp(window, other[i]));
+            return Some(WordOrd::bitwise_cmp(window, other[i]));
         }
     }
     None
@@ -78,7 +78,7 @@ mod avx2 {
     use core::cmp::Ordering;
 
     use crate::WORD_BITS;
-    use crate::traits::BitOrd;
+    use crate::traits::WordOrd;
 
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
@@ -114,14 +114,14 @@ mod avx2 {
             if mask != 0b1111 {
                 let lane = mask.trailing_ones() as usize;
                 let sw = (src[i + lane] >> shift) | (src[i + lane + 1] << (WORD_BITS - shift));
-                return Some(BitOrd::bitwise_cmp(sw, other[i + lane]));
+                return Some(WordOrd::bitwise_cmp(sw, other[i + lane]));
             }
             i += 4;
         }
         while i < len {
             let sw = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
             if sw != other[i] {
-                return Some(BitOrd::bitwise_cmp(sw, other[i]));
+                return Some(WordOrd::bitwise_cmp(sw, other[i]));
             }
             i += 1;
         }
@@ -139,7 +139,7 @@ mod sse41 {
     use core::cmp::Ordering;
 
     use crate::WORD_BITS;
-    use crate::traits::BitOrd;
+    use crate::traits::WordOrd;
 
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
@@ -175,14 +175,14 @@ mod sse41 {
             if mask != 0xFFFF {
                 let lane = mask.trailing_ones() as usize / 8;
                 let sw = (src[i + lane] >> shift) | (src[i + lane + 1] << (WORD_BITS - shift));
-                return Some(BitOrd::bitwise_cmp(sw, other[i + lane]));
+                return Some(WordOrd::bitwise_cmp(sw, other[i + lane]));
             }
             i += 2;
         }
         while i < len {
             let sw = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
             if sw != other[i] {
-                return Some(BitOrd::bitwise_cmp(sw, other[i]));
+                return Some(WordOrd::bitwise_cmp(sw, other[i]));
             }
             i += 1;
         }
@@ -200,7 +200,7 @@ mod neon {
     use core::cmp::Ordering;
 
     use crate::WORD_BITS;
-    use crate::traits::BitOrd;
+    use crate::traits::WordOrd;
 
     use core::arch::aarch64::{
         vceqq_u64, vdupq_n_s64, vgetq_lane_u64, vld1q_u64, vorrq_u64, vshlq_u64,
@@ -226,18 +226,18 @@ mod neon {
             let cmp = unsafe { vceqq_u64(window, expected) };
             if unsafe { vgetq_lane_u64(cmp, 0) } == 0 {
                 let sw = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
-                return Some(BitOrd::bitwise_cmp(sw, other[i]));
+                return Some(WordOrd::bitwise_cmp(sw, other[i]));
             }
             if unsafe { vgetq_lane_u64(cmp, 1) } == 0 {
                 let sw = (src[i + 1] >> shift) | (src[i + 2] << (WORD_BITS - shift));
-                return Some(BitOrd::bitwise_cmp(sw, other[i + 1]));
+                return Some(WordOrd::bitwise_cmp(sw, other[i + 1]));
             }
             i += 2;
         }
         while i < len {
             let sw = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
             if sw != other[i] {
-                return Some(BitOrd::bitwise_cmp(sw, other[i]));
+                return Some(WordOrd::bitwise_cmp(sw, other[i]));
             }
             i += 1;
         }

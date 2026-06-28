@@ -1,13 +1,13 @@
-pub(crate) mod bit_ord;
-pub(crate) mod bits_arith;
-pub(crate) mod bits_edit;
-pub(crate) mod bits_eq;
-pub(crate) mod bits_find;
-pub(crate) mod bits_ord;
+pub(crate) mod word_ord;
+pub(crate) mod words_arith;
+pub(crate) mod words_edit;
+pub(crate) mod words_eq;
+pub(crate) mod words_find;
+pub(crate) mod words_ord;
 
-pub(crate) use bit_ord::*;
-pub(crate) use bits_arith::*;
-pub(crate) use bits_edit::*;
-pub(crate) use bits_eq::*;
-pub(crate) use bits_find::*;
-pub(crate) use bits_ord::*;
+pub(crate) use word_ord::*;
+pub(crate) use words_arith::*;
+pub(crate) use words_edit::*;
+pub(crate) use words_eq::*;
+pub(crate) use words_find::*;
+pub(crate) use words_ord::*;

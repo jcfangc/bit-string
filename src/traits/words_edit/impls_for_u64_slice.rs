@@ -1,9 +1,9 @@
 use crate::{WORD_BITS, last_word_mask, low_mask, word_len};
 
 use super::BitsCopied;
-use super::BitsEdit;
+use super::WordsEdit;
 
-impl BitsEdit for [u64] {
+impl WordsEdit for [u64] {
     /// Masks the last used word with
     /// [`last_word_mask(len)`](last_word_mask),
     /// and zeros any words beyond `word_len(len)`.

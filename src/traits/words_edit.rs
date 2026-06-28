@@ -3,7 +3,7 @@
 /// All bit indices are logical positions in the flat bit string (not word
 /// indices). Word boundaries are handled transparently — callers work with
 /// logical bit positions and the trait translates them to word-level accesses.
-pub(crate) trait BitsEdit {
+pub(crate) trait WordsEdit {
     /// Zeros words beyond `word_len(len)` and masks the last used word.
     ///
     /// `len` is the **total** bit-string length. Words whose bits are entirely

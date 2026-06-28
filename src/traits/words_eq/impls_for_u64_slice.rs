@@ -1,6 +1,6 @@
-use super::BitsEq;
+use super::WordsEq;
 
-impl BitsEq for [u64] {
+impl WordsEq for [u64] {
     #[inline]
     fn eq_words<const HS_WORD_ALIGNED: bool>(
         &self,

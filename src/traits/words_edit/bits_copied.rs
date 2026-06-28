@@ -1,13 +1,13 @@
 use crate::WORD_BITS;
 
-use super::BitsEdit;
+use super::WordsEdit;
 
 mod funcs_for_copy_words_core;
 mod funcs_for_copy_words_shifted_core;
 
 /// Zero-cost curried copy: captures a source snapshot for deferred paste.
 ///
-/// Created by [`BitsEdit::copy_bits`] and materialized via
+/// Created by [`WordsEdit::copy_bits`] and materialized via
 /// [`BitsCopied::paste_to`].
 pub(crate) struct BitsCopied<'a> {
     pub(crate) src: &'a [u64],

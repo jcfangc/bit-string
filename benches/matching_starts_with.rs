@@ -44,42 +44,68 @@ fn no_case(len: usize, pfx: usize) -> Case {
     }
 }
 
-#[divan::bench(name = "starts_with/len_65/yes/bit_string")]
-fn s65y(b: Bencher) {
-    b_bit(b, make_case(65, 4));
-}
-#[divan::bench(name = "starts_with/len_65/yes/string")]
-fn s65ys(b: Bencher) {
+// -- existing ----------------------------------------------------------------
+
+#[divan::bench(name = "starts_with/len_65/yes/ours_str")]
+fn s65y_str(b: Bencher) {
     b_str(b, make_case(65, 4));
 }
-#[divan::bench(name = "starts_with/len_65/no/bit_string")]
-fn s65n(b: Bencher) {
-    b_bit(b, no_case(65, 4));
+#[divan::bench(name = "starts_with/len_65/yes/ours_string")]
+fn s65y_string(b: Bencher) {
+    b_string(b, make_case(65, 4));
 }
-#[divan::bench(name = "starts_with/len_65/no/string")]
-fn s65ns(b: Bencher) {
-    b_str(b, no_case(65, 4));
-}
-#[divan::bench(name = "starts_with/len_65536/yes/bit_string")]
-fn s6y(b: Bencher) {
-    b_bit(b, make_case(65_536, 128));
-}
-#[divan::bench(name = "starts_with/len_65536/yes/string")]
-fn s6ys(b: Bencher) {
-    b_str(b, make_case(65_536, 128));
-}
-#[divan::bench(name = "starts_with/len_65536/no/bit_string")]
-fn s6n(b: Bencher) {
-    b_bit(b, no_case(65_536, 128));
-}
-#[divan::bench(name = "starts_with/len_65536/no/string")]
-fn s6ns(b: Bencher) {
-    b_str(b, no_case(65_536, 128));
+#[divan::bench(name = "starts_with/len_65/yes/string")]
+fn s65y_native(b: Bencher) {
+    b_native(b, make_case(65, 4));
 }
 
-fn b_bit(b: Bencher, c: Case) {
+#[divan::bench(name = "starts_with/len_65/no/ours_str")]
+fn s65n_str(b: Bencher) {
+    b_str(b, no_case(65, 4));
+}
+#[divan::bench(name = "starts_with/len_65/no/ours_string")]
+fn s65n_string(b: Bencher) {
+    b_string(b, no_case(65, 4));
+}
+#[divan::bench(name = "starts_with/len_65/no/string")]
+fn s65n_native(b: Bencher) {
+    b_native(b, no_case(65, 4));
+}
+
+#[divan::bench(name = "starts_with/len_65536/yes/ours_str")]
+fn s6y_str(b: Bencher) {
+    b_str(b, make_case(65_536, 128));
+}
+#[divan::bench(name = "starts_with/len_65536/yes/ours_string")]
+fn s6y_string(b: Bencher) {
+    b_string(b, make_case(65_536, 128));
+}
+#[divan::bench(name = "starts_with/len_65536/yes/string")]
+fn s6y_native(b: Bencher) {
+    b_native(b, make_case(65_536, 128));
+}
+
+#[divan::bench(name = "starts_with/len_65536/no/ours_str")]
+fn s6n_str(b: Bencher) {
+    b_str(b, no_case(65_536, 128));
+}
+#[divan::bench(name = "starts_with/len_65536/no/ours_string")]
+fn s6n_string(b: Bencher) {
+    b_string(b, no_case(65_536, 128));
+}
+#[divan::bench(name = "starts_with/len_65536/no/string")]
+fn s6n_native(b: Bencher) {
+    b_native(b, no_case(65_536, 128));
+}
+
+// -- helpers ----------------------------------------------------------------
+
+fn b_str(b: Bencher, c: Case) {
     b.bench(|| black_box(&c.haystack_bits).starts_with_str(black_box(c.prefix_bits.as_bit_str())));
 }
-fn b_str(b: Bencher, c: Case) {
-    b.bench(|| black_box(&c.haystack_string).starts_with_str(black_box(&c.prefix_string)));
+fn b_string(b: Bencher, c: Case) {
+    b.bench(|| black_box(&c.haystack_bits).starts_with_string(black_box(&c.prefix_bits)));
+}
+fn b_native(b: Bencher, c: Case) {
+    b.bench(|| black_box(&c.haystack_string).starts_with(black_box(&c.prefix_string)));
 }

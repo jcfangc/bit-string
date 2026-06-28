@@ -54,7 +54,7 @@ fn strip_prefix_len_65536_miss_string(bencher: Bencher) {
 
 fn bench_bit_string(bencher: Bencher, case: NeedleCase) {
     bencher.bench(|| {
-        black_box(&case.haystack_bits).strip_prefix(black_box(case.needle_bits.as_bit_str()))
+        black_box(&case.haystack_bits).strip_prefix_str(black_box(case.needle_bits.as_bit_str()))
     });
 }
 
