@@ -191,7 +191,10 @@ pub(super) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
         // SAFETY: mid_first..=wi_end are full u64 words within `bits`.
         unsafe {
             while done + LANES <= total_words {
-                let chunk_start = wi_end - done - LANES + 1;
+                // `done + LANES <= total_words` guarantees
+                // `wi_end + 1 >= done + LANES`, so the
+                // wrapping_sub result is always non-negative.
+                let chunk_start = (wi_end + 1).wrapping_sub(done + LANES);
                 if !chunk_eq::<FILL>(ptr.add(chunk_start)) {
                     break;
                 }
