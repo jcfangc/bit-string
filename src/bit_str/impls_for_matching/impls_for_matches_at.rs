@@ -107,10 +107,10 @@ impl<'bs> BitStr<'bs> {
         let hs_aligned = self.start % WORD_BITS == 0;
         let nd_aligned = prefix.start % WORD_BITS == 0;
         match (hs_aligned, nd_aligned) {
-            (true, true) => self.matches_at_inner::<true, true>(0, prefix),
-            (true, false) => self.matches_at_inner::<true, false>(0, prefix),
-            (false, true) => self.matches_at_inner::<false, true>(0, prefix),
-            (false, false) => self.matches_at_inner::<false, false>(0, prefix),
+            (true, true) => self.starts_with_inner::<true, true>(prefix),
+            (true, false) => self.starts_with_inner::<true, false>(prefix),
+            (false, true) => self.starts_with_inner::<false, true>(prefix),
+            (false, false) => self.starts_with_inner::<false, false>(prefix),
         }
     }
 
@@ -123,12 +123,47 @@ impl<'bs> BitStr<'bs> {
         if suffix.bit_len > self.bit_len {
             return false;
         }
-        self.bits_equal_at(self.bit_len - suffix.bit_len, suffix)
+        let hs_aligned = self.start % WORD_BITS == 0;
+        let nd_aligned = suffix.start % WORD_BITS == 0;
+        let offset = self.bit_len - suffix.bit_len;
+        match (hs_aligned, nd_aligned) {
+            (true, true) => self.ends_with_inner::<true, true>(suffix, offset),
+            (true, false) => self.ends_with_inner::<true, false>(suffix, offset),
+            (false, true) => self.ends_with_inner::<false, true>(suffix, offset),
+            (false, false) => self.ends_with_inner::<false, false>(suffix, offset),
+        }
     }
 
     // -------------------------------------------------------------------
     // Inner helpers with alignment const-generics
     // -------------------------------------------------------------------
+
+    /// `starts_with` with compile-time alignment signals.
+    ///
+    /// Bounds-checks `prefix` length against `self`.
+    #[inline]
+    pub(crate) fn starts_with_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
+        &self,
+        prefix: BitStr<'_>,
+    ) -> bool {
+        if prefix.bit_len > self.bit_len {
+            return false;
+        }
+        self.bits_equal_at_inner::<HS_WORD_ALIGNED, ND_WORD_ALIGNED>(0, prefix)
+    }
+
+    /// `ends_with` with compile-time alignment signals.
+    ///
+    /// `offset` must equal `self.bit_len - suffix.bit_len`.
+    /// Bounds-checks are the caller's responsibility.
+    #[inline]
+    pub(crate) fn ends_with_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
+        &self,
+        suffix: BitStr<'_>,
+        offset: usize,
+    ) -> bool {
+        self.bits_equal_at_inner::<HS_WORD_ALIGNED, ND_WORD_ALIGNED>(offset, suffix)
+    }
 
     /// Like [`matches_at`](Self::matches_at) but with compile-time
     /// alignment signals for both haystack and needle.
