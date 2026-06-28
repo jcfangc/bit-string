@@ -12,7 +12,19 @@ pub(crate) trait BitsEq {
     /// `count` is the number of full `u64` words to compare (computed from
     /// the needle bit length).  The intra-word shift and word slicing are
     /// derived from `offset` internally.
-    fn eq_words(&self, other: &[u64], count: usize, offset: usize) -> bool;
+    /// `self` is pre-trimmed haystack `words[base..]`.
+    /// `needle` is always word-aligned (pre-trimmed by the caller).
+    /// `full_words` is `needle_bit_len / WORD_BITS` — how many
+    /// complete u64 words to compare.
+    /// `haystack_shift` is `original_offset % WORD_BITS`.
+    /// When `HS_WORD_ALIGNED` is `true`, `haystack_shift == 0` is
+    /// guaranteed and the aligned backend is used unconditionally.
+    fn eq_words<const HS_WORD_ALIGNED: bool>(
+        &self,
+        needle: &[u64],
+        full_words: usize,
+        haystack_shift: usize,
+    ) -> bool;
 }
 
 pub(crate) mod funcs_for_eq_words_aligned_core;

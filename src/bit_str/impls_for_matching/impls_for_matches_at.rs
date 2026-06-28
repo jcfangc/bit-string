@@ -39,8 +39,10 @@ impl<'bs> BitStr<'bs> {
         if nd_is_aligned {
             let full_words = n / WORD_BITS;
             let nd_aligned = &nd_words[nd_base / WORD_BITS..];
+            let haystack_shift = hs_base % WORD_BITS;
+            let haystack = &hs_words[hs_base / WORD_BITS..];
 
-            if !hs_words.eq_words(nd_aligned, full_words, hs_base) {
+            if !haystack.eq_words::<HS_WORD_ALIGNED>(nd_aligned, full_words, haystack_shift) {
                 return false;
             }
 
@@ -131,9 +133,9 @@ impl<'bs> BitStr<'bs> {
         if suffix.bit_len > self.bit_len {
             return false;
         }
-        let hs_aligned = self.start % WORD_BITS == 0;
-        let nd_aligned = suffix.start % WORD_BITS == 0;
         let offset = self.bit_len - suffix.bit_len;
+        let hs_aligned = (self.start + offset) % WORD_BITS == 0;
+        let nd_aligned = suffix.start % WORD_BITS == 0;
         match (hs_aligned, nd_aligned) {
             (true, true) => self.ends_with_inner::<true, true>(suffix, offset),
             (true, false) => self.ends_with_inner::<true, false>(suffix, offset),
@@ -169,7 +171,7 @@ impl<'bs> BitStr<'bs> {
             return false;
         }
         let offset = self.bit_len - s.bit_len;
-        if self.start % WORD_BITS == 0 {
+        if (self.start + offset) % WORD_BITS == 0 {
             self.ends_with_inner::<true, true>(s, offset)
         } else {
             self.ends_with_inner::<false, true>(s, offset)

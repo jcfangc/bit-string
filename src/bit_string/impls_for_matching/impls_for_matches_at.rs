@@ -61,10 +61,13 @@ impl BitString {
             return false;
         }
         let offset = view.bit_len - suffix.bit_len;
-        if suffix.start % WORD_BITS == 0 {
-            view.ends_with_inner::<true, true>(suffix, offset)
-        } else {
-            view.ends_with_inner::<true, false>(suffix, offset)
+        let hs_aligned = offset % WORD_BITS == 0; // self.start == 0, so hs_base == offset
+        let nd_aligned = suffix.start % WORD_BITS == 0;
+        match (hs_aligned, nd_aligned) {
+            (true, true) => view.ends_with_inner::<true, true>(suffix, offset),
+            (true, false) => view.ends_with_inner::<true, false>(suffix, offset),
+            (false, true) => view.ends_with_inner::<false, true>(suffix, offset),
+            (false, false) => view.ends_with_inner::<false, false>(suffix, offset),
         }
     }
 
@@ -90,6 +93,11 @@ impl BitString {
             return false;
         }
         let offset = view.bit_len - suffix.bit_len;
-        view.ends_with_inner::<true, true>(suffix.as_bit_str(), offset)
+        let hs_aligned = offset % WORD_BITS == 0;
+        if hs_aligned {
+            view.ends_with_inner::<true, true>(suffix.as_bit_str(), offset)
+        } else {
+            view.ends_with_inner::<false, true>(suffix.as_bit_str(), offset)
+        }
     }
 }
