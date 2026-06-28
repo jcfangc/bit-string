@@ -1,9 +1,9 @@
 //! SIMD-accelerated trailing value-word scan (reverse direction).
 //!
-//! Counts consecutive words equal to a fill value (zero or ones) from the
-//! end of a slice.  All functions are parameterised by `const FILL: u64`
-//! so the two fill variants (`0` / `u64::MAX`) are monomorphised separately
-//! and runtime fill-dispatch branches are eliminated.
+//! Counts consecutive words equal to a fill value (`FILL`) from the end of
+//! a slice.  Each SIMD backend only tests whether a full chunk matches (hot
+//! path: one `ptest` per chunk); when a mismatch is detected the tail is
+//! handed to the scalar loop — there is no lane-level scanning in SIMD code.
 
 use crate::SMALL_WORDS;
 
@@ -11,8 +11,8 @@ use crate::SMALL_WORDS;
 // Dispatch — selects backend at compile time
 // ---------------------------------------------------------------------------
 
-/// Returns the number of consecutive words equal to the fill value at the
-/// **end** of `words`.
+/// Returns the number of consecutive words equal to `FILL` at the **end** of
+/// `words`.
 ///
 /// Use [`FILL_ZEROS`](super::FILL_ZEROS) for trailing zeros,
 /// [`FILL_ONES`](super::FILL_ONES) for trailing ones.  All words from
@@ -81,16 +81,20 @@ mod scalar {
 mod avx2 {
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
-        __m256i, _mm256_cmpeq_epi64, _mm256_loadu_si256, _mm256_movemask_epi8, _mm256_set1_epi64x,
+        __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256, _mm256_xor_si256,
     };
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::{
-        __m256i, _mm256_cmpeq_epi64, _mm256_loadu_si256, _mm256_movemask_epi8, _mm256_set1_epi64x,
+        __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256, _mm256_xor_si256,
     };
 
     const LANES: usize = 4;
 
-    /// AVX2 backend — reverse scan (from the end backwards).
+    /// AVX2 backend — reverse scan.
+    ///
+    /// Processes the partial tail first (scalar), then full SIMD chunks from
+    /// right to left.  Hot path: one `vptest` per chunk; scalar fallback on
+    /// mismatch.
     ///
     /// # Safety
     ///
@@ -98,7 +102,6 @@ mod avx2 {
     #[target_feature(enable = "avx2")]
     pub(super) unsafe fn scan_rev<const FILL: u64>(words: &[u64]) -> usize {
         unsafe {
-            let fill_vec = _mm256_set1_epi64x(FILL as i64);
             let full_chunks = words.len() / LANES;
             let done = full_chunks * LANES;
 
@@ -113,15 +116,18 @@ mod avx2 {
             for chunk in (0..full_chunks).rev() {
                 let offset = chunk * LANES;
                 let data = _mm256_loadu_si256(words.as_ptr().add(offset).cast::<__m256i>());
-                let cmp = _mm256_cmpeq_epi64(data, fill_vec);
-                let mask = _mm256_movemask_epi8(cmp) as u32;
-                if mask != 0xFFFF_FFFF {
-                    for k in (0..LANES).rev() {
-                        if (mask >> (k * 8)) & 0xFF != 0xFF {
-                            return count + (LANES - 1 - k);
-                        }
-                    }
-                    core::hint::unreachable_unchecked();
+
+                let all_eq = if FILL == 0 {
+                    _mm256_testz_si256(data, data) != 0
+                } else {
+                    let fill_vec = _mm256_set1_epi64x(FILL as i64);
+                    let xor = _mm256_xor_si256(data, fill_vec);
+                    _mm256_testz_si256(xor, xor) != 0
+                };
+
+                if !all_eq {
+                    // Fall to scalar from the start of this chunk rightwards.
+                    return count + super::scalar::scan_rev::<FILL>(&words[..=offset + LANES - 1]);
                 }
                 count += LANES;
             }
@@ -140,11 +146,11 @@ mod avx2 {
 mod sse41 {
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
-        __m128i, _mm_cmpeq_epi64, _mm_loadu_si128, _mm_movemask_epi8, _mm_set1_epi64x,
+        __m128i, _mm_loadu_si128, _mm_set1_epi64x, _mm_testz_si128, _mm_xor_si128,
     };
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::{
-        __m128i, _mm_cmpeq_epi64, _mm_loadu_si128, _mm_movemask_epi8, _mm_set1_epi64x,
+        __m128i, _mm_loadu_si128, _mm_set1_epi64x, _mm_testz_si128, _mm_xor_si128,
     };
 
     const LANES: usize = 2;
@@ -157,7 +163,6 @@ mod sse41 {
     #[target_feature(enable = "sse4.1")]
     pub(super) unsafe fn scan_rev<const FILL: u64>(words: &[u64]) -> usize {
         unsafe {
-            let fill_vec = _mm_set1_epi64x(FILL as i64);
             let full_chunks = words.len() / LANES;
             let done = full_chunks * LANES;
 
@@ -170,15 +175,17 @@ mod sse41 {
             for chunk in (0..full_chunks).rev() {
                 let offset = chunk * LANES;
                 let data = _mm_loadu_si128(words.as_ptr().add(offset).cast::<__m128i>());
-                let cmp = _mm_cmpeq_epi64(data, fill_vec);
-                let mask = _mm_movemask_epi8(cmp) as u32;
-                if mask != 0xFFFF {
-                    for k in (0..LANES).rev() {
-                        if (mask >> (k * 8)) & 0xFF != 0xFF {
-                            return count + (LANES - 1 - k);
-                        }
-                    }
-                    core::hint::unreachable_unchecked();
+
+                let all_eq = if FILL == 0 {
+                    _mm_testz_si128(data, data) != 0
+                } else {
+                    let fill_vec = _mm_set1_epi64x(FILL as i64);
+                    let xor = _mm_xor_si128(data, fill_vec);
+                    _mm_testz_si128(xor, xor) != 0
+                };
+
+                if !all_eq {
+                    return count + super::scalar::scan_rev::<FILL>(&words[..=offset + LANES - 1]);
                 }
                 count += LANES;
             }
@@ -221,6 +228,8 @@ mod neon {
                 let offset = chunk * LANES;
                 let data = vld1q_u64(words.as_ptr().add(offset));
                 let cmp = vceqq_u64(data, fill_vec);
+
+                // Scan lanes right-to-left (NEON has only 2 lanes).
                 if vgetq_lane_u64(cmp, 1) == 0 {
                     return count;
                 }

@@ -1,21 +1,15 @@
 use crate::traits::*;
-use crate::{WORD_BITS, low_mask};
+use crate::{FILL_ONES, FILL_ZEROS, WORD_BITS, low_mask};
 
 use crate::BitStr;
 
 // ---------------------------------------------------------------------------
-// Shared helper — parameterised by `fill` (0 → zeros, !0 → ones)
+// Shared helper — parameterised by `FILL` (0 → zeros, !0 → ones)
 // ---------------------------------------------------------------------------
 
-/// Counts consecutive bits equal to the fill value from the start of a view.
-///
-/// `FILL_ONES` selects the fill value: `false` → zeros, `true` → ones.
+/// Counts consecutive bits equal to `FILL` from the start of a view.
 #[inline]
-fn leading_value_count<const FILL_ONES: bool>(
-    words: &[u64],
-    start: usize,
-    bit_len: usize,
-) -> usize {
+fn leading_value_count<const FILL: u64>(words: &[u64], start: usize, bit_len: usize) -> usize {
     let end = start + bit_len;
     let start_offset = start % WORD_BITS;
     let end_rem = end % WORD_BITS;
@@ -27,7 +21,7 @@ fn leading_value_count<const FILL_ONES: bool>(
     // First word — only bits from start_offset upward are in view.
     let first_val = words[wi] >> start_offset;
     let first_limit = (WORD_BITS - start_offset).min(bit_len);
-    let first_count = count_trailing::<FILL_ONES>(first_val).min(first_limit);
+    let first_count = count_trailing::<FILL>(first_val).min(first_limit);
     if first_count < first_limit {
         return first_count;
     }
@@ -37,37 +31,31 @@ fn leading_value_count<const FILL_ONES: bool>(
     // Full middle words — SIMD-accelerated value-word scan.
     let mid_end = if end_rem == 0 { last_wi + 1 } else { last_wi };
     if wi < mid_end {
-        let value_words = if FILL_ONES {
-            words[wi..mid_end].leading_one_words()
-        } else {
-            words[wi..mid_end].leading_zero_words()
-        };
+        let value_words = words[wi..mid_end].leading_value_words::<FILL>();
         scanned += value_words * WORD_BITS;
         wi += value_words;
 
         if wi < mid_end {
-            return scanned + count_trailing::<FILL_ONES>(words[wi]).min(WORD_BITS);
+            return scanned + count_trailing::<FILL>(words[wi]).min(WORD_BITS);
         }
     }
 
     // Last partial word (only when end_rem != 0).
     if end_rem != 0 && wi == last_wi {
         let last_val = words[wi] & low_mask(end_rem);
-        scanned += count_trailing::<FILL_ONES>(last_val).min(end_rem);
+        scanned += count_trailing::<FILL>(last_val).min(end_rem);
     }
 
     scanned.min(bit_len)
 }
 
 /// Counts trailing bits of a given value within a single u64 word.
-///
-/// `FILL_ONES = false` → trailing zeros, `FILL_ONES = true` → trailing ones.
 #[inline]
-fn count_trailing<const FILL_ONES: bool>(val: u64) -> usize {
-    if FILL_ONES {
-        (!val).trailing_zeros() as usize
-    } else {
+fn count_trailing<const FILL: u64>(val: u64) -> usize {
+    if FILL == 0 {
         val.trailing_zeros() as usize
+    } else {
+        (!val).trailing_zeros() as usize
     }
 }
 
@@ -94,7 +82,7 @@ impl<'bs> BitStr<'bs> {
         if self.bit_len == 0 {
             return 0;
         }
-        leading_value_count::<false>(self.source.words(), self.start, self.bit_len)
+        leading_value_count::<FILL_ZEROS>(self.source.words(), self.start, self.bit_len)
     }
 
     /// Returns the number of consecutive `true` bits from the start of this
@@ -119,7 +107,7 @@ impl<'bs> BitStr<'bs> {
         if self.bit_len == 0 {
             return 0;
         }
-        leading_value_count::<true>(self.source.words(), self.start, self.bit_len)
+        leading_value_count::<FILL_ONES>(self.source.words(), self.start, self.bit_len)
     }
 }
 

@@ -7,7 +7,8 @@ use super::funcs_for_not_core;
 use super::funcs_for_shl_core;
 use super::funcs_for_shr_core;
 use super::funcs_for_value_words_core::{
-    FILL_ONES, FILL_ZEROS, leading_value_words, trailing_value_words,
+    leading_value_words as leading_value_words_core,
+    trailing_value_words as trailing_value_words_core,
 };
 
 impl BitsArith for [u64] {
@@ -77,22 +78,12 @@ impl BitsArith for [u64] {
     }
 
     #[inline]
-    fn leading_zero_words(&self) -> usize {
-        leading_value_words::<FILL_ZEROS>(self)
+    fn leading_value_words<const FILL: u64>(&self) -> usize {
+        leading_value_words_core::<FILL>(self)
     }
 
     #[inline]
-    fn leading_one_words(&self) -> usize {
-        leading_value_words::<FILL_ONES>(self)
-    }
-
-    #[inline]
-    fn trailing_zero_words(&self) -> usize {
-        trailing_value_words::<FILL_ZEROS>(self)
-    }
-
-    #[inline]
-    fn trailing_one_words(&self) -> usize {
-        trailing_value_words::<FILL_ONES>(self)
+    fn trailing_value_words<const FILL: u64>(&self) -> usize {
+        trailing_value_words_core::<FILL>(self)
     }
 }

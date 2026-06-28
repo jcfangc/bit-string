@@ -49,29 +49,21 @@ pub(crate) trait BitsArith {
     /// prior calls to [`BitsEdit::mask_unused_bits`]).
     fn count_ones(&self, bit_len: usize) -> usize;
 
-    /// Returns the number of consecutive zero words at the start of `self`.
+    /// Returns the number of consecutive words equal to `FILL` at the start
+    /// of `self`.
     ///
-    /// All words up to (but not including) the returned index are zero.  If
-    /// the return value equals `self.len()`, every word is zero.
-    fn leading_zero_words(&self) -> usize;
+    /// Use [`crate::FILL_ZEROS`] for leading zeros, [`crate::FILL_ONES`] for
+    /// leading ones.  All words up to (but not including) the returned index
+    /// match.  If the return value equals `self.len()`, every word matches.
+    fn leading_value_words<const FILL: u64>(&self) -> usize;
 
-    /// Returns the number of consecutive all-ones words at the start of
-    /// `self`.
+    /// Returns the number of consecutive words equal to `FILL` at the **end**
+    /// of `self`.
     ///
-    /// All words up to (but not including) the returned index are all-ones.
-    /// If the return value equals `self.len()`, every word is all-ones.
-    fn leading_one_words(&self) -> usize;
-
-    /// Returns the number of consecutive zero words at the **end** of `self`.
-    ///
-    /// All words from `self.len() - count` onwards are zero.
-    fn trailing_zero_words(&self) -> usize;
-
-    /// Returns the number of consecutive all-ones words at the **end** of
-    /// `self`.
-    ///
-    /// All words from `self.len() - count` onwards are all-ones.
-    fn trailing_one_words(&self) -> usize;
+    /// Use [`crate::FILL_ZEROS`] for trailing zeros, [`crate::FILL_ONES`] for
+    /// trailing ones.  All words from `self.len() - count` onwards match.  If
+    /// the return value equals `self.len()`, every word matches.
+    fn trailing_value_words<const FILL: u64>(&self) -> usize;
 }
 
 pub(crate) mod funcs_for_binary_core;
