@@ -16,4 +16,4 @@ jobs:
     with:
       rust_toolchain: stable
       build_command: cargo codspeed build -m simulation
-      run_command: cargo codspeed run -m simulation bit_
+      run_command: cargo codspeed run -m simulation bit_ matching_ ord_ hash_
