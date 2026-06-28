@@ -1,7 +1,7 @@
-//! SIMD-accelerated leading value-word scan (forward direction).
+//! SIMD-accelerated trailing value-word scan (reverse direction).
 //!
 //! Counts consecutive words equal to a fill value (zero or ones) from the
-//! start of a slice.  All functions are parameterised by `const FILL_ONES:
+//! end of a slice.  All functions are parameterised by `const FILL_ONES:
 //! bool` so the two fill variants are monomorphised separately and runtime
 //! fill-dispatch branches are eliminated.
 
@@ -12,15 +12,15 @@ use crate::SMALL_WORDS;
 // ---------------------------------------------------------------------------
 
 /// Returns the number of consecutive words equal to the fill value at the
-/// start of `words`.
+/// **end** of `words`.
 ///
-/// `FILL_ONES`: `false` → leading zeros, `true` → leading ones.
-/// All words up to (but not including) the returned index match.  If the
-/// return value equals `words.len()`, every word matches.
+/// `FILL_ONES`: `false` → trailing zeros, `true` → trailing ones.
+/// All words from `words.len() - count` onwards match.  If the return value
+/// equals `words.len()`, every word matches.
 #[inline]
-pub(crate) fn leading_value_words<const FILL_ONES: bool>(words: &[u64]) -> usize {
+pub(crate) fn trailing_value_words<const FILL_ONES: bool>(words: &[u64]) -> usize {
     if words.len() < SMALL_WORDS {
-        return scalar::scan::<FILL_ONES>(words);
+        return scalar::scan_rev::<FILL_ONES>(words);
     }
 
     #[cfg(all(
@@ -28,9 +28,8 @@ pub(crate) fn leading_value_words<const FILL_ONES: bool>(words: &[u64]) -> usize
         target_feature = "avx2"
     ))]
     {
-        // SAFETY: AVX2 is available (compiled with target_feature check).
         unsafe {
-            return avx2::scan::<FILL_ONES>(words);
+            return avx2::scan_rev::<FILL_ONES>(words);
         }
     }
 
@@ -40,22 +39,20 @@ pub(crate) fn leading_value_words<const FILL_ONES: bool>(words: &[u64]) -> usize
         not(target_feature = "avx2")
     ))]
     {
-        // SAFETY: SSE4.1 is available.
         unsafe {
-            return sse41::scan::<FILL_ONES>(words);
+            return sse41::scan_rev::<FILL_ONES>(words);
         }
     }
 
     #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
     {
-        // SAFETY: NEON is available.
         unsafe {
-            return neon::scan::<FILL_ONES>(words);
+            return neon::scan_rev::<FILL_ONES>(words);
         }
     }
 
     #[allow(unused)]
-    scalar::scan::<FILL_ONES>(words)
+    scalar::scan_rev::<FILL_ONES>(words)
 }
 
 // ---------------------------------------------------------------------------
@@ -64,10 +61,10 @@ pub(crate) fn leading_value_words<const FILL_ONES: bool>(words: &[u64]) -> usize
 
 mod scalar {
     #[inline]
-    pub(super) fn scan<const FILL_ONES: bool>(words: &[u64]) -> usize {
+    pub(super) fn scan_rev<const FILL_ONES: bool>(words: &[u64]) -> usize {
         let fill = if FILL_ONES { !0u64 } else { 0 };
-        for (i, &w) in words.iter().enumerate() {
-            if w != fill {
+        for i in 0..words.len() {
+            if words[words.len() - 1 - i] != fill {
                 return i;
             }
         }
@@ -93,44 +90,45 @@ mod avx2 {
 
     const LANES: usize = 4;
 
-    /// AVX2 backend — forward scan.
+    /// AVX2 backend — reverse scan (from the end backwards).
     ///
     /// # Safety
     ///
     /// Caller must ensure AVX2 is available.
     #[target_feature(enable = "avx2")]
-    pub(super) unsafe fn scan<const FILL_ONES: bool>(words: &[u64]) -> usize {
+    pub(super) unsafe fn scan_rev<const FILL_ONES: bool>(words: &[u64]) -> usize {
         let fill = if FILL_ONES { !0u64 } else { 0 };
 
-        // SAFETY: all operations inside require AVX2, which is guaranteed by
-        // the `target_feature` annotation on this function.
         unsafe {
             let fill_vec = _mm256_set1_epi64x(fill as i64);
-            let chunks = words.len() / LANES;
-            let mut count = 0usize;
+            let full_chunks = words.len() / LANES;
+            let done = full_chunks * LANES;
 
-            for chunk in 0..chunks {
+            // Process the partial tail first.
+            let tail_count = super::scalar::scan_rev::<FILL_ONES>(&words[done..]);
+            if tail_count < words.len() - done {
+                return tail_count;
+            }
+            let mut count = tail_count;
+
+            // Full chunks from right to left.
+            for chunk in (0..full_chunks).rev() {
                 let offset = chunk * LANES;
-                // SAFETY: offset + LANES ≤ words.len(); _mm256_loadu_si256
-                // supports unaligned reads.
                 let data = _mm256_loadu_si256(words.as_ptr().add(offset).cast::<__m256i>());
                 let cmp = _mm256_cmpeq_epi64(data, fill_vec);
                 let mask = _mm256_movemask_epi8(cmp) as u32;
                 if mask != 0xFFFF_FFFF {
-                    for k in 0..LANES {
+                    for k in (0..LANES).rev() {
                         if (mask >> (k * 8)) & 0xFF != 0xFF {
-                            return count + k;
+                            return count + (LANES - 1 - k);
                         }
                     }
-                    // SAFETY: mask != 0xFFFF_FFFF guarantees at least one
-                    // lane is not equal to fill, so the loop always returns.
                     core::hint::unreachable_unchecked();
                 }
                 count += LANES;
             }
 
-            let done = chunks * LANES;
-            count + super::scalar::scan::<FILL_ONES>(&words[done..])
+            count
         }
     }
 }
@@ -153,31 +151,35 @@ mod sse41 {
 
     const LANES: usize = 2;
 
-    /// SSE4.1 backend — forward scan.
+    /// SSE4.1 backend — reverse scan.
     ///
     /// # Safety
     ///
     /// Caller must ensure SSE4.1 is available.
     #[target_feature(enable = "sse4.1")]
-    pub(super) unsafe fn scan<const FILL_ONES: bool>(words: &[u64]) -> usize {
+    pub(super) unsafe fn scan_rev<const FILL_ONES: bool>(words: &[u64]) -> usize {
         let fill = if FILL_ONES { !0u64 } else { 0 };
 
-        // SAFETY: all operations inside require SSE4.1, which is guaranteed by
-        // the `target_feature` annotation.
         unsafe {
             let fill_vec = _mm_set1_epi64x(fill as i64);
-            let chunks = words.len() / LANES;
-            let mut count = 0usize;
+            let full_chunks = words.len() / LANES;
+            let done = full_chunks * LANES;
 
-            for chunk in 0..chunks {
+            let tail_count = super::scalar::scan_rev::<FILL_ONES>(&words[done..]);
+            if tail_count < words.len() - done {
+                return tail_count;
+            }
+            let mut count = tail_count;
+
+            for chunk in (0..full_chunks).rev() {
                 let offset = chunk * LANES;
                 let data = _mm_loadu_si128(words.as_ptr().add(offset).cast::<__m128i>());
                 let cmp = _mm_cmpeq_epi64(data, fill_vec);
                 let mask = _mm_movemask_epi8(cmp) as u32;
                 if mask != 0xFFFF {
-                    for k in 0..LANES {
+                    for k in (0..LANES).rev() {
                         if (mask >> (k * 8)) & 0xFF != 0xFF {
-                            return count + k;
+                            return count + (LANES - 1 - k);
                         }
                     }
                     core::hint::unreachable_unchecked();
@@ -185,8 +187,7 @@ mod sse41 {
                 count += LANES;
             }
 
-            let done = chunks * LANES;
-            count + super::scalar::scan::<FILL_ONES>(&words[done..])
+            count
         }
     }
 }
@@ -202,37 +203,40 @@ mod neon {
 
     const LANES: usize = 2;
 
-    /// NEON backend — forward scan.
+    /// NEON backend — reverse scan.
     ///
     /// # Safety
     ///
     /// Caller must ensure NEON is available.
     #[target_feature(enable = "neon")]
-    pub(super) unsafe fn scan<const FILL_ONES: bool>(words: &[u64]) -> usize {
+    pub(super) unsafe fn scan_rev<const FILL_ONES: bool>(words: &[u64]) -> usize {
         let fill = if FILL_ONES { !0u64 } else { 0 };
 
-        // SAFETY: all operations inside require NEON, which is guaranteed by
-        // the `target_feature` annotation.
         unsafe {
             let fill_vec = vdupq_n_u64(fill);
-            let chunks = words.len() / LANES;
-            let mut count = 0usize;
+            let full_chunks = words.len() / LANES;
+            let done = full_chunks * LANES;
 
-            for chunk in 0..chunks {
+            let tail_count = super::scalar::scan_rev::<FILL_ONES>(&words[done..]);
+            if tail_count < words.len() - done {
+                return tail_count;
+            }
+            let mut count = tail_count;
+
+            for chunk in (0..full_chunks).rev() {
                 let offset = chunk * LANES;
                 let data = vld1q_u64(words.as_ptr().add(offset));
                 let cmp = vceqq_u64(data, fill_vec);
-                if vgetq_lane_u64(cmp, 0) == 0 {
+                if vgetq_lane_u64(cmp, 1) == 0 {
                     return count;
                 }
-                if vgetq_lane_u64(cmp, 1) == 0 {
+                if vgetq_lane_u64(cmp, 0) == 0 {
                     return count + 1;
                 }
                 count += LANES;
             }
 
-            let done = chunks * LANES;
-            count + super::scalar::scan::<FILL_ONES>(&words[done..])
+            count
         }
     }
 }

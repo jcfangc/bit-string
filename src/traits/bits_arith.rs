@@ -80,4 +80,5 @@ pub(crate) mod funcs_for_leading_value_words;
 pub(crate) mod funcs_for_not_core;
 pub(crate) mod funcs_for_shl_core;
 pub(crate) mod funcs_for_shr_core;
+pub(crate) mod funcs_for_trailing_value_words;
 pub(crate) mod impls_for_u64_slice;

@@ -53,7 +53,7 @@ fn fill_val<const FILL_ONES: bool>() -> u64 {
 
 fn assert_backend_matches_scalar<const FILL_ONES: bool>(backend: Backend) {
     for &src in cases::<FILL_ONES>() {
-        let expected = scalar::scan::<FILL_ONES>(src);
+        let expected = scalar::scan_rev::<FILL_ONES>(src);
         let actual = unsafe { backend(src) };
         assert_eq!(
             actual,
@@ -71,7 +71,7 @@ fn run_random<const FILL_ONES: bool>(backend: Backend) {
         for _ in 0..16 {
             v.push(if FILL_ONES { 0 } else { u64::MAX });
         }
-        let expected = scalar::scan::<FILL_ONES>(&v);
+        let expected = scalar::scan_rev::<FILL_ONES>(&v);
         let actual = unsafe { backend(&v) };
         assert_eq!(actual, expected, "fill={fill} run={run}");
     }
@@ -87,8 +87,8 @@ fn run_random<const FILL_ONES: bool>(backend: Backend) {
 ))]
 #[test]
 fn avx2_matches_scalar_zeros() {
-    assert_backend_matches_scalar::<false>(avx2::scan::<false>);
-    run_random::<false>(avx2::scan::<false>);
+    assert_backend_matches_scalar::<false>(avx2::scan_rev::<false>);
+    run_random::<false>(avx2::scan_rev::<false>);
 }
 
 #[cfg(all(
@@ -97,8 +97,8 @@ fn avx2_matches_scalar_zeros() {
 ))]
 #[test]
 fn avx2_matches_scalar_ones() {
-    assert_backend_matches_scalar::<true>(avx2::scan::<true>);
-    run_random::<true>(avx2::scan::<true>);
+    assert_backend_matches_scalar::<true>(avx2::scan_rev::<true>);
+    run_random::<true>(avx2::scan_rev::<true>);
 }
 
 // ---------------------------------------------------------------------------
@@ -112,8 +112,8 @@ fn avx2_matches_scalar_ones() {
 ))]
 #[test]
 fn sse41_matches_scalar_zeros() {
-    assert_backend_matches_scalar::<false>(sse41::scan::<false>);
-    run_random::<false>(sse41::scan::<false>);
+    assert_backend_matches_scalar::<false>(sse41::scan_rev::<false>);
+    run_random::<false>(sse41::scan_rev::<false>);
 }
 
 #[cfg(all(
@@ -123,8 +123,8 @@ fn sse41_matches_scalar_zeros() {
 ))]
 #[test]
 fn sse41_matches_scalar_ones() {
-    assert_backend_matches_scalar::<true>(sse41::scan::<true>);
-    run_random::<true>(sse41::scan::<true>);
+    assert_backend_matches_scalar::<true>(sse41::scan_rev::<true>);
+    run_random::<true>(sse41::scan_rev::<true>);
 }
 
 // ---------------------------------------------------------------------------
@@ -134,13 +134,13 @@ fn sse41_matches_scalar_ones() {
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
 #[test]
 fn neon_matches_scalar_zeros() {
-    assert_backend_matches_scalar::<false>(neon::scan::<false>);
-    run_random::<false>(neon::scan::<false>);
+    assert_backend_matches_scalar::<false>(neon::scan_rev::<false>);
+    run_random::<false>(neon::scan_rev::<false>);
 }
 
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
 #[test]
 fn neon_matches_scalar_ones() {
-    assert_backend_matches_scalar::<true>(neon::scan::<true>);
-    run_random::<true>(neon::scan::<true>);
+    assert_backend_matches_scalar::<true>(neon::scan_rev::<true>);
+    run_random::<true>(neon::scan_rev::<true>);
 }
