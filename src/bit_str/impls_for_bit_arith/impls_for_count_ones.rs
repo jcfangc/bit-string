@@ -7,15 +7,26 @@ impl<'bs> BitStr<'bs> {
     /// Returns the number of bits set to 1.
     #[inline]
     pub fn count_ones(&self) -> usize {
+        if self.start % WORD_BITS == 0 {
+            self.count_ones_inner::<true>()
+        } else {
+            self.count_ones_inner::<false>()
+        }
+    }
+
+    /// `count_ones` with compile-time alignment signal.
+    ///
+    /// When `WORD_ALIGNED` is `true`, the unaligned path is eliminated.
+    #[inline]
+    pub(crate) fn count_ones_inner<const WORD_ALIGNED: bool>(&self) -> usize {
         if self.bit_len == 0 {
             return 0;
         }
 
         let words = self.source.words();
 
-        // Fast path: when `start` is word-aligned we can delegate directly to
-        // the SIMD-accelerated `[u64]::count_ones` on the relevant suffix.
-        if self.start % WORD_BITS == 0 {
+        // Fast path: word-aligned — delegate to SIMD on the suffix.
+        if WORD_ALIGNED || self.start % WORD_BITS == 0 {
             let word_start = self.start / WORD_BITS;
             return words[word_start..].count_ones(self.bit_len);
         }
@@ -39,9 +50,7 @@ impl<'bs> BitStr<'bs> {
 
         let end_rem = end % WORD_BITS;
 
-        // Middle words: full u64 words, SIMD-accelerated via
-        // `[u64]::count_ones`. The last word is included in the SIMD path
-        // when it is full (end_rem == 0), otherwise handled separately.
+        // Middle words: full u64 words, SIMD-accelerated.
         let mid_start = start_word + 1;
         let mid_end = if end_rem == 0 {
             last_word + 1
