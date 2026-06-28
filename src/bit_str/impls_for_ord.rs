@@ -12,7 +12,35 @@ impl<'bs> BitStr<'bs> {
     /// side with a `1` is greater.  When all bits in the common prefix are
     /// equal, the longer bit string is greater.
     #[inline]
-    pub fn cmp(&self, other: &BitStr<'bs>) -> Ordering {
+    pub fn cmp_str(&self, other: &BitStr<'bs>) -> Ordering {
+        let hs_aligned = self.start % WORD_BITS == 0;
+        let nd_aligned = other.start % WORD_BITS == 0;
+        match (hs_aligned, nd_aligned) {
+            (true, true) => self.cmp_inner::<true, true>(other),
+            (true, false) => self.cmp_inner::<true, false>(other),
+            (false, true) => self.cmp_inner::<false, true>(other),
+            (false, false) => self.cmp_inner::<false, false>(other),
+        }
+    }
+
+    /// `cmp_str` when `other` is a [`BitString`](crate::BitString)
+    /// (always word-aligned).
+    #[inline]
+    pub fn cmp_string(&self, other: &crate::BitString) -> Ordering {
+        let o = other.as_bit_str();
+        if self.start % WORD_BITS == 0 {
+            self.cmp_inner::<true, true>(&o)
+        } else {
+            self.cmp_inner::<false, true>(&o)
+        }
+    }
+
+    /// `cmp` with compile-time alignment signals.
+    #[inline]
+    pub(crate) fn cmp_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
+        &self,
+        other: &BitStr<'bs>,
+    ) -> Ordering {
         let common = self.bit_len.min(other.bit_len);
         if common == 0 {
             return self.bit_len.cmp(&other.bit_len);
@@ -22,19 +50,18 @@ impl<'bs> BitStr<'bs> {
         let nd_words = other.source.words();
         let hs_base = self.start;
         let nd_base = other.start;
-        let hs_aligned = hs_base % WORD_BITS == 0;
-        let nd_aligned = nd_base % WORD_BITS == 0;
 
         let full = common / WORD_BITS;
 
         // Full-word comparison — follow the same dispatch pattern as
         // [`BitsEq::eq_words`]: SIMD when `other` is word-aligned.
-        if nd_aligned {
+        let nd_is_aligned = ND_WORD_ALIGNED || nd_base % WORD_BITS == 0;
+        if nd_is_aligned {
             let nd_slice = &nd_words[nd_base / WORD_BITS..];
             if let Some(ord) = hs_words.cmp_words(nd_slice, full, hs_base) {
                 return ord;
             }
-        } else if hs_aligned {
+        } else if HS_WORD_ALIGNED || hs_base % WORD_BITS == 0 {
             // Only `self` is aligned — swap so `other` becomes the
             // word-aligned reference, then reverse.
             let hs_slice = &hs_words[hs_base / WORD_BITS..];
@@ -73,14 +100,14 @@ impl<'bs> BitStr<'bs> {
 impl PartialOrd for BitStr<'_> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+        Some(self.cmp_str(other))
     }
 }
 
 impl Ord for BitStr<'_> {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
-        self.cmp(other)
+        self.cmp_str(other)
     }
 }
 
