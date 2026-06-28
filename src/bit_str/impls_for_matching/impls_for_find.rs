@@ -7,47 +7,14 @@ impl<'bs> BitStr<'bs> {
     /// Returns `true` if `needle` is contained within `self`.
     #[inline]
     pub fn contains(&self, needle: BitStr<'_>) -> bool {
-        if needle.bit_len == 0 {
-            return true;
+        let hs_aligned = self.start % WORD_BITS == 0;
+        let nd_aligned = needle.start % WORD_BITS == 0;
+        match (hs_aligned, nd_aligned) {
+            (true, true) => self.contains_inner::<true, true>(needle),
+            (true, false) => self.contains_inner::<true, false>(needle),
+            (false, true) => self.contains_inner::<false, true>(needle),
+            (false, false) => self.contains_inner::<false, false>(needle),
         }
-        if needle.bit_len > self.bit_len {
-            return false;
-        }
-
-        let words = self.source.words();
-        let sw = self.start / WORD_BITS;
-        let so = self.start % WORD_BITS;
-        let needle_words = needle.source.words();
-        let needle_len = needle.bit_len;
-
-        // Unaligned start: check the first partial word before delegating to
-        // SIMD on the aligned remainder.
-        if so != 0 {
-            let first_bits = (WORD_BITS - so).min(self.bit_len);
-            let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
-            for p in 0..=max {
-                if self.bits_equal_at(p, needle) {
-                    return true;
-                }
-            }
-            let remaining = self.bit_len - first_bits;
-            if remaining == 0 {
-                return false;
-            }
-            let aligned = &words[sw + 1..];
-            return aligned
-                .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
-                    self.bits_equal_at(pos + first_bits, needle)
-                })
-                .is_some();
-        }
-
-        // Word-aligned: full SIMD on the relevant suffix.
-        words[sw..]
-            .find_any_candidate(self.bit_len, needle_words, needle_len, &mut |pos| {
-                self.bits_equal_at(pos, needle)
-            })
-            .is_some()
     }
 
     /// Returns the index of the first occurrence of `needle`, or `None`.
@@ -175,6 +142,64 @@ impl<'bs> BitStr<'bs> {
         }
 
         None
+    }
+
+    // -------------------------------------------------------------------
+    // Inner helpers with alignment const-generics
+    // -------------------------------------------------------------------
+
+    /// `contains` with compile-time alignment signals.
+    ///
+    /// When `HS_WORD_ALIGNED` is `true`, the `start % WORD_BITS == 0`
+    /// branch is eliminated and we go straight to the aligned SIMD path.
+    #[inline]
+    pub(crate) fn contains_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
+        &self,
+        needle: BitStr<'_>,
+    ) -> bool {
+        if needle.bit_len == 0 {
+            return true;
+        }
+        if needle.bit_len > self.bit_len {
+            return false;
+        }
+
+        let words = self.source.words();
+        let sw = self.start / WORD_BITS;
+        let so = self.start % WORD_BITS;
+        let needle_words = needle.source.words();
+        let needle_len = needle.bit_len;
+
+        // When HS_WORD_ALIGNED, so == 0 — LLVM eliminates the unaligned path.
+        if !HS_WORD_ALIGNED && so != 0 {
+            let first_bits = (WORD_BITS - so).min(self.bit_len);
+            let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
+            for p in 0..=max {
+                if self.bits_equal_at_inner::<HS_WORD_ALIGNED, ND_WORD_ALIGNED>(p, needle) {
+                    return true;
+                }
+            }
+            let remaining = self.bit_len - first_bits;
+            if remaining == 0 {
+                return false;
+            }
+            let aligned = &words[sw + 1..];
+            return aligned
+                .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
+                    self.bits_equal_at_inner::<HS_WORD_ALIGNED, ND_WORD_ALIGNED>(
+                        pos + first_bits,
+                        needle,
+                    )
+                })
+                .is_some();
+        }
+
+        // Word-aligned: full SIMD on the relevant suffix.
+        words[sw..]
+            .find_any_candidate(self.bit_len, needle_words, needle_len, &mut |pos| {
+                self.bits_equal_at_inner::<HS_WORD_ALIGNED, ND_WORD_ALIGNED>(pos, needle)
+            })
+            .is_some()
     }
 }
 
