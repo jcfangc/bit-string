@@ -58,14 +58,21 @@ impl<'bs> BitStr<'bs> {
         let nd_is_aligned = ND_WORD_ALIGNED || nd_base % WORD_BITS == 0;
         if nd_is_aligned {
             let nd_slice = &nd_words[nd_base / WORD_BITS..];
-            if let Some(ord) = hs_words.cmp_words(nd_slice, full, hs_base) {
+            let hs_slice = &hs_words[hs_base / WORD_BITS..];
+            let ok = if HS_WORD_ALIGNED {
+                hs_slice.cmp_words::<true>(nd_slice, full, 0)
+            } else {
+                hs_slice.cmp_words::<false>(nd_slice, full, hs_base % WORD_BITS)
+            };
+            if let Some(ord) = ok {
                 return ord;
             }
         } else if HS_WORD_ALIGNED || hs_base % WORD_BITS == 0 {
             // Only `self` is aligned — swap so `other` becomes the
             // word-aligned reference, then reverse.
             let hs_slice = &hs_words[hs_base / WORD_BITS..];
-            if let Some(ord) = nd_words.cmp_words(hs_slice, full, nd_base) {
+            let nd_slice = &nd_words[nd_base / WORD_BITS..];
+            if let Some(ord) = nd_slice.cmp_words::<false>(hs_slice, full, nd_base % WORD_BITS) {
                 return ord.reverse();
             }
         } else {

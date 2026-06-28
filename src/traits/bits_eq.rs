@@ -27,5 +27,6 @@ pub(crate) trait BitsEq {
     ) -> bool;
 }
 
-pub(crate) mod funcs_for_eq_words_core;
+pub(crate) mod funcs_for_eq_words_aligned_core;
+pub(crate) mod funcs_for_eq_words_unaligned_core;
 pub(crate) mod impls_for_u64_slice;

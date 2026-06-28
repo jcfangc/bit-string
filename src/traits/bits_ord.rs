@@ -17,7 +17,18 @@ use core::cmp::Ordering;
 ///
 /// Short inputs fall back to scalar in all backends.
 pub(crate) trait BitsOrd {
-    fn cmp_words(&self, other: &[u64], count: usize, offset: usize) -> Option<Ordering>;
+    /// `self` is pre-trimmed haystack `words[base..]`.
+    /// `needle` is always word-aligned (pre-trimmed by the caller).
+    /// `full_words` is the number of complete u64 words to compare.
+    /// `haystack_shift` is the intra-word offset within the first word.
+    /// When `HS_WORD_ALIGNED` is `true`, `haystack_shift == 0` is
+    /// guaranteed and the aligned backend is used unconditionally.
+    fn cmp_words<const HS_WORD_ALIGNED: bool>(
+        &self,
+        needle: &[u64],
+        full_words: usize,
+        haystack_shift: usize,
+    ) -> Option<Ordering>;
 }
 
 pub(crate) mod funcs_for_cmp_aligned_core;
