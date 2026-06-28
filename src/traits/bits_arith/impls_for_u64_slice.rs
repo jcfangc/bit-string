@@ -3,11 +3,12 @@ use alloc::vec::Vec;
 use super::BitsArith;
 use super::funcs_for_binary_core::{OP_AND, OP_OR, OP_XOR, assign, owned};
 use super::funcs_for_count_ones;
-use super::funcs_for_leading_value_words;
 use super::funcs_for_not_core;
 use super::funcs_for_shl_core;
 use super::funcs_for_shr_core;
-use super::funcs_for_trailing_value_words;
+use super::funcs_for_value_words_core::{
+    FILL_ONES, FILL_ZEROS, leading_value_words, trailing_value_words,
+};
 
 impl BitsArith for [u64] {
     #[inline]
@@ -77,21 +78,21 @@ impl BitsArith for [u64] {
 
     #[inline]
     fn leading_zero_words(&self) -> usize {
-        funcs_for_leading_value_words::leading_value_words::<false>(self)
+        leading_value_words::<FILL_ZEROS>(self)
     }
 
     #[inline]
     fn leading_one_words(&self) -> usize {
-        funcs_for_leading_value_words::leading_value_words::<true>(self)
+        leading_value_words::<FILL_ONES>(self)
     }
 
     #[inline]
     fn trailing_zero_words(&self) -> usize {
-        funcs_for_trailing_value_words::trailing_value_words::<false>(self)
+        trailing_value_words::<FILL_ZEROS>(self)
     }
 
     #[inline]
     fn trailing_one_words(&self) -> usize {
-        funcs_for_trailing_value_words::trailing_value_words::<true>(self)
+        trailing_value_words::<FILL_ONES>(self)
     }
 }

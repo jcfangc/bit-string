@@ -43,35 +43,30 @@ const CASES_ONE: &[&[u64]] = &[
 
 type Backend = unsafe fn(&[u64]) -> usize;
 
-fn cases<const FILL_ONES: bool>() -> &'static [&'static [u64]] {
-    if FILL_ONES { CASES_ONE } else { CASES_ZERO }
+fn cases<const FILL: u64>() -> &'static [&'static [u64]] {
+    if FILL == 0 { CASES_ZERO } else { CASES_ONE }
 }
 
-fn fill_val<const FILL_ONES: bool>() -> u64 {
-    if FILL_ONES { !0u64 } else { 0 }
+fn fill_val<const FILL: u64>() -> u64 {
+    FILL
 }
 
-fn assert_backend_matches_scalar<const FILL_ONES: bool>(backend: Backend) {
-    for &src in cases::<FILL_ONES>() {
-        let expected = scalar::scan_rev::<FILL_ONES>(src);
+fn assert_backend_matches_scalar<const FILL: u64>(backend: Backend) {
+    for &src in cases::<FILL>() {
+        let expected = scalar::scan::<FILL>(src);
         let actual = unsafe { backend(src) };
-        assert_eq!(
-            actual,
-            expected,
-            "fill={} src={src:?}",
-            fill_val::<FILL_ONES>()
-        );
+        assert_eq!(actual, expected, "fill={} src={src:?}", fill_val::<FILL>());
     }
 }
 
-fn run_random<const FILL_ONES: bool>(backend: Backend) {
-    let fill = fill_val::<FILL_ONES>();
+fn run_random<const FILL: u64>(backend: Backend) {
+    let fill = fill_val::<FILL>();
     for run in [0, 1, 3, 5, 7, 9, 15, 16, 17, 31] {
         let mut v = vec![fill; run];
         for _ in 0..16 {
-            v.push(if FILL_ONES { 0 } else { u64::MAX });
+            v.push(if FILL == 0 { u64::MAX } else { 0 });
         }
-        let expected = scalar::scan_rev::<FILL_ONES>(&v);
+        let expected = scalar::scan::<FILL>(&v);
         let actual = unsafe { backend(&v) };
         assert_eq!(actual, expected, "fill={fill} run={run}");
     }
@@ -87,8 +82,8 @@ fn run_random<const FILL_ONES: bool>(backend: Backend) {
 ))]
 #[test]
 fn avx2_matches_scalar_zeros() {
-    assert_backend_matches_scalar::<false>(avx2::scan_rev::<false>);
-    run_random::<false>(avx2::scan_rev::<false>);
+    assert_backend_matches_scalar::<0>(avx2::scan::<0>);
+    run_random::<0>(avx2::scan::<0>);
 }
 
 #[cfg(all(
@@ -97,8 +92,8 @@ fn avx2_matches_scalar_zeros() {
 ))]
 #[test]
 fn avx2_matches_scalar_ones() {
-    assert_backend_matches_scalar::<true>(avx2::scan_rev::<true>);
-    run_random::<true>(avx2::scan_rev::<true>);
+    assert_backend_matches_scalar::<{ u64::MAX }>(avx2::scan::<{ u64::MAX }>);
+    run_random::<{ u64::MAX }>(avx2::scan::<{ u64::MAX }>);
 }
 
 // ---------------------------------------------------------------------------
@@ -112,8 +107,8 @@ fn avx2_matches_scalar_ones() {
 ))]
 #[test]
 fn sse41_matches_scalar_zeros() {
-    assert_backend_matches_scalar::<false>(sse41::scan_rev::<false>);
-    run_random::<false>(sse41::scan_rev::<false>);
+    assert_backend_matches_scalar::<0>(sse41::scan::<0>);
+    run_random::<0>(sse41::scan::<0>);
 }
 
 #[cfg(all(
@@ -123,8 +118,8 @@ fn sse41_matches_scalar_zeros() {
 ))]
 #[test]
 fn sse41_matches_scalar_ones() {
-    assert_backend_matches_scalar::<true>(sse41::scan_rev::<true>);
-    run_random::<true>(sse41::scan_rev::<true>);
+    assert_backend_matches_scalar::<{ u64::MAX }>(sse41::scan::<{ u64::MAX }>);
+    run_random::<{ u64::MAX }>(sse41::scan::<{ u64::MAX }>);
 }
 
 // ---------------------------------------------------------------------------
@@ -134,13 +129,13 @@ fn sse41_matches_scalar_ones() {
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
 #[test]
 fn neon_matches_scalar_zeros() {
-    assert_backend_matches_scalar::<false>(neon::scan_rev::<false>);
-    run_random::<false>(neon::scan_rev::<false>);
+    assert_backend_matches_scalar::<0>(neon::scan::<0>);
+    run_random::<0>(neon::scan::<0>);
 }
 
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
 #[test]
 fn neon_matches_scalar_ones() {
-    assert_backend_matches_scalar::<true>(neon::scan_rev::<true>);
-    run_random::<true>(neon::scan_rev::<true>);
+    assert_backend_matches_scalar::<{ u64::MAX }>(neon::scan::<{ u64::MAX }>);
+    run_random::<{ u64::MAX }>(neon::scan::<{ u64::MAX }>);
 }
