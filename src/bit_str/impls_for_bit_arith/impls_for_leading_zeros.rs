@@ -1,15 +1,23 @@
 use crate::{FILL_ONES, FILL_ZEROS, WORD_BITS, low_mask};
 
-use super::funcs_for_chunk_eq::{LANES, chunk_eq};
 use crate::BitStr;
+use crate::traits::bits_arith::funcs_for_value_bits_core::{LANES, chunk_eq};
 
 // ---------------------------------------------------------------------------
 // Shared helper — parameterised by `FILL` (0 → zeros, !0 → ones)
 // ---------------------------------------------------------------------------
 
 /// Counts consecutive bits equal to `FILL` from the start of a view.
+///
+/// `ALIGNED`: when `true`, the caller guarantees `start % WORD_BITS == 0`,
+/// eliminating the first-word TZCNT and letting the SIMD loop start from
+/// word 0.  `BitString::leading_zeros()` always sets this.
 #[inline]
-fn leading_value_count<const FILL: u64>(words: &[u64], start: usize, bit_len: usize) -> usize {
+pub(crate) fn leading_value_count<const FILL: u64, const ALIGNED: bool>(
+    words: &[u64],
+    start: usize,
+    bit_len: usize,
+) -> usize {
     let end = start + bit_len;
     let start_offset = start % WORD_BITS;
     let end_rem = end % WORD_BITS;
@@ -19,14 +27,18 @@ fn leading_value_count<const FILL: u64>(words: &[u64], start: usize, bit_len: us
     let mut wi = start / WORD_BITS;
 
     // First word — only bits from start_offset upward are in view.
-    let first_val = words[wi] >> start_offset;
-    let first_limit = (WORD_BITS - start_offset).min(bit_len);
-    let first_count = count_trailing::<FILL>(first_val).min(first_limit);
-    if first_count < first_limit {
-        return first_count;
+    // When ALIGNED is true, start_offset is 0 and this block is a no-op
+    // (LLVM will eliminate it entirely at compile time).
+    if !ALIGNED && start_offset != 0 {
+        let first_val = words[wi] >> start_offset;
+        let first_limit = (WORD_BITS - start_offset).min(bit_len);
+        let first_count = count_trailing::<FILL>(first_val).min(first_limit);
+        if first_count < first_limit {
+            return first_count;
+        }
+        scanned += first_limit;
+        wi += 1;
     }
-    scanned += first_limit;
-    wi += 1;
 
     // Full middle words — SIMD skip-while + scalar tail.
     let mid_end = if end_rem == 0 { last_wi + 1 } else { last_wi };
@@ -82,7 +94,7 @@ impl<'bs> BitStr<'bs> {
         if self.bit_len == 0 {
             return 0;
         }
-        leading_value_count::<FILL_ZEROS>(self.source.words(), self.start, self.bit_len)
+        leading_value_count::<FILL_ZEROS, false>(self.source.words(), self.start, self.bit_len)
     }
 
     /// Returns the number of consecutive `true` bits from the start of this
@@ -92,7 +104,7 @@ impl<'bs> BitStr<'bs> {
         if self.bit_len == 0 {
             return 0;
         }
-        leading_value_count::<FILL_ONES>(self.source.words(), self.start, self.bit_len)
+        leading_value_count::<FILL_ONES, false>(self.source.words(), self.start, self.bit_len)
     }
 }
 

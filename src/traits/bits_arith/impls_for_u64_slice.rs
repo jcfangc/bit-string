@@ -6,6 +6,7 @@ use super::funcs_for_count_ones;
 use super::funcs_for_not_core;
 use super::funcs_for_shl_core;
 use super::funcs_for_shr_core;
+use super::funcs_for_value_bits_core;
 
 impl BitsArith for [u64] {
     #[inline]
@@ -71,5 +72,23 @@ impl BitsArith for [u64] {
     #[inline]
     fn count_ones(&self, bit_len: usize) -> usize {
         funcs_for_count_ones::count_ones(self, bit_len)
+    }
+
+    #[inline]
+    fn leading_value_bits<const FILL: u64, const WORD_ALIGNED: bool>(
+        &self,
+        start_offset: u32,
+        bit_len: usize,
+    ) -> usize {
+        funcs_for_value_bits_core::leading::<FILL, WORD_ALIGNED>(self, start_offset, bit_len)
+    }
+
+    #[inline]
+    fn trailing_value_bits<const FILL: u64, const WORD_ALIGNED: bool>(
+        &self,
+        start_offset: u32,
+        bit_len: usize,
+    ) -> usize {
+        funcs_for_value_bits_core::trailing::<FILL, WORD_ALIGNED>(self, start_offset, bit_len)
     }
 }

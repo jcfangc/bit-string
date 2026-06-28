@@ -1,20 +1,28 @@
 use super::BitString;
+use crate::bit_str::impls_for_bit_arith::impls_for_leading_zeros::leading_value_count;
+use crate::{FILL_ONES, FILL_ZEROS};
 
 impl BitString {
     /// Returns the number of consecutive `false` bits from the start.
     ///
-    /// Delegates to [`BitStr::leading_zeros`](crate::BitStr::leading_zeros).
+    /// Because `BitString` views always start at bit 0, the first word is
+    /// word-aligned — we pass `ALIGNED = true` so the compiler eliminates
+    /// the first-word TZCNT.
     #[inline]
     pub fn leading_zeros(&self) -> usize {
-        self.as_bit_str().leading_zeros()
+        if self.bit_len == 0 {
+            return 0;
+        }
+        leading_value_count::<FILL_ZEROS, true>(self.words(), 0, self.bit_len)
     }
 
     /// Returns the number of consecutive `true` bits from the start.
-    ///
-    /// Delegates to [`BitStr::leading_ones`](crate::BitStr::leading_ones).
     #[inline]
     pub fn leading_ones(&self) -> usize {
-        self.as_bit_str().leading_ones()
+        if self.bit_len == 0 {
+            return 0;
+        }
+        leading_value_count::<FILL_ONES, true>(self.words(), 0, self.bit_len)
     }
 
     /// Returns the number of consecutive `false` bits from the end.

@@ -1,7 +1,7 @@
 use crate::{FILL_ONES, FILL_ZEROS, WORD_BITS, low_mask};
 
-use super::funcs_for_chunk_eq::{LANES, chunk_eq};
 use crate::BitStr;
+use crate::traits::bits_arith::funcs_for_value_bits_core::{LANES, chunk_eq};
 
 // ---------------------------------------------------------------------------
 // Trailing helper — scans from the end backwards

@@ -26,7 +26,7 @@ pub struct BitStr<'bs> {
 
 pub mod errors;
 mod impls_for_access;
-mod impls_for_bit_arith;
+pub(crate) mod impls_for_bit_arith;
 mod impls_for_eq;
 mod impls_for_fmt;
 mod impls_for_hash;
