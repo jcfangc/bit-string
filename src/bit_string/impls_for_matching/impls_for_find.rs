@@ -20,12 +20,12 @@ impl BitString {
 
     #[inline]
     pub fn find_str(&self, needle: crate::BitStr<'_>) -> Option<usize> {
-        self.as_bit_str().find_str(needle)
+        self.as_bit_str().find_inner::<true>(needle)
     }
 
     #[inline]
     pub fn rfind_str(&self, needle: crate::BitStr<'_>) -> Option<usize> {
-        self.as_bit_str().rfind_str(needle)
+        self.as_bit_str().rfind_inner::<true>(needle)
     }
 
     // -------------------------------------------------------------------
@@ -37,5 +37,15 @@ impl BitString {
     pub fn contains_string(&self, needle: &BitString) -> bool {
         self.as_bit_str()
             .contains_inner::<true, true>(needle.as_bit_str())
+    }
+
+    #[inline]
+    pub fn find_string(&self, needle: &BitString) -> Option<usize> {
+        self.as_bit_str().find_inner::<true>(needle.as_bit_str())
+    }
+
+    #[inline]
+    pub fn rfind_string(&self, needle: &BitString) -> Option<usize> {
+        self.as_bit_str().rfind_inner::<true>(needle.as_bit_str())
     }
 }

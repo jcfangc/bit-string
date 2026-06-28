@@ -20,6 +20,27 @@ impl<'bs> BitStr<'bs> {
     /// Returns the index of the first occurrence of `needle`, or `None`.
     #[inline]
     pub fn find_str(&self, needle: BitStr<'_>) -> Option<usize> {
+        if self.start % WORD_BITS == 0 {
+            self.find_inner::<true>(needle)
+        } else {
+            self.find_inner::<false>(needle)
+        }
+    }
+
+    /// `find_str` when `needle` is a [`BitString`](crate::BitString).
+    #[inline]
+    pub fn find_string(&self, needle: &crate::BitString) -> Option<usize> {
+        let n = needle.as_bit_str();
+        if self.start % WORD_BITS == 0 {
+            self.find_inner::<true>(n)
+        } else {
+            self.find_inner::<false>(n)
+        }
+    }
+
+    /// `find` with compile-time alignment signal for the haystack.
+    #[inline]
+    pub(crate) fn find_inner<const WORD_ALIGNED: bool>(&self, needle: BitStr<'_>) -> Option<usize> {
         if needle.bit_len == 0 {
             return Some(0);
         }
@@ -34,7 +55,7 @@ impl<'bs> BitStr<'bs> {
         let needle_len = needle.bit_len;
 
         // Word-aligned fast path.
-        if so == 0 {
+        if WORD_ALIGNED || so == 0 {
             return words[sw..].find_first_word(
                 self.bit_len,
                 needle_words,
@@ -80,6 +101,30 @@ impl<'bs> BitStr<'bs> {
     /// Returns the index of the last occurrence of `needle`, or `None`.
     #[inline]
     pub fn rfind_str(&self, needle: BitStr<'_>) -> Option<usize> {
+        if self.start % WORD_BITS == 0 {
+            self.rfind_inner::<true>(needle)
+        } else {
+            self.rfind_inner::<false>(needle)
+        }
+    }
+
+    /// `rfind_str` when `needle` is a [`BitString`](crate::BitString).
+    #[inline]
+    pub fn rfind_string(&self, needle: &crate::BitString) -> Option<usize> {
+        let n = needle.as_bit_str();
+        if self.start % WORD_BITS == 0 {
+            self.rfind_inner::<true>(n)
+        } else {
+            self.rfind_inner::<false>(n)
+        }
+    }
+
+    /// `rfind` with compile-time alignment signal for the haystack.
+    #[inline]
+    pub(crate) fn rfind_inner<const WORD_ALIGNED: bool>(
+        &self,
+        needle: BitStr<'_>,
+    ) -> Option<usize> {
         if needle.bit_len == 0 {
             return Some(self.bit_len);
         }
@@ -94,7 +139,7 @@ impl<'bs> BitStr<'bs> {
         let needle_len = needle.bit_len;
 
         // Word-aligned fast path.
-        if so == 0 {
+        if WORD_ALIGNED || so == 0 {
             return words[sw..].find_last_word(
                 self.bit_len,
                 needle_words,
@@ -103,18 +148,13 @@ impl<'bs> BitStr<'bs> {
             );
         }
 
-        // Unaligned: SIMD on the aligned remainder first (reverse),
-        // then fall back to the first partial word.
+        // Unaligned: SIMD on the aligned remainder first (reverse).
         let first_bits = (WORD_BITS - so).min(self.bit_len);
         let remaining = self.bit_len - first_bits;
 
         if remaining > 0 {
             let aligned = &words[sw + 1..];
 
-            // Quick rejection via SIMD candidate scan — only when the
-            // aligned portion is large enough to amortize setup cost.
-            // When it's too small we skip the gate and scan directly
-            // (find_last_word has its own scalar fallback).
             let maybe_candidate = aligned.len() < SMALL_WORDS
                 || aligned
                     .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
