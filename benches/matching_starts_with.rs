@@ -6,106 +6,103 @@ fn main() {
 }
 
 struct Case {
-    haystack_bits: BitString,
-    prefix_bits: BitString,
-    haystack_string: String,
-    prefix_string: String,
+    h: BitString,
+    p: BitString,
+    hs: String,
+    ps: String,
 }
 
-fn make_bits(len: usize) -> BitString {
-    let mut bits = BitString::zeros(len);
+fn mk(len: usize) -> BitString {
+    let mut b = BitString::zeros(len);
     for i in 0..len {
         if (i as u64 * 17 + 3) % 7 == 0 {
-            bits.set(i, true);
+            b.set(i, true);
         }
     }
-    bits
+    b
 }
-
-fn make_case(len: usize, pfx: usize) -> Case {
-    let h = make_bits(len);
-    let p = make_bits(pfx);
+fn hit(len: usize, pfx: usize) -> Case {
+    let h = mk(len);
+    let p = mk(pfx);
     Case {
-        haystack_string: h.to_string(),
-        prefix_string: p.to_string(),
-        haystack_bits: h,
-        prefix_bits: p,
+        hs: h.to_string(),
+        ps: p.to_string(),
+        h,
+        p,
     }
 }
-fn no_case(len: usize, pfx: usize) -> Case {
-    let mut h = make_bits(len);
-    let p = make_bits(pfx);
+fn no(len: usize, pfx: usize) -> Case {
+    let mut h = mk(len);
+    let p = mk(pfx);
     h.set(0, !h.get(0).unwrap());
     Case {
-        haystack_string: h.to_string(),
-        prefix_string: p.to_string(),
-        haystack_bits: h,
-        prefix_bits: p,
+        hs: h.to_string(),
+        ps: p.to_string(),
+        h,
+        p,
     }
 }
 
-// -- existing ----------------------------------------------------------------
-
-#[divan::bench(name = "starts_with/len_65/yes/ours_str")]
-fn s65y_str(b: Bencher) {
-    b_str(b, make_case(65, 4));
+#[divan::bench(name = "starts_with/len_65/hit/ours_str")]
+fn s65h_str(b: Bencher) {
+    let c = hit(65, 4);
+    b.bench(|| black_box(&c.h).starts_with_str(black_box(c.p.as_bit_str())));
 }
-#[divan::bench(name = "starts_with/len_65/yes/ours_string")]
-fn s65y_string(b: Bencher) {
-    b_string(b, make_case(65, 4));
+#[divan::bench(name = "starts_with/len_65/hit/ours_string")]
+fn s65h_string(b: Bencher) {
+    let c = hit(65, 4);
+    b.bench(|| black_box(&c.h).starts_with_string(black_box(&c.p)));
 }
-#[divan::bench(name = "starts_with/len_65/yes/string")]
-fn s65y_native(b: Bencher) {
-    b_native(b, make_case(65, 4));
-}
-
-#[divan::bench(name = "starts_with/len_65/no/ours_str")]
-fn s65n_str(b: Bencher) {
-    b_str(b, no_case(65, 4));
-}
-#[divan::bench(name = "starts_with/len_65/no/ours_string")]
-fn s65n_string(b: Bencher) {
-    b_string(b, no_case(65, 4));
-}
-#[divan::bench(name = "starts_with/len_65/no/string")]
-fn s65n_native(b: Bencher) {
-    b_native(b, no_case(65, 4));
+#[divan::bench(name = "starts_with/len_65/hit/string")]
+fn s65h_native(b: Bencher) {
+    let c = hit(65, 4);
+    b.bench(|| black_box(&c.hs).starts_with(black_box(&c.ps)));
 }
 
-#[divan::bench(name = "starts_with/len_65536/yes/ours_str")]
-fn s6y_str(b: Bencher) {
-    b_str(b, make_case(65_536, 128));
+#[divan::bench(name = "starts_with/len_65/miss/ours_str")]
+fn s65m_str(b: Bencher) {
+    let c = no(65, 4);
+    b.bench(|| black_box(&c.h).starts_with_str(black_box(c.p.as_bit_str())));
 }
-#[divan::bench(name = "starts_with/len_65536/yes/ours_string")]
-fn s6y_string(b: Bencher) {
-    b_string(b, make_case(65_536, 128));
+#[divan::bench(name = "starts_with/len_65/miss/ours_string")]
+fn s65m_string(b: Bencher) {
+    let c = no(65, 4);
+    b.bench(|| black_box(&c.h).starts_with_string(black_box(&c.p)));
 }
-#[divan::bench(name = "starts_with/len_65536/yes/string")]
-fn s6y_native(b: Bencher) {
-    b_native(b, make_case(65_536, 128));
-}
-
-#[divan::bench(name = "starts_with/len_65536/no/ours_str")]
-fn s6n_str(b: Bencher) {
-    b_str(b, no_case(65_536, 128));
-}
-#[divan::bench(name = "starts_with/len_65536/no/ours_string")]
-fn s6n_string(b: Bencher) {
-    b_string(b, no_case(65_536, 128));
-}
-#[divan::bench(name = "starts_with/len_65536/no/string")]
-fn s6n_native(b: Bencher) {
-    b_native(b, no_case(65_536, 128));
+#[divan::bench(name = "starts_with/len_65/miss/string")]
+fn s65m_native(b: Bencher) {
+    let c = no(65, 4);
+    b.bench(|| black_box(&c.hs).starts_with(black_box(&c.ps)));
 }
 
-// -- helpers ----------------------------------------------------------------
+#[divan::bench(name = "starts_with/len_65536/hit/ours_str")]
+fn s6h_str(b: Bencher) {
+    let c = hit(65536, 128);
+    b.bench(|| black_box(&c.h).starts_with_str(black_box(c.p.as_bit_str())));
+}
+#[divan::bench(name = "starts_with/len_65536/hit/ours_string")]
+fn s6h_string(b: Bencher) {
+    let c = hit(65536, 128);
+    b.bench(|| black_box(&c.h).starts_with_string(black_box(&c.p)));
+}
+#[divan::bench(name = "starts_with/len_65536/hit/string")]
+fn s6h_native(b: Bencher) {
+    let c = hit(65536, 128);
+    b.bench(|| black_box(&c.hs).starts_with(black_box(&c.ps)));
+}
 
-fn b_str(b: Bencher, c: Case) {
-    b.bench(|| black_box(&c.haystack_bits).starts_with_str(black_box(c.prefix_bits.as_bit_str())));
+#[divan::bench(name = "starts_with/len_65536/miss/ours_str")]
+fn s6m_str(b: Bencher) {
+    let c = no(65536, 128);
+    b.bench(|| black_box(&c.h).starts_with_str(black_box(c.p.as_bit_str())));
 }
-fn b_string(b: Bencher, c: Case) {
-    b.bench(|| black_box(&c.haystack_bits).starts_with_string(black_box(&c.prefix_bits)));
+#[divan::bench(name = "starts_with/len_65536/miss/ours_string")]
+fn s6m_string(b: Bencher) {
+    let c = no(65536, 128);
+    b.bench(|| black_box(&c.h).starts_with_string(black_box(&c.p)));
 }
-fn b_native(b: Bencher, c: Case) {
-    b.bench(|| black_box(&c.haystack_string).starts_with(black_box(&c.prefix_string)));
+#[divan::bench(name = "starts_with/len_65536/miss/string")]
+fn s6m_native(b: Bencher) {
+    let c = no(65536, 128);
+    b.bench(|| black_box(&c.hs).starts_with(black_box(&c.ps)));
 }

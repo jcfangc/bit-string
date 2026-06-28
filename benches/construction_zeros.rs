@@ -6,7 +6,7 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench(name = "zeros/len_65/bit_string")]
+#[divan::bench(name = "zeros/len_65/ours")]
 fn zeros_len_65_bit_string(bencher: Bencher) {
     bencher.bench(|| black_box(BitString::zeros(65)));
 }
@@ -16,7 +16,7 @@ fn zeros_len_65_bitvec_simd(bencher: Bencher) {
     bencher.bench(|| black_box(BitVec::zeros(65)));
 }
 
-#[divan::bench(name = "zeros/len_4096/bit_string")]
+#[divan::bench(name = "zeros/len_4096/ours")]
 fn zeros_len_4096_bit_string(bencher: Bencher) {
     bencher.bench(|| black_box(BitString::zeros(4096)));
 }
@@ -26,7 +26,7 @@ fn zeros_len_4096_bitvec_simd(bencher: Bencher) {
     bencher.bench(|| black_box(BitVec::zeros(4096)));
 }
 
-#[divan::bench(name = "zeros/len_65536/bit_string")]
+#[divan::bench(name = "zeros/len_65536/ours")]
 fn zeros_len_65536_bit_string(bencher: Bencher) {
     bencher.bench(|| black_box(BitString::zeros(65_536)));
 }

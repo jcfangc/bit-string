@@ -5,7 +5,7 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench(name = "push_bit_string/len_65/bit_string")]
+#[divan::bench(name = "push_bit_string/len_65/ours")]
 fn push_bits_len_65_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65);
 }
@@ -15,7 +15,7 @@ fn push_bits_len_65_string(bencher: Bencher) {
     bench_string(bencher, 65);
 }
 
-#[divan::bench(name = "push_bit_string/len_65536/bit_string")]
+#[divan::bench(name = "push_bit_string/len_65536/ours")]
 fn push_bits_len_65536_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65_536);
 }

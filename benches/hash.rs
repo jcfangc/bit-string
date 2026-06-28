@@ -19,12 +19,12 @@ enum Pattern {
 // BitString
 // ---------------------------------------------------------------------------
 
-#[divan::bench(name = "hash/len_64/dense/bit_string")]
+#[divan::bench(name = "hash/len_64/dense/ours")]
 fn hash_len_64_dense_bit_string(b: Bencher) {
     bench_bit_string(b, 64, Pattern::Dense);
 }
 
-#[divan::bench(name = "hash/len_64/dense/bit_str")]
+#[divan::bench(name = "hash/len_64/dense/ours_str")]
 fn hash_len_64_dense_bit_str(b: Bencher) {
     bench_bit_str(b, 64, Pattern::Dense);
 }
@@ -39,12 +39,12 @@ fn hash_len_64_dense_str(b: Bencher) {
     bench_str(b, 64, Pattern::Dense);
 }
 
-#[divan::bench(name = "hash/len_64/sparse/bit_string")]
+#[divan::bench(name = "hash/len_64/sparse/ours")]
 fn hash_len_64_sparse_bit_string(b: Bencher) {
     bench_bit_string(b, 64, Pattern::Sparse);
 }
 
-#[divan::bench(name = "hash/len_64/sparse/bit_str")]
+#[divan::bench(name = "hash/len_64/sparse/ours_str")]
 fn hash_len_64_sparse_bit_str(b: Bencher) {
     bench_bit_str(b, 64, Pattern::Sparse);
 }
@@ -59,12 +59,12 @@ fn hash_len_64_sparse_str(b: Bencher) {
     bench_str(b, 64, Pattern::Sparse);
 }
 
-#[divan::bench(name = "hash/len_64/alternating/bit_string")]
+#[divan::bench(name = "hash/len_64/alternating/ours")]
 fn hash_len_64_alternating_bit_string(b: Bencher) {
     bench_bit_string(b, 64, Pattern::Alternating);
 }
 
-#[divan::bench(name = "hash/len_64/alternating/bit_str")]
+#[divan::bench(name = "hash/len_64/alternating/ours_str")]
 fn hash_len_64_alternating_bit_str(b: Bencher) {
     bench_bit_str(b, 64, Pattern::Alternating);
 }
@@ -83,12 +83,12 @@ fn hash_len_64_alternating_str(b: Bencher) {
 // len = 4096
 // ---------------------------------------------------------------------------
 
-#[divan::bench(name = "hash/len_4096/dense/bit_string")]
+#[divan::bench(name = "hash/len_4096/dense/ours")]
 fn hash_len_4096_dense_bit_string(b: Bencher) {
     bench_bit_string(b, 4096, Pattern::Dense);
 }
 
-#[divan::bench(name = "hash/len_4096/dense/bit_str")]
+#[divan::bench(name = "hash/len_4096/dense/ours_str")]
 fn hash_len_4096_dense_bit_str(b: Bencher) {
     bench_bit_str(b, 4096, Pattern::Dense);
 }
@@ -103,12 +103,12 @@ fn hash_len_4096_dense_str(b: Bencher) {
     bench_str(b, 4096, Pattern::Dense);
 }
 
-#[divan::bench(name = "hash/len_4096/sparse/bit_string")]
+#[divan::bench(name = "hash/len_4096/sparse/ours")]
 fn hash_len_4096_sparse_bit_string(b: Bencher) {
     bench_bit_string(b, 4096, Pattern::Sparse);
 }
 
-#[divan::bench(name = "hash/len_4096/sparse/bit_str")]
+#[divan::bench(name = "hash/len_4096/sparse/ours_str")]
 fn hash_len_4096_sparse_bit_str(b: Bencher) {
     bench_bit_str(b, 4096, Pattern::Sparse);
 }
@@ -123,12 +123,12 @@ fn hash_len_4096_sparse_str(b: Bencher) {
     bench_str(b, 4096, Pattern::Sparse);
 }
 
-#[divan::bench(name = "hash/len_4096/alternating/bit_string")]
+#[divan::bench(name = "hash/len_4096/alternating/ours")]
 fn hash_len_4096_alternating_bit_string(b: Bencher) {
     bench_bit_string(b, 4096, Pattern::Alternating);
 }
 
-#[divan::bench(name = "hash/len_4096/alternating/bit_str")]
+#[divan::bench(name = "hash/len_4096/alternating/ours_str")]
 fn hash_len_4096_alternating_bit_str(b: Bencher) {
     bench_bit_str(b, 4096, Pattern::Alternating);
 }
@@ -147,12 +147,12 @@ fn hash_len_4096_alternating_str(b: Bencher) {
 // len = 65536
 // ---------------------------------------------------------------------------
 
-#[divan::bench(name = "hash/len_65536/dense/bit_string")]
+#[divan::bench(name = "hash/len_65536/dense/ours")]
 fn hash_len_65536_dense_bit_string(b: Bencher) {
     bench_bit_string(b, 65536, Pattern::Dense);
 }
 
-#[divan::bench(name = "hash/len_65536/dense/bit_str")]
+#[divan::bench(name = "hash/len_65536/dense/ours_str")]
 fn hash_len_65536_dense_bit_str(b: Bencher) {
     bench_bit_str(b, 65536, Pattern::Dense);
 }
@@ -167,12 +167,12 @@ fn hash_len_65536_dense_str(b: Bencher) {
     bench_str(b, 65536, Pattern::Dense);
 }
 
-#[divan::bench(name = "hash/len_65536/sparse/bit_string")]
+#[divan::bench(name = "hash/len_65536/sparse/ours")]
 fn hash_len_65536_sparse_bit_string(b: Bencher) {
     bench_bit_string(b, 65536, Pattern::Sparse);
 }
 
-#[divan::bench(name = "hash/len_65536/sparse/bit_str")]
+#[divan::bench(name = "hash/len_65536/sparse/ours_str")]
 fn hash_len_65536_sparse_bit_str(b: Bencher) {
     bench_bit_str(b, 65536, Pattern::Sparse);
 }
@@ -187,12 +187,12 @@ fn hash_len_65536_sparse_str(b: Bencher) {
     bench_str(b, 65536, Pattern::Sparse);
 }
 
-#[divan::bench(name = "hash/len_65536/alternating/bit_string")]
+#[divan::bench(name = "hash/len_65536/alternating/ours")]
 fn hash_len_65536_alternating_bit_string(b: Bencher) {
     bench_bit_string(b, 65536, Pattern::Alternating);
 }
 
-#[divan::bench(name = "hash/len_65536/alternating/bit_str")]
+#[divan::bench(name = "hash/len_65536/alternating/ours_str")]
 fn hash_len_65536_alternating_bit_str(b: Bencher) {
     bench_bit_str(b, 65536, Pattern::Alternating);
 }

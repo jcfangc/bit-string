@@ -6,7 +6,7 @@ fn main() {
 }
 
 // Flattened push benchmarks for CodSpeed compatibility
-#[divan::bench(name = "push/len_65/bit_string")]
+#[divan::bench(name = "push/len_65/ours")]
 fn push_len_65_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65);
 }
@@ -16,7 +16,7 @@ fn push_len_65_string(bencher: Bencher) {
     bench_string(bencher, 65);
 }
 
-#[divan::bench(name = "push/len_65536/bit_string")]
+#[divan::bench(name = "push/len_65536/ours")]
 fn push_len_65536_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65_536);
 }

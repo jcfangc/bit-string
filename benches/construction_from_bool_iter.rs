@@ -6,7 +6,7 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench(name = "from_bool_iter/len_65/bit_string")]
+#[divan::bench(name = "from_bool_iter/len_65/ours")]
 fn from_bool_iter_len_65_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65);
 }
@@ -16,7 +16,7 @@ fn from_bool_iter_len_65_bitvec_simd(bencher: Bencher) {
     bench_bitvec_simd(bencher, 65);
 }
 
-#[divan::bench(name = "from_bool_iter/len_4096/bit_string")]
+#[divan::bench(name = "from_bool_iter/len_4096/ours")]
 fn from_bool_iter_len_4096_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 4096);
 }
@@ -26,7 +26,7 @@ fn from_bool_iter_len_4096_bitvec_simd(bencher: Bencher) {
     bench_bitvec_simd(bencher, 4096);
 }
 
-#[divan::bench(name = "from_bool_iter/len_65536/bit_string")]
+#[divan::bench(name = "from_bool_iter/len_65536/ours")]
 fn from_bool_iter_len_65536_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65536);
 }
