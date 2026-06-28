@@ -31,7 +31,7 @@ proptest! {
             haystack.bit_len(),
             needle.words(),
             needle.bit_len(),
-            &mut |pos| haystack.as_bit_str().bits_equal_at(pos, needle.as_bit_str()),
+            &mut |pos| haystack.as_bit_str().bits_equal_at_inner::<false, false>(pos, needle.as_bit_str()),
         );
 
         // Brute-force reference: find any match.
@@ -75,7 +75,7 @@ proptest! {
             needle.words(),
             needle_len,
             &mut |pos| {
-                let ok = haystack.as_bit_str().bits_equal_at(pos, needle.as_bit_str());
+                let ok = haystack.as_bit_str().bits_equal_at_inner::<false, false>(pos, needle.as_bit_str());
                 if ok { any_found = true; }
                 ok
             },

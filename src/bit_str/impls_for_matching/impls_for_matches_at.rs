@@ -81,12 +81,6 @@ impl<'bs> BitStr<'bs> {
         true
     }
 
-    /// Public entry point — no compile-time alignment guarantees.
-    #[inline]
-    pub(crate) fn bits_equal_at(&self, offset: usize, needle: BitStr<'_>) -> bool {
-        self.bits_equal_at_inner::<false, false>(offset, needle)
-    }
-
     // -------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------
