@@ -25,7 +25,7 @@ enum Pattern {
 mod leading_zeros {
     use super::*;
 
-    #[divan::bench(name = "leading_zeros/len_65/all_zeros/ours")]
+    #[divan::bench(name = "leading_zeros/len_65/all_zeros/ours_string")]
     fn len_65_all_zeros_bit_string(b: Bencher) {
         bench_leading_zeros(b, 65, Pattern::AllZeros);
     }
@@ -35,7 +35,7 @@ mod leading_zeros {
         bench_leading_zeros_bitvec(b, 65, Pattern::AllZeros);
     }
 
-    #[divan::bench(name = "leading_zeros/len_65/alternating/ours")]
+    #[divan::bench(name = "leading_zeros/len_65/alternating/ours_string")]
     fn len_65_alternating_bit_string(b: Bencher) {
         bench_leading_zeros(b, 65, Pattern::Alternating);
     }
@@ -45,7 +45,7 @@ mod leading_zeros {
         bench_leading_zeros_bitvec(b, 65, Pattern::Alternating);
     }
 
-    #[divan::bench(name = "leading_zeros/len_65/dense/ours")]
+    #[divan::bench(name = "leading_zeros/len_65/dense/ours_string")]
     fn len_65_dense_bit_string(b: Bencher) {
         bench_leading_zeros(b, 65, Pattern::Dense);
     }
@@ -55,7 +55,7 @@ mod leading_zeros {
         bench_leading_zeros_bitvec(b, 65, Pattern::Dense);
     }
 
-    #[divan::bench(name = "leading_zeros/len_4096/all_zeros/ours")]
+    #[divan::bench(name = "leading_zeros/len_4096/all_zeros/ours_string")]
     fn len_4096_all_zeros_bit_string(b: Bencher) {
         bench_leading_zeros(b, 4096, Pattern::AllZeros);
     }
@@ -65,7 +65,7 @@ mod leading_zeros {
         bench_leading_zeros_bitvec(b, 4096, Pattern::AllZeros);
     }
 
-    #[divan::bench(name = "leading_zeros/len_4096/dense/ours")]
+    #[divan::bench(name = "leading_zeros/len_4096/dense/ours_string")]
     fn len_4096_dense_bit_string(b: Bencher) {
         bench_leading_zeros(b, 4096, Pattern::Dense);
     }
@@ -75,7 +75,7 @@ mod leading_zeros {
         bench_leading_zeros_bitvec(b, 4096, Pattern::Dense);
     }
 
-    #[divan::bench(name = "leading_zeros/len_65536/all_zeros/ours")]
+    #[divan::bench(name = "leading_zeros/len_65536/all_zeros/ours_string")]
     fn len_65536_all_zeros_bit_string(b: Bencher) {
         bench_leading_zeros(b, 65536, Pattern::AllZeros);
     }

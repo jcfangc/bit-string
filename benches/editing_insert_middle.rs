@@ -5,7 +5,7 @@ fn main() {
     divan::main();
 }
 
-#[divan::bench(name = "insert_middle/len_65/ours")]
+#[divan::bench(name = "insert_middle/len_65/ours_string")]
 fn insert_middle_len_65_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65);
 }
@@ -15,7 +15,7 @@ fn insert_middle_len_65_string(bencher: Bencher) {
     bench_string(bencher, 65);
 }
 
-#[divan::bench(name = "insert_middle/len_65536/ours")]
+#[divan::bench(name = "insert_middle/len_65536/ours_string")]
 fn insert_middle_len_65536_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65_536);
 }

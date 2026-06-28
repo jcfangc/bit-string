@@ -6,7 +6,7 @@ fn main() {
 }
 
 // Truncate 65→64 crosses a word boundary, testing the lazy-shrink fast path.
-#[divan::bench(name = "truncate/65_to_64/ours")]
+#[divan::bench(name = "truncate/65_to_64/ours_string")]
 fn truncate_65_to_64_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65, 64);
 }
@@ -17,7 +17,7 @@ fn truncate_65_to_64_string(bencher: Bencher) {
 }
 
 // Truncate 65536→128 removes many words, tests batch-shrink behavior.
-#[divan::bench(name = "truncate/65536_to_128/ours")]
+#[divan::bench(name = "truncate/65536_to_128/ours_string")]
 fn truncate_65536_to_128_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65_536, 128);
 }
@@ -28,7 +28,7 @@ fn truncate_65536_to_128_string(bencher: Bencher) {
 }
 
 // Truncate 128→65 partial-word rewrite in the last word.
-#[divan::bench(name = "truncate/128_to_65/ours")]
+#[divan::bench(name = "truncate/128_to_65/ours_string")]
 fn truncate_128_to_65_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 128, 65);
 }

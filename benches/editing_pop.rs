@@ -6,7 +6,7 @@ fn main() {
 }
 
 // Pop from 65 bits → 64 triggers the lazy-shrink truncate_words path.
-#[divan::bench(name = "pop/len_65/ours")]
+#[divan::bench(name = "pop/len_65/ours_string")]
 fn pop_len_65_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65);
 }
@@ -16,7 +16,7 @@ fn pop_len_65_string(bencher: Bencher) {
     bench_string(bencher, 65);
 }
 
-#[divan::bench(name = "pop/len_65536/ours")]
+#[divan::bench(name = "pop/len_65536/ours_string")]
 fn pop_len_65536_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65_536);
 }

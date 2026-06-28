@@ -7,7 +7,7 @@ fn main() {
 }
 
 // Flattened slice benchmarks for CodSpeed compatibility
-#[divan::bench(name = "slice/len_65/ours")]
+#[divan::bench(name = "slice/len_65/ours_string")]
 fn slice_len_65_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65);
 }
@@ -17,7 +17,7 @@ fn slice_len_65_string(bencher: Bencher) {
     bench_string(bencher, 65);
 }
 
-#[divan::bench(name = "slice/len_65536/ours")]
+#[divan::bench(name = "slice/len_65536/ours_string")]
 fn slice_len_65536_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, 65_536);
 }
