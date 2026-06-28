@@ -114,23 +114,25 @@ fn attack_strip_prefix_suffix() {
 
     // Strip empty
     assert_eq!(
-        bits.strip_prefix(BitString::new().as_bit_str()).unwrap(),
+        bits.strip_prefix_str(BitString::new().as_bit_str())
+            .unwrap(),
         bits
     );
     assert_eq!(
-        bits.strip_suffix(BitString::new().as_bit_str()).unwrap(),
+        bits.strip_suffix_str(BitString::new().as_bit_str())
+            .unwrap(),
         bits
     );
 
     // Mismatch
-    assert!(bits.strip_prefix(bs("0").as_bit_str()).is_none());
-    assert!(bits.strip_suffix(bs("0").as_bit_str()).is_none());
+    assert!(bits.strip_prefix_str(bs("0").as_bit_str()).is_none());
+    assert!(bits.strip_suffix_str(bs("0").as_bit_str()).is_none());
 
     // Valid strip
-    let stripped = bits.strip_prefix(bs("10").as_bit_str()).unwrap();
+    let stripped = bits.strip_prefix_str(bs("10").as_bit_str()).unwrap();
     assert_eq!(stripped.to_string(), "101");
 
-    let stripped = bits.strip_suffix(bs("01").as_bit_str()).unwrap();
+    let stripped = bits.strip_suffix_str(bs("01").as_bit_str()).unwrap();
     assert_eq!(stripped.to_string(), "101");
 }
 
@@ -230,7 +232,7 @@ fn attack_strip_prefix_unaligned() {
     let view = a
         .as_bit_str()
         .slice(UsizeCO::checked_from_start_len(3, 20).unwrap());
-    let result = view.strip_prefix(bs("0000000").as_bit_str());
+    let result = view.strip_prefix_str(bs("0000000").as_bit_str());
     assert!(result.is_some());
     assert_eq!(result.unwrap().to_bit_string().to_string(), "1100110000000");
 }
@@ -245,7 +247,7 @@ fn attack_strip_suffix_unaligned() {
     let view = a
         .as_bit_str()
         .slice(UsizeCO::checked_from_start_len(7, 15).unwrap());
-    let result = view.strip_suffix(bs("000000").as_bit_str());
+    let result = view.strip_suffix_str(bs("000000").as_bit_str());
     assert!(result.is_some());
     assert_eq!(result.unwrap().to_bit_string().to_string(), "000101101");
 }
