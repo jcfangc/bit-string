@@ -48,22 +48,6 @@ pub(crate) trait BitsArith {
     /// Bits beyond `bit_len` are assumed to already be zero (masked by
     /// prior calls to [`BitsEdit::mask_unused_bits`]).
     fn count_ones(&self, bit_len: usize) -> usize;
-
-    /// Returns the number of consecutive words equal to `FILL` at the start
-    /// of `self`.
-    ///
-    /// Use [`crate::FILL_ZEROS`] for leading zeros, [`crate::FILL_ONES`] for
-    /// leading ones.  All words up to (but not including) the returned index
-    /// match.  If the return value equals `self.len()`, every word matches.
-    fn leading_value_words<const FILL: u64>(&self) -> usize;
-
-    /// Returns the number of consecutive words equal to `FILL` at the **end**
-    /// of `self`.
-    ///
-    /// Use [`crate::FILL_ZEROS`] for trailing zeros, [`crate::FILL_ONES`] for
-    /// trailing ones.  All words from `self.len() - count` onwards match.  If
-    /// the return value equals `self.len()`, every word matches.
-    fn trailing_value_words<const FILL: u64>(&self) -> usize;
 }
 
 pub(crate) mod funcs_for_binary_core;
@@ -71,5 +55,4 @@ pub(crate) mod funcs_for_count_ones;
 pub(crate) mod funcs_for_not_core;
 pub(crate) mod funcs_for_shl_core;
 pub(crate) mod funcs_for_shr_core;
-pub(crate) mod funcs_for_value_words_core;
 pub(crate) mod impls_for_u64_slice;

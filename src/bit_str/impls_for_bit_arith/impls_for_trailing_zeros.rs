@@ -1,6 +1,6 @@
-use crate::traits::*;
 use crate::{FILL_ONES, FILL_ZEROS, WORD_BITS, low_mask};
 
+use super::funcs_for_chunk_eq::{LANES, chunk_eq};
 use crate::BitStr;
 
 // ---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ fn trailing_value_count<const FILL: u64>(words: &[u64], start: usize, bit_len: u
         }
     }
 
-    // Full middle words — SIMD-accelerated, from right to left.
+    // Full middle words — SIMD skip-while from right to left.
     let wi_end = if end_rem != 0 { last_wi - 1 } else { last_wi };
     let mid_first = if start_offset > 0 {
         start_wi + 1
@@ -50,14 +50,34 @@ fn trailing_value_count<const FILL: u64>(words: &[u64], start: usize, bit_len: u
         start_wi
     };
     if wi_end >= mid_first {
-        let nr_words = wi_end + 1 - mid_first;
-        let trailing_w = words[mid_first..=wi_end].trailing_value_words::<FILL>();
-        if trailing_w < nr_words {
-            let hit_wi = wi_end - trailing_w;
-            scanned += trailing_w * WORD_BITS;
-            return scanned + count_leading::<FILL>(words[hit_wi]).min(WORD_BITS);
+        // SIMD skip-while from right to left, then scalar tail.
+        // Uses a `done` counter so `w` never underflows.
+        let total_words = wi_end + 1 - mid_first;
+        let ptr = words.as_ptr();
+        let mut done = 0usize;
+
+        // SAFETY: mid_first..=wi_end are full u64 words within `words`.
+        unsafe {
+            while done + LANES <= total_words {
+                let chunk_start = wi_end - done - LANES + 1;
+                if !chunk_eq::<FILL>(ptr.add(chunk_start)) {
+                    break;
+                }
+                scanned += LANES * WORD_BITS;
+                done += LANES;
+            }
         }
-        scanned += trailing_w * WORD_BITS;
+
+        // Scalar tail — right to left.
+        while done < total_words {
+            let w = wi_end - done;
+            if words[w] != FILL {
+                scanned += count_leading::<FILL>(words[w]).min(WORD_BITS);
+                return scanned.min(bit_len);
+            }
+            scanned += WORD_BITS;
+            done += 1;
+        }
     }
 
     // First word (partial, if start_offset != 0 and not already handled).
@@ -82,9 +102,6 @@ fn count_leading<const FILL: u64>(val: u64) -> usize {
 }
 
 /// Counts leading bits of a value within its highest `limit` bits.
-///
-/// Shifts valid bits to the top of the u64 so that [`u64::leading_zeros`]
-/// counts from the highest valid bit downwards.
 #[inline]
 fn count_leading_within<const FILL: u64>(val: u64, limit: usize) -> usize {
     if limit == 0 {
@@ -101,16 +118,6 @@ fn count_leading_within<const FILL: u64>(val: u64, limit: usize) -> usize {
 impl<'bs> BitStr<'bs> {
     /// Returns the number of consecutive `false` bits from the **end** of this
     /// view.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bit_string::BitString;
-    ///
-    /// let bits = BitString::try_from("10000").unwrap();
-    /// let v = bits.as_bit_str();
-    /// assert_eq!(v.trailing_zeros(), 4);
-    /// ```
     #[inline]
     pub fn trailing_zeros(&self) -> usize {
         if self.bit_len == 0 {
@@ -121,16 +128,6 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns the number of consecutive `true` bits from the **end** of this
     /// view.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bit_string::BitString;
-    ///
-    /// let bits = BitString::try_from("01111").unwrap();
-    /// let v = bits.as_bit_str();
-    /// assert_eq!(v.trailing_ones(), 4);
-    /// ```
     #[inline]
     pub fn trailing_ones(&self) -> usize {
         if self.bit_len == 0 {

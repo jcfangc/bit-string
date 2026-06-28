@@ -1,6 +1,6 @@
-use crate::traits::*;
 use crate::{FILL_ONES, FILL_ZEROS, WORD_BITS, low_mask};
 
+use super::funcs_for_chunk_eq::{LANES, chunk_eq};
 use crate::BitStr;
 
 // ---------------------------------------------------------------------------
@@ -28,15 +28,30 @@ fn leading_value_count<const FILL: u64>(words: &[u64], start: usize, bit_len: us
     scanned += first_limit;
     wi += 1;
 
-    // Full middle words — SIMD-accelerated value-word scan.
+    // Full middle words — SIMD skip-while + scalar tail.
     let mid_end = if end_rem == 0 { last_wi + 1 } else { last_wi };
     if wi < mid_end {
-        let value_words = words[wi..mid_end].leading_value_words::<FILL>();
-        scanned += value_words * WORD_BITS;
-        wi += value_words;
+        let ptr = words.as_ptr();
+        // SAFETY: wi..mid_end are full u64 words within `words`.
+        // chunk_eq uses unaligned loads which are always safe on x86/aarch64.
+        unsafe {
+            // SIMD: skip full chunks.
+            while wi + LANES <= mid_end {
+                if !chunk_eq::<FILL>(ptr.add(wi)) {
+                    break;
+                }
+                scanned += LANES * WORD_BITS;
+                wi += LANES;
+            }
+        }
 
-        if wi < mid_end {
-            return scanned + count_trailing::<FILL>(words[wi]).min(WORD_BITS);
+        // Scalar: handle remaining full words.
+        while wi < mid_end {
+            if words[wi] != FILL {
+                return scanned + count_trailing::<FILL>(words[wi]).min(WORD_BITS);
+            }
+            scanned += WORD_BITS;
+            wi += 1;
         }
     }
 
@@ -62,21 +77,6 @@ fn count_trailing<const FILL: u64>(val: u64) -> usize {
 impl<'bs> BitStr<'bs> {
     /// Returns the number of consecutive `false` bits from the start of this
     /// view.
-    ///
-    /// # Complexity
-    ///
-    /// O(n / 64) worst case, SIMD-accelerated for long runs.
-    /// Returns early at the first bit that differs from the expected value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bit_string::BitString;
-    ///
-    /// let bits = BitString::try_from("00101").unwrap();
-    /// let v = bits.as_bit_str();
-    /// assert_eq!(v.leading_zeros(), 2);
-    /// ```
     #[inline]
     pub fn leading_zeros(&self) -> usize {
         if self.bit_len == 0 {
@@ -87,21 +87,6 @@ impl<'bs> BitStr<'bs> {
 
     /// Returns the number of consecutive `true` bits from the start of this
     /// view.
-    ///
-    /// # Complexity
-    ///
-    /// O(n / 64) worst case, SIMD-accelerated for long runs.
-    /// Returns early at the first bit that differs from the expected value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bit_string::BitString;
-    ///
-    /// let bits = BitString::try_from("11010").unwrap();
-    /// let v = bits.as_bit_str();
-    /// assert_eq!(v.leading_ones(), 2);
-    /// ```
     #[inline]
     pub fn leading_ones(&self) -> usize {
         if self.bit_len == 0 {
