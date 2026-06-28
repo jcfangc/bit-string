@@ -138,12 +138,12 @@ fn scalar_paste(src: &[u64], src_start: usize, len: usize, dst: &mut [u64], dst_
     let full_words = len / WORD_BITS;
     let rem = len % WORD_BITS;
     for i in 0..full_words {
-        let chunk = src.read_word_at(src_start + i * WORD_BITS);
-        dst.write_word_at(dst_start + i * WORD_BITS, chunk, WORD_BITS);
+        let chunk = src.read_word_at::<false>(src_start + i * WORD_BITS);
+        dst.write_word_at::<false>(dst_start + i * WORD_BITS, chunk, WORD_BITS);
     }
     if rem > 0 {
-        let chunk = src.read_word_at(src_start + full_words * WORD_BITS);
-        dst.write_word_at(dst_start + full_words * WORD_BITS, chunk, rem);
+        let chunk = src.read_word_at::<false>(src_start + full_words * WORD_BITS);
+        dst.write_word_at::<false>(dst_start + full_words * WORD_BITS, chunk, rem);
     }
 }
 

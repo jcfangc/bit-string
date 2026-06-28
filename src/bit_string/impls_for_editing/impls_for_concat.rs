@@ -88,10 +88,10 @@ impl BitString {
             while offset > 0 {
                 offset -= WORD_BITS.min(offset);
                 let take = WORD_BITS.min(tail_len - offset);
-                let chunk = self.words.read_word_at(index + offset);
+                let chunk = self.words.read_word_at::<false>(index + offset);
                 self.words.clear_bits_at(index + shift + offset, take);
                 self.words
-                    .write_word_at(index + shift + offset, chunk, take);
+                    .write_word_at::<false>(index + shift + offset, chunk, take);
             }
 
             // The source region [index, index+shift) still holds the original

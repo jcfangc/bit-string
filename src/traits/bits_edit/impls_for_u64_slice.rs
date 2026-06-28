@@ -44,17 +44,21 @@ impl BitsEdit for [u64] {
     /// intra-word offset. When the read crosses a word boundary the high part
     /// is stitched in from the next word.
     #[inline]
-    fn read_word_at(&self, bit_start: usize) -> u64 {
+    fn read_word_at<const WORD_ALIGNED: bool>(&self, bit_start: usize) -> u64 {
         let word = bit_start / WORD_BITS;
-        let shift = bit_start % WORD_BITS;
 
-        let lo = self.get(word).copied().unwrap_or(0) >> shift;
-
-        if shift == 0 {
-            lo
+        if WORD_ALIGNED {
+            self.get(word).copied().unwrap_or(0)
         } else {
-            let hi = self.get(word + 1).copied().unwrap_or(0);
-            lo | (hi << (WORD_BITS - shift))
+            let shift = bit_start % WORD_BITS;
+            let lo = self.get(word).copied().unwrap_or(0) >> shift;
+
+            if shift == 0 {
+                lo
+            } else {
+                let hi = self.get(word + 1).copied().unwrap_or(0);
+                lo | (hi << (WORD_BITS - shift))
+            }
         }
     }
 
@@ -62,15 +66,24 @@ impl BitsEdit for [u64] {
     /// `self` at `bit_start`. When the write crosses a word boundary the high
     /// part spills into the next word.
     #[inline]
-    fn write_word_at(&mut self, bit_start: usize, value: u64, len: usize) {
+    fn write_word_at<const WORD_ALIGNED: bool>(
+        &mut self,
+        bit_start: usize,
+        value: u64,
+        len: usize,
+    ) {
         let value = value & low_mask(len);
         let word = bit_start / WORD_BITS;
-        let shift = bit_start % WORD_BITS;
 
-        self[word] |= value << shift;
+        if WORD_ALIGNED {
+            self[word] |= value;
+        } else {
+            let shift = bit_start % WORD_BITS;
+            self[word] |= value << shift;
 
-        if shift != 0 && word + 1 < self.len() {
-            self[word + 1] |= value >> (WORD_BITS - shift);
+            if shift != 0 && word + 1 < self.len() {
+                self[word + 1] |= value >> (WORD_BITS - shift);
+            }
         }
     }
 

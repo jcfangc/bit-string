@@ -29,8 +29,8 @@ impl<'bs> BitStr<'bs> {
         // Sub-word fast path — a single 64-bit read on each side.
         if n <= WORD_BITS {
             let mask = low_mask(n);
-            let h = hs_words.read_word_at(hs_base);
-            let nd = nd_words.read_word_at(nd_base);
+            let h = hs_words.read_word_at::<false>(hs_base);
+            let nd = nd_words.read_word_at::<false>(nd_base);
             return (h & mask) == (nd & mask);
         }
 
@@ -55,7 +55,7 @@ impl<'bs> BitStr<'bs> {
             let rem = n % WORD_BITS;
             if rem > 0 {
                 let mask = low_mask(rem);
-                let h = hs_words.read_word_at(hs_base + full_words * WORD_BITS);
+                let h = hs_words.read_word_at::<false>(hs_base + full_words * WORD_BITS);
                 if (h & mask) != (nd_aligned[full_words] & mask) {
                     return false;
                 }
@@ -68,8 +68,8 @@ impl<'bs> BitStr<'bs> {
         let full_words = n / WORD_BITS;
         for i in 0..full_words {
             let pos = i * WORD_BITS;
-            let h = hs_words.read_word_at(hs_base + pos);
-            let nd = nd_words.read_word_at(nd_base + pos);
+            let h = hs_words.read_word_at::<false>(hs_base + pos);
+            let nd = nd_words.read_word_at::<false>(nd_base + pos);
             if h != nd {
                 return false;
             }
@@ -79,8 +79,8 @@ impl<'bs> BitStr<'bs> {
         if rem > 0 {
             let mask = low_mask(rem);
             let pos = full_words * WORD_BITS;
-            let h = hs_words.read_word_at(hs_base + pos);
-            let nd = nd_words.read_word_at(nd_base + pos);
+            let h = hs_words.read_word_at::<false>(hs_base + pos);
+            let nd = nd_words.read_word_at::<false>(nd_base + pos);
             if (h & mask) != (nd & mask) {
                 return false;
             }

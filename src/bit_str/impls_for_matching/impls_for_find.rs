@@ -66,7 +66,7 @@ impl<'bs> BitStr<'bs> {
                 self.bit_len,
                 needle_words,
                 needle_len,
-                &mut |pos| self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(pos, needle),
+                &mut |pos| self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos, needle),
             );
         }
 
@@ -74,7 +74,7 @@ impl<'bs> BitStr<'bs> {
         let first_bits = (WORD_BITS - so).min(self.bit_len);
         let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
         for p in 0..=max {
-            if self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(p, needle) {
+            if self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(p, needle) {
                 return Some(p);
             }
         }
@@ -90,10 +90,7 @@ impl<'bs> BitStr<'bs> {
         if aligned.len() >= SMALL_WORDS
             && !aligned
                 .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
-                    self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(
-                        pos + first_bits,
-                        needle,
-                    )
+                    self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos + first_bits, needle)
                 })
                 .is_some()
         {
@@ -102,7 +99,7 @@ impl<'bs> BitStr<'bs> {
 
         aligned
             .find_first_word(remaining, needle_words, needle_len, &mut |pos| {
-                self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(pos + first_bits, needle)
+                self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos + first_bits, needle)
             })
             .map(|pos| pos + first_bits)
     }
@@ -156,7 +153,7 @@ impl<'bs> BitStr<'bs> {
                 self.bit_len,
                 needle_words,
                 needle_len,
-                &mut |pos| self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(pos, needle),
+                &mut |pos| self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos, needle),
             );
         }
 
@@ -170,20 +167,14 @@ impl<'bs> BitStr<'bs> {
             let maybe_candidate = aligned.len() < SMALL_WORDS
                 || aligned
                     .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
-                        self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(
-                            pos + first_bits,
-                            needle,
-                        )
+                        self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos + first_bits, needle)
                     })
                     .is_some();
 
             if maybe_candidate {
                 if let Some(pos) =
                     aligned.find_last_word(remaining, needle_words, needle_len, &mut |pos| {
-                        self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(
-                            pos + first_bits,
-                            needle,
-                        )
+                        self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos + first_bits, needle)
                     })
                 {
                     return Some(pos + first_bits);
@@ -194,7 +185,7 @@ impl<'bs> BitStr<'bs> {
         // Check the first partial word.
         let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
         for p in (0..=max).rev() {
-            if self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(p, needle) {
+            if self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(p, needle) {
                 return Some(p);
             }
         }
@@ -248,7 +239,11 @@ impl<'bs> BitStr<'bs> {
             let first_bits = (WORD_BITS - so).min(self.bit_len);
             let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
             for p in 0..=max {
-                if self.bits_equal_at_inner::<HS_WORD_ALIGNED, ND_WORD_ALIGNED>(p, needle) {
+                if
+                // HS_WORD_ALIGNED is always false here — the candidate
+                // position `p` varies, so hs_base % WORD_BITS is not
+                // known at compile time.  Only needle alignment is fixed.
+                self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(p, needle) {
                     return true;
                 }
             }
@@ -259,10 +254,10 @@ impl<'bs> BitStr<'bs> {
             let aligned = &words[sw + 1..];
             return aligned
                 .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
-                    self.bits_equal_at_inner::<HS_WORD_ALIGNED, ND_WORD_ALIGNED>(
-                        pos + first_bits,
-                        needle,
-                    )
+                    // HS_WORD_ALIGNED is always false here — the candidate
+                    // position `p` varies, so hs_base % WORD_BITS is not
+                    // known at compile time.  Only needle alignment is fixed.
+                    self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos + first_bits, needle)
                 })
                 .is_some();
         }
@@ -270,7 +265,10 @@ impl<'bs> BitStr<'bs> {
         // Word-aligned: full SIMD on the relevant suffix.
         words[sw..]
             .find_any_candidate(self.bit_len, needle_words, needle_len, &mut |pos| {
-                self.bits_equal_at_inner::<HS_WORD_ALIGNED, ND_WORD_ALIGNED>(pos, needle)
+                // HS_WORD_ALIGNED is always false here — the candidate
+                // position `p` varies, so hs_base % WORD_BITS is not
+                // known at compile time.  Only needle alignment is fixed.
+                self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos, needle)
             })
             .is_some()
     }

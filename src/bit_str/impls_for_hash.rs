@@ -25,13 +25,15 @@ impl<'bs> BitStr<'bs> {
             }
         } else {
             for i in 0..full_words {
-                words.read_word_at(self.start + i * WORD_BITS).hash(state);
+                words
+                    .read_word_at::<false>(self.start + i * WORD_BITS)
+                    .hash(state);
             }
         }
 
         if rem > 0 {
             let tail_start = self.start + full_words * WORD_BITS;
-            (words.read_word_at(tail_start) & low_mask(rem)).hash(state);
+            (words.read_word_at::<false>(tail_start) & low_mask(rem)).hash(state);
         }
     }
 }

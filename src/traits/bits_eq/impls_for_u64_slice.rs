@@ -1,5 +1,3 @@
-use crate::WORD_BITS;
-
 use super::BitsEq;
 
 impl BitsEq for [u64] {

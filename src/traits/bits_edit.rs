@@ -23,7 +23,9 @@ pub(crate) trait BitsEdit {
     /// When `bit_start` is word-aligned the result comes from a single word.
     /// Otherwise it spans two consecutive words, shifting and combining them.
     /// Bits past the end of `self` are silently treated as zero.
-    fn read_word_at(&self, bit_start: usize) -> u64;
+    /// When `WORD_ALIGNED` is `true`, `bit_start % WORD_BITS == 0` is
+    /// guaranteed — the cross-word stitch is eliminated at compile time.
+    fn read_word_at<const WORD_ALIGNED: bool>(&self, bit_start: usize) -> u64;
 
     /// Writes the low `len` bits of `value` into `self` starting at `bit_start`.
     ///
@@ -31,7 +33,9 @@ pub(crate) trait BitsEdit {
     /// bitwise OR). `len` is clamped to `WORD_BITS` via [`low_mask`]; callers
     /// must ensure `len <= WORD_BITS`. When `bit_start` is not word-aligned
     /// the value is split across two consecutive words.
-    fn write_word_at(&mut self, bit_start: usize, value: u64, len: usize);
+    /// When `WORD_ALIGNED` is `true`, `bit_start % WORD_BITS == 0` is
+    /// guaranteed — the cross-word spill is eliminated at compile time.
+    fn write_word_at<const WORD_ALIGNED: bool>(&mut self, bit_start: usize, value: u64, len: usize);
 
     /// Captures a snapshot of `len` bits starting at `start` for deferred
     /// paste via [`BitsCopied::paste_to`].

@@ -30,7 +30,7 @@ impl BitString {
     /// Bits beyond `self.len()` are treated as zero.
     #[inline]
     pub fn get_chunk(&self, bit_start: usize) -> u64 {
-        self.words.read_word_at(bit_start)
+        self.words.read_word_at::<false>(bit_start)
     }
 }
 

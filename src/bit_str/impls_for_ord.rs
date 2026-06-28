@@ -79,8 +79,8 @@ impl<'bs> BitStr<'bs> {
             // Both sides misaligned — scalar word-at-a-time (rare).
             for i in 0..full {
                 let pos = i * WORD_BITS;
-                let a = hs_words.read_word_at(hs_base + pos);
-                let b = nd_words.read_word_at(nd_base + pos);
+                let a = hs_words.read_word_at::<false>(hs_base + pos);
+                let b = nd_words.read_word_at::<false>(nd_base + pos);
                 if a != b {
                     return a.bitwise_cmp(b);
                 }
@@ -92,8 +92,8 @@ impl<'bs> BitStr<'bs> {
         if rem > 0 {
             let pos = full * WORD_BITS;
             let mask = low_mask(rem);
-            let a = hs_words.read_word_at(hs_base + pos) & mask;
-            let b = nd_words.read_word_at(nd_base + pos) & mask;
+            let a = hs_words.read_word_at::<false>(hs_base + pos) & mask;
+            let b = nd_words.read_word_at::<false>(nd_base + pos) & mask;
             if a != b {
                 return a.bitwise_cmp(b);
             }

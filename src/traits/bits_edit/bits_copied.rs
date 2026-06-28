@@ -100,16 +100,18 @@ impl BitsCopied<'_> {
         // then OR'd into two dst words.
         else {
             for i in 0..full_words {
-                let chunk = self.src.read_word_at(self.src_start + i * WORD_BITS);
-                dst.write_word_at(dst_start + i * WORD_BITS, chunk, WORD_BITS);
+                let chunk = self
+                    .src
+                    .read_word_at::<false>(self.src_start + i * WORD_BITS);
+                dst.write_word_at::<false>(dst_start + i * WORD_BITS, chunk, WORD_BITS);
             }
         }
 
         // Partial last word — uniform scalar handling for all paths.
         if remainder_bits > 0 {
             let offset = full_words * WORD_BITS;
-            let chunk = self.src.read_word_at(self.src_start + offset);
-            dst.write_word_at(dst_start + offset, chunk, remainder_bits);
+            let chunk = self.src.read_word_at::<false>(self.src_start + offset);
+            dst.write_word_at::<false>(dst_start + offset, chunk, remainder_bits);
         }
     }
 }
