@@ -121,5 +121,9 @@ name = "ord"
 harness = false
 
 [[bench]]
-name = "bit_ops_leading_trailing"
+name = "bit_ops_leading"
+harness = false
+
+[[bench]]
+name = "bit_ops_trailing"
 harness = false
