@@ -94,13 +94,25 @@ impl<'bs> BitStr<'bs> {
     /// Returns `true` if `pattern` matches the bits starting at `index`.
     #[inline]
     pub fn matches_at_str(&self, index: usize, pattern: BitStr<'_>) -> bool {
-        if index > self.bit_len {
-            return false;
+        let hs_aligned = (self.start + index) % WORD_BITS == 0;
+        let nd_aligned = pattern.start % WORD_BITS == 0;
+        match (hs_aligned, nd_aligned) {
+            (true, true) => self.matches_at_inner::<true, true>(index, pattern),
+            (true, false) => self.matches_at_inner::<true, false>(index, pattern),
+            (false, true) => self.matches_at_inner::<false, true>(index, pattern),
+            (false, false) => self.matches_at_inner::<false, false>(index, pattern),
         }
-        if pattern.bit_len > self.bit_len - index {
-            return false;
+    }
+
+    /// `matches_at_str` when `pattern` is a [`BitString`](crate::BitString).
+    #[inline]
+    pub fn matches_at_string(&self, index: usize, pattern: &crate::BitString) -> bool {
+        let p = pattern.as_bit_str();
+        if (self.start + index) % WORD_BITS == 0 {
+            self.matches_at_inner::<true, true>(index, p)
+        } else {
+            self.matches_at_inner::<false, true>(index, p)
         }
-        self.bits_equal_at(index, pattern)
     }
 
     /// Returns `true` if `prefix` is a prefix of `self`.
