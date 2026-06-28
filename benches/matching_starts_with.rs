@@ -44,103 +44,103 @@ fn no(len: usize, pfx: usize) -> Case {
 }
 
 #[divan::bench(name = "starts_with/len_65/hit/ours_str_str")]
-fn s65h_va(b: Bencher) {
-    bench_va(b, &hit(65, 4));
+fn starts_65_hit_str_str(b: Bencher) {
+    bench_str_str(b, &hit(65, 4));
 }
 #[divan::bench(name = "starts_with/len_65/hit/ours_str_string")]
-fn s65h_vb(b: Bencher) {
-    bench_vb(b, &hit(65, 4));
+fn starts_65_hit_str_string(b: Bencher) {
+    bench_str_string(b, &hit(65, 4));
 }
 #[divan::bench(name = "starts_with/len_65/hit/ours_string_str")]
-fn s65h_ba(b: Bencher) {
-    bench_ba(b, &hit(65, 4));
+fn starts_65_hit_string_str(b: Bencher) {
+    bench_string_str(b, &hit(65, 4));
 }
 #[divan::bench(name = "starts_with/len_65/hit/ours_string_string")]
-fn s65h_bb(b: Bencher) {
-    bench_bb(b, &hit(65, 4));
+fn starts_65_hit_string_string(b: Bencher) {
+    bench_string_string(b, &hit(65, 4));
 }
 #[divan::bench(name = "starts_with/len_65/hit/string")]
-fn s65h_vn(b: Bencher) {
-    bench_vn(b, &hit(65, 4));
+fn starts_65_hit_native(b: Bencher) {
+    bench_native(b, &hit(65, 4));
 }
 
 #[divan::bench(name = "starts_with/len_65/miss/ours_str_str")]
-fn s65m_va(b: Bencher) {
-    bench_va(b, &no(65, 4));
+fn starts_65_miss_str_str(b: Bencher) {
+    bench_str_str(b, &no(65, 4));
 }
 #[divan::bench(name = "starts_with/len_65/miss/ours_str_string")]
-fn s65m_vb(b: Bencher) {
-    bench_vb(b, &no(65, 4));
+fn starts_65_miss_str_string(b: Bencher) {
+    bench_str_string(b, &no(65, 4));
 }
 #[divan::bench(name = "starts_with/len_65/miss/ours_string_str")]
-fn s65m_ba(b: Bencher) {
-    bench_ba(b, &no(65, 4));
+fn starts_65_miss_string_str(b: Bencher) {
+    bench_string_str(b, &no(65, 4));
 }
 #[divan::bench(name = "starts_with/len_65/miss/ours_string_string")]
-fn s65m_bb(b: Bencher) {
-    bench_bb(b, &no(65, 4));
+fn starts_65_miss_string_string(b: Bencher) {
+    bench_string_string(b, &no(65, 4));
 }
 #[divan::bench(name = "starts_with/len_65/miss/string")]
-fn s65m_vn(b: Bencher) {
-    bench_vn(b, &no(65, 4));
+fn starts_65_miss_native(b: Bencher) {
+    bench_native(b, &no(65, 4));
 }
 
 #[divan::bench(name = "starts_with/len_65536/hit/ours_str_str")]
-fn s6h_va(b: Bencher) {
-    bench_va(b, &hit(65536, 128));
+fn starts_65536_hit_str_str(b: Bencher) {
+    bench_str_str(b, &hit(65536, 128));
 }
 #[divan::bench(name = "starts_with/len_65536/hit/ours_str_string")]
-fn s6h_vb(b: Bencher) {
-    bench_vb(b, &hit(65536, 128));
+fn starts_65536_hit_str_string(b: Bencher) {
+    bench_str_string(b, &hit(65536, 128));
 }
 #[divan::bench(name = "starts_with/len_65536/hit/ours_string_str")]
-fn s6h_ba(b: Bencher) {
-    bench_ba(b, &hit(65536, 128));
+fn starts_65536_hit_string_str(b: Bencher) {
+    bench_string_str(b, &hit(65536, 128));
 }
 #[divan::bench(name = "starts_with/len_65536/hit/ours_string_string")]
-fn s6h_bb(b: Bencher) {
-    bench_bb(b, &hit(65536, 128));
+fn starts_65536_hit_string_string(b: Bencher) {
+    bench_string_string(b, &hit(65536, 128));
 }
 #[divan::bench(name = "starts_with/len_65536/hit/string")]
-fn s6h_vn(b: Bencher) {
-    bench_vn(b, &hit(65536, 128));
+fn starts_65536_hit_native(b: Bencher) {
+    bench_native(b, &hit(65536, 128));
 }
 
 #[divan::bench(name = "starts_with/len_65536/miss/ours_str_str")]
-fn s6m_va(b: Bencher) {
-    bench_va(b, &no(65536, 128));
+fn starts_65536_miss_str_str(b: Bencher) {
+    bench_str_str(b, &no(65536, 128));
 }
 #[divan::bench(name = "starts_with/len_65536/miss/ours_str_string")]
-fn s6m_vb(b: Bencher) {
-    bench_vb(b, &no(65536, 128));
+fn starts_65536_miss_str_string(b: Bencher) {
+    bench_str_string(b, &no(65536, 128));
 }
 #[divan::bench(name = "starts_with/len_65536/miss/ours_string_str")]
-fn s6m_ba(b: Bencher) {
-    bench_ba(b, &no(65536, 128));
+fn starts_65536_miss_string_str(b: Bencher) {
+    bench_string_str(b, &no(65536, 128));
 }
 #[divan::bench(name = "starts_with/len_65536/miss/ours_string_string")]
-fn s6m_bb(b: Bencher) {
-    bench_bb(b, &no(65536, 128));
+fn starts_65536_miss_string_string(b: Bencher) {
+    bench_string_string(b, &no(65536, 128));
 }
 #[divan::bench(name = "starts_with/len_65536/miss/string")]
-fn s6m_vn(b: Bencher) {
-    bench_vn(b, &no(65536, 128));
+fn starts_65536_miss_native(b: Bencher) {
+    bench_native(b, &no(65536, 128));
 }
 
-fn bench_va(b: Bencher, c: &Case) {
+fn bench_str_str(b: Bencher, c: &Case) {
     let v = c.h.as_bit_str();
     b.bench(|| black_box(&v).starts_with_str(black_box(c.p.as_bit_str())));
 }
-fn bench_vb(b: Bencher, c: &Case) {
+fn bench_str_string(b: Bencher, c: &Case) {
     let v = c.h.as_bit_str();
     b.bench(|| black_box(&v).starts_with_string(black_box(&c.p)));
 }
-fn bench_ba(b: Bencher, c: &Case) {
+fn bench_string_str(b: Bencher, c: &Case) {
     b.bench(|| black_box(&c.h).starts_with_str(black_box(c.p.as_bit_str())));
 }
-fn bench_bb(b: Bencher, c: &Case) {
+fn bench_string_string(b: Bencher, c: &Case) {
     b.bench(|| black_box(&c.h).starts_with_string(black_box(&c.p)));
 }
-fn bench_vn(b: Bencher, c: &Case) {
+fn bench_native(b: Bencher, c: &Case) {
     b.bench(|| black_box(&c.hs).starts_with(black_box(&c.ps)));
 }

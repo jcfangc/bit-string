@@ -7,122 +7,110 @@ fn main() {
 }
 
 #[derive(Clone, Copy)]
-enum P {
-    Z,
-    A,
-    D,
+enum Pattern {
+    Zeros,
+    Alternating,
+    Dense,
 }
 
 #[divan::bench(name = "trailing_zeros/len_65/all_zeros/ours_str")]
-fn t65z_v(b: Bencher) {
-    let bits = bs(65, P::Z);
-    let v = bits.as_bit_str();
-    b.bench(|| black_box(&v).trailing_zeros());
+fn trailing_65_zeros_str(b: Bencher) {
+    bench_str(b, 65, Pattern::Zeros);
 }
 #[divan::bench(name = "trailing_zeros/len_65/all_zeros/ours_string")]
-fn t65z_o(b: Bencher) {
-    let bits = bs(65, P::Z);
-    b.bench(|| black_box(&bits).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_65/alternating/ours_str")]
-fn t65a_v(b: Bencher) {
-    let bits = bs(65, P::A);
-    let v = bits.as_bit_str();
-    b.bench(|| black_box(&v).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_65/alternating/ours_string")]
-fn t65a_o(b: Bencher) {
-    let bits = bs(65, P::A);
-    b.bench(|| black_box(&bits).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_65/dense/ours_str")]
-fn t65d_v(b: Bencher) {
-    let bits = bs(65, P::D);
-    let v = bits.as_bit_str();
-    b.bench(|| black_box(&v).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_65/dense/ours_string")]
-fn t65d_o(b: Bencher) {
-    let bits = bs(65, P::D);
-    b.bench(|| black_box(&bits).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_4096/all_zeros/ours_str")]
-fn t4z_v(b: Bencher) {
-    let bits = bs(4096, P::Z);
-    let v = bits.as_bit_str();
-    b.bench(|| black_box(&v).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_4096/all_zeros/ours_string")]
-fn t4z_o(b: Bencher) {
-    let bits = bs(4096, P::Z);
-    b.bench(|| black_box(&bits).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_4096/dense/ours_str")]
-fn t4d_v(b: Bencher) {
-    let bits = bs(4096, P::D);
-    let v = bits.as_bit_str();
-    b.bench(|| black_box(&v).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_4096/dense/ours_string")]
-fn t4d_o(b: Bencher) {
-    let bits = bs(4096, P::D);
-    b.bench(|| black_box(&bits).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_65536/all_zeros/ours_str")]
-fn t6z_v(b: Bencher) {
-    let bits = bs(65536, P::Z);
-    let v = bits.as_bit_str();
-    b.bench(|| black_box(&v).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_65536/all_zeros/ours_string")]
-fn t6z_o(b: Bencher) {
-    let bits = bs(65536, P::Z);
-    b.bench(|| black_box(&bits).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_65536/dense/ours_str")]
-fn t6d_v(b: Bencher) {
-    let bits = bs(65536, P::D);
-    let v = bits.as_bit_str();
-    b.bench(|| black_box(&v).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/len_65536/dense/ours_string")]
-fn t6d_o(b: Bencher) {
-    let bits = bs(65536, P::D);
-    b.bench(|| black_box(&bits).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/unaligned_3/len_4096/all_zeros/ours_str")]
-fn tu3_v(b: Bencher) {
-    let bits = bs_unaligned(4096, 3, P::Z);
-    let sub = slice_sub(&bits, 3, 4096);
-    b.bench(|| black_box(&sub).trailing_zeros());
-}
-#[divan::bench(name = "trailing_zeros/unaligned_63/len_4096/all_zeros/ours_str")]
-fn tu63_v(b: Bencher) {
-    let bits = bs_unaligned(4096, 63, P::Z);
-    let sub = slice_sub(&bits, 63, 4096);
-    b.bench(|| black_box(&sub).trailing_zeros());
+fn trailing_65_zeros_string(b: Bencher) {
+    bench_string(b, 65, Pattern::Zeros);
 }
 
-fn bs(len: usize, p: P) -> BitString {
-    (0..len).map(|i| bit(i, p)).collect()
+#[divan::bench(name = "trailing_zeros/len_65/alternating/ours_str")]
+fn trailing_65_alternating_str(b: Bencher) {
+    bench_str(b, 65, Pattern::Alternating);
 }
-fn bs_unaligned(len: usize, skip: usize, p: P) -> BitString {
+#[divan::bench(name = "trailing_zeros/len_65/alternating/ours_string")]
+fn trailing_65_alternating_string(b: Bencher) {
+    bench_string(b, 65, Pattern::Alternating);
+}
+
+#[divan::bench(name = "trailing_zeros/len_65/dense/ours_str")]
+fn trailing_65_dense_str(b: Bencher) {
+    bench_str(b, 65, Pattern::Dense);
+}
+#[divan::bench(name = "trailing_zeros/len_65/dense/ours_string")]
+fn trailing_65_dense_string(b: Bencher) {
+    bench_string(b, 65, Pattern::Dense);
+}
+
+#[divan::bench(name = "trailing_zeros/len_4096/all_zeros/ours_str")]
+fn trailing_4096_zeros_str(b: Bencher) {
+    bench_str(b, 4096, Pattern::Zeros);
+}
+#[divan::bench(name = "trailing_zeros/len_4096/all_zeros/ours_string")]
+fn trailing_4096_zeros_string(b: Bencher) {
+    bench_string(b, 4096, Pattern::Zeros);
+}
+
+#[divan::bench(name = "trailing_zeros/len_4096/dense/ours_str")]
+fn trailing_4096_dense_str(b: Bencher) {
+    bench_str(b, 4096, Pattern::Dense);
+}
+#[divan::bench(name = "trailing_zeros/len_4096/dense/ours_string")]
+fn trailing_4096_dense_string(b: Bencher) {
+    bench_string(b, 4096, Pattern::Dense);
+}
+
+#[divan::bench(name = "trailing_zeros/len_65536/all_zeros/ours_str")]
+fn trailing_65536_zeros_str(b: Bencher) {
+    bench_str(b, 65536, Pattern::Zeros);
+}
+#[divan::bench(name = "trailing_zeros/len_65536/all_zeros/ours_string")]
+fn trailing_65536_zeros_string(b: Bencher) {
+    bench_string(b, 65536, Pattern::Zeros);
+}
+
+#[divan::bench(name = "trailing_zeros/len_65536/dense/ours_str")]
+fn trailing_65536_dense_str(b: Bencher) {
+    bench_str(b, 65536, Pattern::Dense);
+}
+#[divan::bench(name = "trailing_zeros/len_65536/dense/ours_string")]
+fn trailing_65536_dense_string(b: Bencher) {
+    bench_string(b, 65536, Pattern::Dense);
+}
+
+#[divan::bench(name = "trailing_zeros/unaligned_3/len_4096/all_zeros/ours_str")]
+fn trailing_unaligned_3_4096_zeros_str(b: Bencher) {
+    bench_unaligned_str(b, 4096, 3, Pattern::Zeros);
+}
+#[divan::bench(name = "trailing_zeros/unaligned_63/len_4096/all_zeros/ours_str")]
+fn trailing_unaligned_63_4096_zeros_str(b: Bencher) {
+    bench_unaligned_str(b, 4096, 63, Pattern::Zeros);
+}
+
+fn bench_str(b: Bencher, len: usize, p: Pattern) {
+    let bits: BitString = (0..len).map(|i| bit(i, p)).collect();
+    let v = bits.as_bit_str();
+    b.bench(|| black_box(&v).trailing_zeros());
+}
+fn bench_string(b: Bencher, len: usize, p: Pattern) {
+    let bits: BitString = (0..len).map(|i| bit(i, p)).collect();
+    b.bench(|| black_box(&bits).trailing_zeros());
+}
+fn bench_unaligned_str(b: Bencher, len: usize, skip: usize, p: Pattern) {
     let pad = skip + len + 10;
     let mut bits = BitString::zeros(pad);
     for i in skip..skip + len {
         bits.set(i, bit(i - skip, p));
     }
-    bits
+    let sub = bits
+        .as_bit_str()
+        .slice(UsizeCO::try_new(skip, skip + len).unwrap());
+    b.bench(|| black_box(&sub).trailing_zeros());
 }
-fn slice_sub(bits: &BitString, skip: usize, len: usize) -> bit_string::BitStr<'_> {
-    bits.as_bit_str()
-        .slice(UsizeCO::try_new(skip, skip + len).unwrap())
-}
-fn bit(i: usize, p: P) -> bool {
+
+fn bit(i: usize, p: Pattern) -> bool {
     match p {
-        P::Z => false,
-        P::A => i % 2 != 0,
-        P::D => mix64(i as u64) & 1 != 0,
+        Pattern::Zeros => false,
+        Pattern::Alternating => i % 2 != 0,
+        Pattern::Dense => mix64(i as u64) & 1 != 0,
     }
 }
 fn mix64(mut v: u64) -> u64 {
