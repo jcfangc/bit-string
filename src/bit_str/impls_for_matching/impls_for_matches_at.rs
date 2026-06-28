@@ -6,11 +6,16 @@ use crate::BitStr;
 impl<'bs> BitStr<'bs> {
     /// Compare `needle` bits against `self` starting at `offset`.
     ///
-    /// When `needle.start` is word-aligned, the fast path delegates to
-    /// SIMD word-equality via [`BitsEq::eq_words`].  Otherwise falls
-    /// back to a scalar word-at-a-time comparison.
+    /// When `HS_WORD_ALIGNED` is `true`, `self.start + offset` is
+    /// guaranteed to be word-aligned.  When `ND_WORD_ALIGNED` is `true`,
+    /// `needle.start` is guaranteed to be word-aligned.  Both compile-time
+    /// signals eliminate runtime alignment checks.
     #[inline]
-    pub(crate) fn bits_equal_at(&self, offset: usize, needle: BitStr<'_>) -> bool {
+    pub(crate) fn bits_equal_at_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
+        &self,
+        offset: usize,
+        needle: BitStr<'_>,
+    ) -> bool {
         let n = needle.bit_len;
         if n == 0 {
             return true;
@@ -30,7 +35,10 @@ impl<'bs> BitStr<'bs> {
         }
 
         // Multi-word, needle word-aligned — SIMD eq_words on haystack.
-        if nd_base % WORD_BITS == 0 {
+        // When ND_WORD_ALIGNED is true, the `nd_base % WORD_BITS == 0`
+        // branch is unconditionally taken; LLVM eliminates the else.
+        let nd_is_aligned = ND_WORD_ALIGNED || nd_base % WORD_BITS == 0;
+        if nd_is_aligned {
             let full_words = n / WORD_BITS;
             let nd_aligned = &nd_words[nd_base / WORD_BITS..];
 
@@ -75,6 +83,12 @@ impl<'bs> BitStr<'bs> {
         true
     }
 
+    /// Public entry point — no compile-time alignment guarantees.
+    #[inline]
+    pub(crate) fn bits_equal_at(&self, offset: usize, needle: BitStr<'_>) -> bool {
+        self.bits_equal_at_inner::<false, false>(offset, needle)
+    }
+
     /// Returns `true` if `pattern` matches the bits starting at `index`.
     #[inline]
     pub fn matches_at(&self, index: usize, pattern: BitStr<'_>) -> bool {
@@ -90,7 +104,14 @@ impl<'bs> BitStr<'bs> {
     /// Returns `true` if `prefix` is a prefix of `self`.
     #[inline]
     pub fn starts_with(&self, prefix: BitStr<'_>) -> bool {
-        self.matches_at(0, prefix)
+        let hs_aligned = self.start % WORD_BITS == 0;
+        let nd_aligned = prefix.start % WORD_BITS == 0;
+        match (hs_aligned, nd_aligned) {
+            (true, true) => self.matches_at_inner::<true, true>(0, prefix),
+            (true, false) => self.matches_at_inner::<true, false>(0, prefix),
+            (false, true) => self.matches_at_inner::<false, true>(0, prefix),
+            (false, false) => self.matches_at_inner::<false, false>(0, prefix),
+        }
     }
 
     /// Returns `true` if `suffix` is a suffix of `self`.
@@ -103,6 +124,27 @@ impl<'bs> BitStr<'bs> {
             return false;
         }
         self.bits_equal_at(self.bit_len - suffix.bit_len, suffix)
+    }
+
+    // -------------------------------------------------------------------
+    // Inner helpers with alignment const-generics
+    // -------------------------------------------------------------------
+
+    /// Like [`matches_at`](Self::matches_at) but with compile-time
+    /// alignment signals for both haystack and needle.
+    #[inline]
+    pub(crate) fn matches_at_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
+        &self,
+        index: usize,
+        pattern: BitStr<'_>,
+    ) -> bool {
+        if index > self.bit_len {
+            return false;
+        }
+        if pattern.bit_len > self.bit_len - index {
+            return false;
+        }
+        self.bits_equal_at_inner::<HS_WORD_ALIGNED, ND_WORD_ALIGNED>(index, pattern)
     }
 }
 
