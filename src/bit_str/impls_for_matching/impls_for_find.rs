@@ -20,10 +20,13 @@ impl<'bs> BitStr<'bs> {
     /// Returns the index of the first occurrence of `needle`, or `None`.
     #[inline]
     pub fn find_str(&self, needle: BitStr<'_>) -> Option<usize> {
-        if self.start % WORD_BITS == 0 {
-            self.find_inner::<true>(needle)
-        } else {
-            self.find_inner::<false>(needle)
+        let hs_a = self.start % WORD_BITS == 0;
+        let nd_a = needle.start % WORD_BITS == 0;
+        match (hs_a, nd_a) {
+            (true, true) => self.find_inner::<true, true>(needle),
+            (true, false) => self.find_inner::<true, false>(needle),
+            (false, true) => self.find_inner::<false, true>(needle),
+            (false, false) => self.find_inner::<false, false>(needle),
         }
     }
 
@@ -32,15 +35,18 @@ impl<'bs> BitStr<'bs> {
     pub fn find_string(&self, needle: &crate::BitString) -> Option<usize> {
         let n = needle.as_bit_str();
         if self.start % WORD_BITS == 0 {
-            self.find_inner::<true>(n)
+            self.find_inner::<true, true>(n)
         } else {
-            self.find_inner::<false>(n)
+            self.find_inner::<false, true>(n)
         }
     }
 
-    /// `find` with compile-time alignment signal for the haystack.
+    /// `find` with compile-time alignment signals.
     #[inline]
-    pub(crate) fn find_inner<const WORD_ALIGNED: bool>(&self, needle: BitStr<'_>) -> Option<usize> {
+    pub(crate) fn find_inner<const WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
+        &self,
+        needle: BitStr<'_>,
+    ) -> Option<usize> {
         if needle.bit_len == 0 {
             return Some(0);
         }
@@ -60,7 +66,7 @@ impl<'bs> BitStr<'bs> {
                 self.bit_len,
                 needle_words,
                 needle_len,
-                &mut |pos| self.bits_equal_at(pos, needle),
+                &mut |pos| self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(pos, needle),
             );
         }
 
@@ -68,7 +74,7 @@ impl<'bs> BitStr<'bs> {
         let first_bits = (WORD_BITS - so).min(self.bit_len);
         let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
         for p in 0..=max {
-            if self.bits_equal_at(p, needle) {
+            if self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(p, needle) {
                 return Some(p);
             }
         }
@@ -84,7 +90,10 @@ impl<'bs> BitStr<'bs> {
         if aligned.len() >= SMALL_WORDS
             && !aligned
                 .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
-                    self.bits_equal_at(pos + first_bits, needle)
+                    self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(
+                        pos + first_bits,
+                        needle,
+                    )
                 })
                 .is_some()
         {
@@ -93,7 +102,7 @@ impl<'bs> BitStr<'bs> {
 
         aligned
             .find_first_word(remaining, needle_words, needle_len, &mut |pos| {
-                self.bits_equal_at(pos + first_bits, needle)
+                self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(pos + first_bits, needle)
             })
             .map(|pos| pos + first_bits)
     }
@@ -101,10 +110,13 @@ impl<'bs> BitStr<'bs> {
     /// Returns the index of the last occurrence of `needle`, or `None`.
     #[inline]
     pub fn rfind_str(&self, needle: BitStr<'_>) -> Option<usize> {
-        if self.start % WORD_BITS == 0 {
-            self.rfind_inner::<true>(needle)
-        } else {
-            self.rfind_inner::<false>(needle)
+        let hs_a = self.start % WORD_BITS == 0;
+        let nd_a = needle.start % WORD_BITS == 0;
+        match (hs_a, nd_a) {
+            (true, true) => self.rfind_inner::<true, true>(needle),
+            (true, false) => self.rfind_inner::<true, false>(needle),
+            (false, true) => self.rfind_inner::<false, true>(needle),
+            (false, false) => self.rfind_inner::<false, false>(needle),
         }
     }
 
@@ -113,15 +125,15 @@ impl<'bs> BitStr<'bs> {
     pub fn rfind_string(&self, needle: &crate::BitString) -> Option<usize> {
         let n = needle.as_bit_str();
         if self.start % WORD_BITS == 0 {
-            self.rfind_inner::<true>(n)
+            self.rfind_inner::<true, true>(n)
         } else {
-            self.rfind_inner::<false>(n)
+            self.rfind_inner::<false, true>(n)
         }
     }
 
-    /// `rfind` with compile-time alignment signal for the haystack.
+    /// `rfind` with compile-time alignment signals.
     #[inline]
-    pub(crate) fn rfind_inner<const WORD_ALIGNED: bool>(
+    pub(crate) fn rfind_inner<const WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
         &self,
         needle: BitStr<'_>,
     ) -> Option<usize> {
@@ -144,7 +156,7 @@ impl<'bs> BitStr<'bs> {
                 self.bit_len,
                 needle_words,
                 needle_len,
-                &mut |pos| self.bits_equal_at(pos, needle),
+                &mut |pos| self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(pos, needle),
             );
         }
 
@@ -158,14 +170,20 @@ impl<'bs> BitStr<'bs> {
             let maybe_candidate = aligned.len() < SMALL_WORDS
                 || aligned
                     .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
-                        self.bits_equal_at(pos + first_bits, needle)
+                        self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(
+                            pos + first_bits,
+                            needle,
+                        )
                     })
                     .is_some();
 
             if maybe_candidate {
                 if let Some(pos) =
                     aligned.find_last_word(remaining, needle_words, needle_len, &mut |pos| {
-                        self.bits_equal_at(pos + first_bits, needle)
+                        self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(
+                            pos + first_bits,
+                            needle,
+                        )
                     })
                 {
                     return Some(pos + first_bits);
@@ -176,7 +194,7 @@ impl<'bs> BitStr<'bs> {
         // Check the first partial word.
         let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
         for p in (0..=max).rev() {
-            if self.bits_equal_at(p, needle) {
+            if self.bits_equal_at_inner::<WORD_ALIGNED, ND_WORD_ALIGNED>(p, needle) {
                 return Some(p);
             }
         }

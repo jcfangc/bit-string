@@ -20,12 +20,22 @@ impl BitString {
 
     #[inline]
     pub fn find_str(&self, needle: crate::BitStr<'_>) -> Option<usize> {
-        self.as_bit_str().find_inner::<true>(needle)
+        let view = self.as_bit_str();
+        if needle.start % WORD_BITS == 0 {
+            view.find_inner::<true, true>(needle)
+        } else {
+            view.find_inner::<true, false>(needle)
+        }
     }
 
     #[inline]
     pub fn rfind_str(&self, needle: crate::BitStr<'_>) -> Option<usize> {
-        self.as_bit_str().rfind_inner::<true>(needle)
+        let view = self.as_bit_str();
+        if needle.start % WORD_BITS == 0 {
+            view.rfind_inner::<true, true>(needle)
+        } else {
+            view.rfind_inner::<true, false>(needle)
+        }
     }
 
     // -------------------------------------------------------------------
@@ -41,11 +51,13 @@ impl BitString {
 
     #[inline]
     pub fn find_string(&self, needle: &BitString) -> Option<usize> {
-        self.as_bit_str().find_inner::<true>(needle.as_bit_str())
+        self.as_bit_str()
+            .find_inner::<true, true>(needle.as_bit_str())
     }
 
     #[inline]
     pub fn rfind_string(&self, needle: &BitString) -> Option<usize> {
-        self.as_bit_str().rfind_inner::<true>(needle.as_bit_str())
+        self.as_bit_str()
+            .rfind_inner::<true, true>(needle.as_bit_str())
     }
 }

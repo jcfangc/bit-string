@@ -1,5 +1,4 @@
 use crate::BitStr;
-use crate::WORD_BITS;
 
 impl<'bs> BitStr<'bs> {
     /// Strips `prefix` from the start, returning the remaining sub-view.
