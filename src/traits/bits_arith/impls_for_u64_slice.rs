@@ -3,10 +3,11 @@ use alloc::vec::Vec;
 use super::BitsArith;
 use super::funcs_for_binary_core::{OP_AND, OP_OR, OP_XOR, assign, owned};
 use super::funcs_for_count_ones;
+use super::funcs_for_leading_core;
 use super::funcs_for_not_core;
 use super::funcs_for_shl_core;
 use super::funcs_for_shr_core;
-use super::funcs_for_value_bits_core;
+use super::funcs_for_trailing_core;
 
 impl BitsArith for [u64] {
     #[inline]
@@ -80,7 +81,7 @@ impl BitsArith for [u64] {
         start_offset: u32,
         bit_len: usize,
     ) -> usize {
-        funcs_for_value_bits_core::leading::<FILL, WORD_ALIGNED>(self, start_offset, bit_len)
+        funcs_for_leading_core::leading::<FILL, WORD_ALIGNED>(self, start_offset, bit_len)
     }
 
     #[inline]
@@ -89,6 +90,6 @@ impl BitsArith for [u64] {
         start_offset: u32,
         bit_len: usize,
     ) -> usize {
-        funcs_for_value_bits_core::trailing::<FILL, WORD_ALIGNED>(self, start_offset, bit_len)
+        funcs_for_trailing_core::trailing::<FILL, WORD_ALIGNED>(self, start_offset, bit_len)
     }
 }
