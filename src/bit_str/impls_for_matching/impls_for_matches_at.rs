@@ -39,10 +39,16 @@ impl<'bs> BitStr<'bs> {
         if nd_is_aligned {
             let full_words = n / WORD_BITS;
             let nd_aligned = &nd_words[nd_base / WORD_BITS..];
-            let haystack_shift = hs_base % WORD_BITS;
             let haystack = &hs_words[hs_base / WORD_BITS..];
 
-            if !haystack.eq_words::<HS_WORD_ALIGNED>(nd_aligned, full_words, haystack_shift) {
+            // When HS_WORD_ALIGNED is true, haystack_shift is known to be 0
+            // and the modulo is skipped entirely.
+            let ok = if HS_WORD_ALIGNED {
+                haystack.eq_words::<true>(nd_aligned, full_words, 0)
+            } else {
+                haystack.eq_words::<false>(nd_aligned, full_words, hs_base % WORD_BITS)
+            };
+            if !ok {
                 return false;
             }
 
