@@ -14,11 +14,11 @@ struct NeedleCase {
 
 // -- rfind/len_65 -----------------------------------------------------------
 
-#[divan::bench(name = "rfind/len_65/front/ours_str")]
+#[divan::bench(name = "rfind/len_65/front/ours_string_str")]
 fn rf65f_str(b: Bencher) {
     b_str(b, make_case(65, 0));
 }
-#[divan::bench(name = "rfind/len_65/front/ours_string")]
+#[divan::bench(name = "rfind/len_65/front/ours_string_string")]
 fn rf65f_string(b: Bencher) {
     b_string(b, make_case(65, 0));
 }
@@ -27,11 +27,11 @@ fn rf65f_native(b: Bencher) {
     b_native(b, make_case(65, 0));
 }
 
-#[divan::bench(name = "rfind/len_65/middle/ours_str")]
+#[divan::bench(name = "rfind/len_65/middle/ours_string_str")]
 fn rf65m_str(b: Bencher) {
     b_str(b, middle_case(65));
 }
-#[divan::bench(name = "rfind/len_65/middle/ours_string")]
+#[divan::bench(name = "rfind/len_65/middle/ours_string_string")]
 fn rf65m_string(b: Bencher) {
     b_string(b, middle_case(65));
 }
@@ -40,11 +40,11 @@ fn rf65m_native(b: Bencher) {
     b_native(b, middle_case(65));
 }
 
-#[divan::bench(name = "rfind/len_65/end/ours_str")]
+#[divan::bench(name = "rfind/len_65/end/ours_string_str")]
 fn rf65e_str(b: Bencher) {
     b_str(b, end_case(65));
 }
-#[divan::bench(name = "rfind/len_65/end/ours_string")]
+#[divan::bench(name = "rfind/len_65/end/ours_string_string")]
 fn rf65e_string(b: Bencher) {
     b_string(b, end_case(65));
 }
@@ -53,11 +53,11 @@ fn rf65e_native(b: Bencher) {
     b_native(b, end_case(65));
 }
 
-#[divan::bench(name = "rfind/len_65/miss/ours_str")]
+#[divan::bench(name = "rfind/len_65/miss/ours_string_str")]
 fn rf65x_str(b: Bencher) {
     b_str(b, miss_case(65));
 }
-#[divan::bench(name = "rfind/len_65/miss/ours_string")]
+#[divan::bench(name = "rfind/len_65/miss/ours_string_string")]
 fn rf65x_string(b: Bencher) {
     b_string(b, miss_case(65));
 }
@@ -68,11 +68,11 @@ fn rf65x_native(b: Bencher) {
 
 // -- rfind/len_65536 --------------------------------------------------------
 
-#[divan::bench(name = "rfind/len_65536/front/ours_str")]
+#[divan::bench(name = "rfind/len_65536/front/ours_string_str")]
 fn rf6f_str(b: Bencher) {
     b_str(b, make_case(65536, 0));
 }
-#[divan::bench(name = "rfind/len_65536/front/ours_string")]
+#[divan::bench(name = "rfind/len_65536/front/ours_string_string")]
 fn rf6f_string(b: Bencher) {
     b_string(b, make_case(65536, 0));
 }
@@ -81,11 +81,11 @@ fn rf6f_native(b: Bencher) {
     b_native(b, make_case(65536, 0));
 }
 
-#[divan::bench(name = "rfind/len_65536/middle/ours_str")]
+#[divan::bench(name = "rfind/len_65536/middle/ours_string_str")]
 fn rf6m_str(b: Bencher) {
     b_str(b, middle_case(65536));
 }
-#[divan::bench(name = "rfind/len_65536/middle/ours_string")]
+#[divan::bench(name = "rfind/len_65536/middle/ours_string_string")]
 fn rf6m_string(b: Bencher) {
     b_string(b, middle_case(65536));
 }
@@ -94,11 +94,11 @@ fn rf6m_native(b: Bencher) {
     b_native(b, middle_case(65536));
 }
 
-#[divan::bench(name = "rfind/len_65536/end/ours_str")]
+#[divan::bench(name = "rfind/len_65536/end/ours_string_str")]
 fn rf6e_str(b: Bencher) {
     b_str(b, end_case(65536));
 }
-#[divan::bench(name = "rfind/len_65536/end/ours_string")]
+#[divan::bench(name = "rfind/len_65536/end/ours_string_string")]
 fn rf6e_string(b: Bencher) {
     b_string(b, end_case(65536));
 }
@@ -107,11 +107,11 @@ fn rf6e_native(b: Bencher) {
     b_native(b, end_case(65536));
 }
 
-#[divan::bench(name = "rfind/len_65536/miss/ours_str")]
+#[divan::bench(name = "rfind/len_65536/miss/ours_string_str")]
 fn rf6x_str(b: Bencher) {
     b_str(b, miss_case(65536));
 }
-#[divan::bench(name = "rfind/len_65536/miss/ours_string")]
+#[divan::bench(name = "rfind/len_65536/miss/ours_string_string")]
 fn rf6x_string(b: Bencher) {
     b_string(b, miss_case(65536));
 }
