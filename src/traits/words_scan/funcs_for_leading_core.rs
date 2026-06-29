@@ -5,7 +5,7 @@
 //! allowing the compiler to eliminate the first-word TZCNT phase.
 
 use super::funcs_for_chunk_eq::{LANES, chunk_eq};
-use crate::{WORD_BITS, low_mask};
+use crate::{SMALL_WORDS, WORD_BITS, low_mask};
 
 /// Counts trailing bits within a single u64 word that match `FILL`.
 ///
@@ -54,29 +54,57 @@ pub(super) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
         wi = 1;
     }
 
-    // Full middle words — SIMD skip-while + scalar tail.
+    // Full middle words.
     let mid_end = if end_rem == 0 { last_wi + 1 } else { last_wi };
     if wi < mid_end {
-        let ptr = bits.as_ptr();
-        // SAFETY: wi..mid_end are full u64 words within `bits`.
-        // chunk_eq uses unaligned loads which are safe on x86/aarch64.
-        unsafe {
-            while wi + LANES <= mid_end {
-                if !chunk_eq::<FILL>(ptr.add(wi)) {
-                    break;
-                }
-                scanned += LANES * WORD_BITS;
-                wi += LANES;
-            }
-        }
+        let total = mid_end - wi;
 
-        // Scalar: remaining full words.
-        while wi < mid_end {
-            if bits[wi] != FILL {
-                return scanned + count_trailing::<FILL>(bits[wi]).min(WORD_BITS);
+        // Too few words for SIMD — use a simple scalar loop.
+        if total < SMALL_WORDS {
+            for i in 0..total {
+                let w = bits[wi + i];
+                if w != FILL {
+                    return scanned + count_trailing::<FILL>(w).min(WORD_BITS);
+                }
+                scanned += WORD_BITS;
             }
-            scanned += WORD_BITS;
-            wi += 1;
+            wi = mid_end;
+        } else {
+            // SIMD countdown — only ptr advances in the hot loop; scanned is
+            // reconstructed from the pointer difference afterwards.
+            let base = unsafe { bits.as_ptr().add(wi) };
+            let end = unsafe { base.add(total) };
+            let limit = unsafe { end.sub(LANES) };
+            let mut ptr = base;
+
+            // SAFETY: base..end are full u64 words within `bits`.
+            unsafe {
+                while ptr <= limit {
+                    if !chunk_eq::<FILL>(ptr) {
+                        break;
+                    }
+                    ptr = ptr.add(LANES);
+                }
+            }
+
+            // scanned ← (ptr − base) in bytes → words → bits.
+            let done_words = (ptr as usize - base as usize) / 8;
+            scanned += done_words * WORD_BITS;
+
+            // Remainder — at most LANES‑1 words when the loop ran to
+            // completion; more when we bailed early.
+            let rem = (end as usize - ptr as usize) / 8;
+            for _ in 0..rem {
+                unsafe {
+                    if *ptr != FILL {
+                        scanned += count_trailing::<FILL>(*ptr).min(WORD_BITS);
+                        return scanned.min(bit_len);
+                    }
+                    scanned += WORD_BITS;
+                    ptr = ptr.add(1);
+                }
+            }
+            wi = mid_end;
         }
     }
 

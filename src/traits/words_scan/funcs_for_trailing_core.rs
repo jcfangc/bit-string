@@ -79,7 +79,7 @@ pub(super) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
         }
     }
 
-    // Full middle words — SIMD skip-while from right to left.
+    // Full middle words — SIMD countdown from right to left.
     let wi_end = if end_rem != 0 { last_wi - 1 } else { last_wi };
     let mid_first = if !WORD_ALIGNED && start_offset > 0 {
         1
@@ -95,10 +95,9 @@ pub(super) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
         // SAFETY: mid_first..=wi_end are full u64 words within `bits`.
         unsafe {
             while done + LANES <= total_words {
-                // `done + LANES <= total_words` guarantees
-                // `wi_end + 1 >= done + LANES`, so the
-                // wrapping_sub result is always non-negative.
-                let chunk_start = (wi_end + 1).wrapping_sub(done + LANES);
+                // `done + LANES ≤ total_words` implies
+                // `wi_end + 1 ≥ done + LANES`, so this never wraps.
+                let chunk_start = wi_end + 1 - (done + LANES);
                 if !chunk_eq::<FILL>(ptr.add(chunk_start)) {
                     break;
                 }
@@ -107,7 +106,7 @@ pub(super) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
             }
         }
 
-        // Scalar tail — right to left.
+        // Scalar tail — right to left on remainder.
         while done < total_words {
             let w = wi_end - done;
             if bits[w] != FILL {
