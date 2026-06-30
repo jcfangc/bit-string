@@ -100,72 +100,63 @@ impl BitString {
         let mut scanned: usize;
 
         // AVX2  (256‑bit, 4 × u64)
-        // For large inputs (≥ 128 words), the alignment prefix +
-        // aligned `vmovdqa` wins after ~32 SIMD iterations amortise
-        // the 4‑scalar‑word overhead.  For medium inputs, unaligned
-        // `vmovdqu` avoids the prefix/remainder cost entirely.
+        // 2×‑unrolled (8 u64s / iter).  For large inputs (≥ 128 words)
+        // we use an alignment prefix + aligned `vmovdqa` to avoid
+        // cache‑line crossings; for medium inputs, unaligned `vmovdqu`
+        // avoids the prefix/remainder scalar cost.
         #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
         {
             use core::arch::x86_64::{
                 __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_testz_si256,
             };
             const LANES: usize = 4;
-            // Threshold — above this many full words the alignment prefix
-            // is worth its scalar-overhead cost.
+            const STRIDE: usize = LANES * 2; // 8 u64s per iteration
             const ALIGN_THRESHOLD: usize = 128;
 
             let end = unsafe { words_ptr.add(mid_end) };
             let mut p = words_ptr;
 
             if mid_end >= ALIGN_THRESHOLD {
-                // Align p to 32‑byte boundary for aligned `vmovdqa`.
+                // Aligned path — prefix to 32‑byte boundary, then
+                // 2×‑unrolled aligned loop.
                 let misalign = (p as usize % 32) / 8;
                 if misalign > 0 {
                     let prefix_end = unsafe { p.add(misalign) };
                     while p < prefix_end {
                         let w = unsafe { *p };
                         if w != 0 {
-                            let tz = w.trailing_zeros() as usize;
-                            return tz.min(bit_len);
+                            return (w.trailing_zeros() as usize).min(bit_len);
                         }
                         p = unsafe { p.add(1) };
                     }
                 }
-
-                let mut iters = (end as usize - p as usize) / (LANES * core::mem::size_of::<u64>());
+                let mut iters =
+                    (end as usize - p as usize) / (STRIDE * core::mem::size_of::<u64>());
                 while iters > 0 {
-                    let all_zero = unsafe {
-                        let data = _mm256_load_si256(p.cast::<__m256i>());
-                        _mm256_testz_si256(data, data) != 0
-                    };
-                    if !all_zero {
-                        break;
+                    unsafe {
+                        let d0 = _mm256_load_si256(p.cast::<__m256i>());
+                        let d1 = _mm256_load_si256(p.add(LANES).cast::<__m256i>());
+                        if _mm256_testz_si256(d0, d0) == 0 || _mm256_testz_si256(d1, d1) == 0 {
+                            break;
+                        }
                     }
-                    p = unsafe { p.add(LANES) };
+                    p = unsafe { p.add(STRIDE) };
                     iters -= 1;
                 }
             } else {
-                // Unaligned — no prefix, SIMD loop covers everything.
-                // Unrolled 2× (8 u64s per iteration) to cut loop overhead
-                // in half for the common 4096‑bit case.
-                let mut iters = mid_end / (LANES * 2);
+                // Unaligned path — no prefix, 2×‑unrolled.
+                let mut iters = mid_end / STRIDE;
                 while iters > 0 {
                     unsafe {
                         let d0 = _mm256_loadu_si256(p.cast::<__m256i>());
                         let d1 = _mm256_loadu_si256(p.add(LANES).cast::<__m256i>());
                         if _mm256_testz_si256(d0, d0) == 0 || _mm256_testz_si256(d1, d1) == 0 {
-                            // Non-zero in one of the two vectors.
-                            // Fall back to scalar check of each lane.
                             break;
                         }
                     }
-                    p = unsafe { p.add(LANES * 2) };
+                    p = unsafe { p.add(STRIDE) };
                     iters -= 1;
                 }
-                // If we broke early, p points to the start of the failing
-                // pair — the scalar remainder loop below will find the
-                // exact non-zero word.
-                // If we completed, p == end and the fast path returns.
             }
 
             let done = (p as usize - words_ptr as usize) / 8;
