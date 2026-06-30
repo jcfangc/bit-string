@@ -139,3 +139,173 @@ mod imp {
 }
 
 pub(crate) use imp::{LANES, chunk_eq};
+
+// ═══════════════════════════════════════════════════════════════════════
+// 2×‑unrolled and aligned chunk‑eq primitives.
+// Each `#[cfg]` block below is mutually exclusive — exactly one is
+// compiled per target tuple.  Callers use the bare name (e.g.
+// `chunk_eq_2x::<FILL>(ptr)`) without a module prefix.
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── AVX2 ─────────────────────────────────────────────────────────────
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
+mod chunk_eq_avx2_extras {
+    #[cfg(target_arch = "x86")]
+    use core::arch::x86::{
+        __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256,
+        _mm256_xor_si256,
+    };
+    #[cfg(target_arch = "x86_64")]
+    use core::arch::x86_64::{
+        __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256,
+        _mm256_xor_si256,
+    };
+
+    pub(crate) const LANES_2X: usize = 8;
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) unsafe fn chunk_eq_2x<const FILL: u64>(ptr: *const u64) -> bool {
+        unsafe {
+            let d0 = _mm256_loadu_si256(ptr.cast::<__m256i>());
+            let d1 = _mm256_loadu_si256(ptr.add(4).cast::<__m256i>());
+            if FILL == 0 {
+                _mm256_testz_si256(d0, d0) != 0 && _mm256_testz_si256(d1, d1) != 0
+            } else {
+                let fill_vec = _mm256_set1_epi64x(FILL as i64);
+                let x0 = _mm256_xor_si256(d0, fill_vec);
+                let x1 = _mm256_xor_si256(d1, fill_vec);
+                _mm256_testz_si256(x0, x0) != 0 && _mm256_testz_si256(x1, x1) != 0
+            }
+        }
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) unsafe fn chunk_eq_aligned<const FILL: u64>(ptr: *const u64) -> bool {
+        unsafe {
+            let data = _mm256_load_si256(ptr.cast::<__m256i>());
+            if FILL == 0 {
+                _mm256_testz_si256(data, data) != 0
+            } else {
+                let fill_vec = _mm256_set1_epi64x(FILL as i64);
+                let xor = _mm256_xor_si256(data, fill_vec);
+                _mm256_testz_si256(xor, xor) != 0
+            }
+        }
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) unsafe fn chunk_eq_2x_aligned<const FILL: u64>(ptr: *const u64) -> bool {
+        unsafe {
+            let d0 = _mm256_load_si256(ptr.cast::<__m256i>());
+            let d1 = _mm256_load_si256(ptr.add(4).cast::<__m256i>());
+            if FILL == 0 {
+                _mm256_testz_si256(d0, d0) != 0 && _mm256_testz_si256(d1, d1) != 0
+            } else {
+                let fill_vec = _mm256_set1_epi64x(FILL as i64);
+                let x0 = _mm256_xor_si256(d0, fill_vec);
+                let x1 = _mm256_xor_si256(d1, fill_vec);
+                _mm256_testz_si256(x0, x0) != 0 && _mm256_testz_si256(x1, x1) != 0
+            }
+        }
+    }
+}
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
+pub(crate) use chunk_eq_avx2_extras::{
+    LANES_2X, chunk_eq_2x, chunk_eq_2x_aligned, chunk_eq_aligned,
+};
+
+// ── SSE2 (x86 baseline, no AVX2) ──────────────────────────────────────
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "sse2",
+    not(target_feature = "avx2")
+))]
+mod chunk_eq_sse2_extras {
+    use super::imp::LANES;
+
+    pub(crate) const LANES_2X: usize = LANES * 2; // 4
+
+    #[inline]
+    pub(crate) unsafe fn chunk_eq_2x<const FILL: u64>(ptr: *const u64) -> bool {
+        use super::imp::chunk_eq;
+        unsafe { chunk_eq::<FILL>(ptr) && chunk_eq::<FILL>(ptr.add(LANES)) }
+    }
+}
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "sse2",
+    not(target_feature = "avx2")
+))]
+pub(crate) use chunk_eq_sse2_extras::LANES_2X;
+
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "sse2",
+    not(target_feature = "avx2")
+))]
+pub(crate) use chunk_eq_sse2_extras::chunk_eq_2x;
+
+// ── NEON (aarch64) ────────────────────────────────────────────────────
+#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+mod chunk_eq_neon_extras {
+    use super::imp::LANES;
+
+    pub(crate) const LANES_2X: usize = LANES * 2; // 4
+
+    #[inline]
+    pub(crate) unsafe fn chunk_eq_2x<const FILL: u64>(ptr: *const u64) -> bool {
+        use super::imp::chunk_eq;
+        unsafe { chunk_eq::<FILL>(ptr) && chunk_eq::<FILL>(ptr.add(LANES)) }
+    }
+}
+#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+pub(crate) use chunk_eq_neon_extras::LANES_2X;
+
+#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+pub(crate) use chunk_eq_neon_extras::chunk_eq_2x;
+
+// ── Scalar fallback ───────────────────────────────────────────────────
+#[cfg(not(any(
+    all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        any(target_feature = "avx2", target_feature = "sse2")
+    ),
+    all(target_arch = "aarch64", target_feature = "neon"),
+)))]
+mod chunk_eq_scalar_extras {
+    use super::imp::LANES;
+
+    pub(crate) const LANES_2X: usize = LANES * 2; // 2
+
+    #[inline]
+    pub(crate) unsafe fn chunk_eq_2x<const FILL: u64>(ptr: *const u64) -> bool {
+        use super::imp::chunk_eq;
+        unsafe { chunk_eq::<FILL>(ptr) && chunk_eq::<FILL>(ptr.add(LANES)) }
+    }
+}
+#[cfg(not(any(
+    all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        any(target_feature = "avx2", target_feature = "sse2")
+    ),
+    all(target_arch = "aarch64", target_feature = "neon"),
+)))]
+pub(crate) use chunk_eq_scalar_extras::LANES_2X;
+
+#[cfg(not(any(
+    all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        any(target_feature = "avx2", target_feature = "sse2")
+    ),
+    all(target_arch = "aarch64", target_feature = "neon"),
+)))]
+pub(crate) use chunk_eq_scalar_extras::chunk_eq_2x;
