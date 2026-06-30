@@ -14,6 +14,37 @@ enum Pattern {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// BitStr::leading_zeros (optimised trait path) — reference baseline
+// for trailing_zeros.  Both go through WordsScan; trailing adds the
+// reverse-scan overhead.  Goal: make trailing as close as possible.
+// ═══════════════════════════════════════════════════════════════════════
+
+#[divan::bench(name = "leading_zeros/len_65/all_zeros/ours_str")]
+fn lead_65_zeros_str_ref(b: Bencher) {
+    bench_lead_str(b, 65, Pattern::Zeros);
+}
+#[divan::bench(name = "leading_zeros/len_65/dense/ours_str")]
+fn lead_65_dense_str_ref(b: Bencher) {
+    bench_lead_str(b, 65, Pattern::Dense);
+}
+#[divan::bench(name = "leading_zeros/len_4096/all_zeros/ours_str")]
+fn lead_4096_zeros_str_ref(b: Bencher) {
+    bench_lead_str(b, 4096, Pattern::Zeros);
+}
+#[divan::bench(name = "leading_zeros/len_65536/all_zeros/ours_str")]
+fn lead_65536_zeros_str_ref(b: Bencher) {
+    bench_lead_str(b, 65536, Pattern::Zeros);
+}
+#[divan::bench(name = "leading_ones/len_65/all_zeros/ours_str")]
+fn lead_ones_65_zeros_str_ref(b: Bencher) {
+    bench_lead_ones_str(b, 65, Pattern::Zeros);
+}
+#[divan::bench(name = "leading_ones/len_4096/all_zeros/ours_str")]
+fn lead_ones_4096_zeros_str_ref(b: Bencher) {
+    bench_lead_ones_str(b, 4096, Pattern::Zeros);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // trailing_zeros
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -118,6 +149,19 @@ fn trailing_ones_4096_zeros_str(b: Bencher) {
 #[divan::bench(name = "trailing_ones/len_4096/all_zeros/ours_string")]
 fn trailing_ones_4096_zeros_string(b: Bencher) {
     bench_string_trailing_ones(b, 4096, Pattern::Zeros);
+}
+
+// ── leading reference helpers (BitStr) ──────────────────────────────
+
+fn bench_lead_str(b: Bencher, len: usize, p: Pattern) {
+    let bits: BitString = (0..len).map(|i| bit(i, p)).collect();
+    let v = bits.as_bit_str();
+    b.bench(|| black_box(&v).leading_zeros());
+}
+fn bench_lead_ones_str(b: Bencher, len: usize, p: Pattern) {
+    let bits: BitString = (0..len).map(|i| bit(i, p)).collect();
+    let v = bits.as_bit_str();
+    b.bench(|| black_box(&v).leading_ones());
 }
 
 // ── trailing_zeros helpers ────────────────────────────────────────────
