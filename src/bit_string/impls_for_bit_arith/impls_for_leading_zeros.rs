@@ -146,18 +146,26 @@ impl BitString {
                 }
             } else {
                 // Unaligned — no prefix, SIMD loop covers everything.
-                let mut iters = mid_end / LANES;
+                // Unrolled 2× (8 u64s per iteration) to cut loop overhead
+                // in half for the common 4096‑bit case.
+                let mut iters = mid_end / (LANES * 2);
                 while iters > 0 {
-                    let all_zero = unsafe {
-                        let data = _mm256_loadu_si256(p.cast::<__m256i>());
-                        _mm256_testz_si256(data, data) != 0
-                    };
-                    if !all_zero {
-                        break;
+                    unsafe {
+                        let d0 = _mm256_loadu_si256(p.cast::<__m256i>());
+                        let d1 = _mm256_loadu_si256(p.add(LANES).cast::<__m256i>());
+                        if _mm256_testz_si256(d0, d0) == 0 || _mm256_testz_si256(d1, d1) == 0 {
+                            // Non-zero in one of the two vectors.
+                            // Fall back to scalar check of each lane.
+                            break;
+                        }
                     }
-                    p = unsafe { p.add(LANES) };
+                    p = unsafe { p.add(LANES * 2) };
                     iters -= 1;
                 }
+                // If we broke early, p points to the start of the failing
+                // pair — the scalar remainder loop below will find the
+                // exact non-zero word.
+                // If we completed, p == end and the fast path returns.
             }
 
             let done = (p as usize - words_ptr as usize) / 8;
