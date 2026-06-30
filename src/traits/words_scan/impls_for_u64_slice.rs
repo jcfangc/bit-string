@@ -9,7 +9,7 @@ impl WordsScan for [u64] {
         funcs_for_count_ones::count_ones(self, bit_len)
     }
 
-    #[inline]
+    #[inline(always)]
     fn leading_value_bits<const FILL: u64, const WORD_ALIGNED: bool>(
         &self,
         start_offset: u32,

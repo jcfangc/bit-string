@@ -1,5 +1,5 @@
 use crate::traits::WordsScan;
-use crate::{SMALL_WORDS, WORD_BITS, low_mask};
+use crate::{FILL_ONES, FILL_ZEROS, SMALL_WORDS, WORD_BITS};
 
 use super::BitString;
 
@@ -11,297 +11,44 @@ impl BitString {
         if bit_len == 0 {
             return 0;
         }
-        let words_ptr = self.words.as_ptr();
+        let words = self.words();
 
+        // ── First-word fast path ──────────────────────────────────
+        // Catches dense / alternating / any early-1 input directly,
+        // avoiding the trait call overhead entirely.
+        let w0 = words[0];
+        if w0 != 0 {
+            return (w0.trailing_zeros() as usize).min(bit_len);
+        }
+
+        // ── Tiny inputs — inline scalar ───────────────────────────
+        // For < SMALL_WORDS full words, the trait dispatch overhead
+        // dominates.  Keep the hot tiny path here.
         let last_wi = (bit_len - 1) / WORD_BITS;
         let end_rem = bit_len % WORD_BITS;
         let mid_end = if end_rem == 0 { last_wi + 1 } else { last_wi };
-
-        // Tiny inputs — unrolled scalar, no SIMD or loop overhead.
         if mid_end < SMALL_WORDS {
-            match mid_end {
-                0 => {
-                    let last = unsafe { *words_ptr } & low_mask(end_rem);
-                    if last == 0 {
-                        return bit_len;
-                    }
-                    return (last.trailing_zeros() as usize).min(bit_len);
-                }
-                1 => {
-                    let w0 = unsafe { *words_ptr };
-                    if w0 != 0 {
-                        return (w0.trailing_zeros() as usize).min(bit_len);
-                    }
-                    if end_rem == 0 {
-                        return bit_len;
-                    }
-                    let last = unsafe { *words_ptr.add(1) } & low_mask(end_rem);
-                    if last == 0 {
-                        return bit_len;
-                    }
-                    return (64 + last.trailing_zeros() as usize).min(bit_len);
-                }
-                2 => {
-                    let w0 = unsafe { *words_ptr };
-                    if w0 != 0 {
-                        return (w0.trailing_zeros() as usize).min(bit_len);
-                    }
-                    let w1 = unsafe { *words_ptr.add(1) };
-                    if w1 != 0 {
-                        return (64 + w1.trailing_zeros() as usize).min(bit_len);
-                    }
-                    if end_rem == 0 {
-                        return bit_len;
-                    }
-                    let last = unsafe { *words_ptr.add(2) } & low_mask(end_rem);
-                    if last == 0 {
-                        return bit_len;
-                    }
-                    return (128 + last.trailing_zeros() as usize).min(bit_len);
-                }
-                _ => {
-                    // 3 full words (mid_end == 3, SMALL_WORDS == 4 for AVX2)
-                    let w0 = unsafe { *words_ptr };
-                    if w0 != 0 {
-                        return (w0.trailing_zeros() as usize).min(bit_len);
-                    }
-                    let w1 = unsafe { *words_ptr.add(1) };
-                    if w1 != 0 {
-                        return (64 + w1.trailing_zeros() as usize).min(bit_len);
-                    }
-                    let w2 = unsafe { *words_ptr.add(2) };
-                    if w2 != 0 {
-                        return (128 + w2.trailing_zeros() as usize).min(bit_len);
-                    }
-                    if end_rem == 0 {
-                        return bit_len;
-                    }
-                    let last = unsafe { *words_ptr.add(3) } & low_mask(end_rem);
-                    if last == 0 {
-                        return bit_len;
-                    }
-                    return (192 + last.trailing_zeros() as usize).min(bit_len);
-                }
-            }
-        }
-
-        // ── First-word fast path ─────────────────────────────────
-        // Catches the common case where the answer lies in word 0.
-        {
-            let w0 = unsafe { *words_ptr };
-            if w0 != 0 {
-                return (w0.trailing_zeros() as usize).min(bit_len);
-            }
-        }
-
-        // ── SIMD countdown ──────────────────────────────────────
-        // Exactly one cfg block is compiled; each sets `scanned`.
-
-        let mut scanned: usize;
-
-        // AVX2  (256‑bit, 4 × u64)
-        // 2×‑unrolled (8 u64s / iter).  For large inputs (≥ 128 words)
-        // we use an alignment prefix + aligned `vmovdqa` to avoid
-        // cache‑line crossings; for medium inputs, unaligned `vmovdqu`
-        // avoids the prefix/remainder scalar cost.
-        #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-        {
-            use core::arch::x86_64::{
-                __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_testz_si256,
-            };
-            const LANES: usize = 4;
-            const STRIDE: usize = LANES * 2; // 8 u64s per iteration
-            const ALIGN_THRESHOLD: usize = 128;
-
-            let end = unsafe { words_ptr.add(mid_end) };
-            let mut p = words_ptr;
-
-            if mid_end >= ALIGN_THRESHOLD {
-                // Aligned path — prefix to 32‑byte boundary, then
-                // 2×‑unrolled aligned loop.
-                let misalign = (p as usize % 32) / 8;
-                if misalign > 0 {
-                    let prefix_end = unsafe { p.add(misalign) };
-                    while p < prefix_end {
-                        let w = unsafe { *p };
-                        if w != 0 {
-                            return (w.trailing_zeros() as usize).min(bit_len);
-                        }
-                        p = unsafe { p.add(1) };
-                    }
-                }
-                let mut iters =
-                    (end as usize - p as usize) / (STRIDE * core::mem::size_of::<u64>());
-                while iters > 0 {
-                    unsafe {
-                        let d0 = _mm256_load_si256(p.cast::<__m256i>());
-                        let d1 = _mm256_load_si256(p.add(LANES).cast::<__m256i>());
-                        if _mm256_testz_si256(d0, d0) == 0 || _mm256_testz_si256(d1, d1) == 0 {
-                            break;
-                        }
-                    }
-                    p = unsafe { p.add(STRIDE) };
-                    iters -= 1;
-                }
-            } else {
-                // Unaligned path — no prefix, 2×‑unrolled.
-                let mut iters = mid_end / STRIDE;
-                while iters > 0 {
-                    unsafe {
-                        let d0 = _mm256_loadu_si256(p.cast::<__m256i>());
-                        let d1 = _mm256_loadu_si256(p.add(LANES).cast::<__m256i>());
-                        if _mm256_testz_si256(d0, d0) == 0 || _mm256_testz_si256(d1, d1) == 0 {
-                            break;
-                        }
-                    }
-                    p = unsafe { p.add(STRIDE) };
-                    iters -= 1;
-                }
-            }
-
-            let done = (p as usize - words_ptr as usize) / 8;
-            scanned = done * WORD_BITS;
-
-            if (p as usize) >= (end as usize) && end_rem == 0 {
-                return scanned;
-            }
-
-            let rem = (end as usize - p as usize) / 8;
-            for _ in 0..rem {
-                let w = unsafe { *p };
+            let mut scanned = WORD_BITS; // word 0 already checked above
+            for i in 1..mid_end {
+                let w = words[i];
                 if w != 0 {
-                    scanned += w.trailing_zeros() as usize;
-                    return scanned.min(bit_len);
+                    return (scanned + w.trailing_zeros() as usize).min(bit_len);
                 }
                 scanned += WORD_BITS;
-                p = unsafe { p.add(1) };
             }
             if end_rem != 0 {
-                let last = unsafe { *p } & low_mask(end_rem);
-                scanned += last.trailing_zeros() as usize;
+                let last = words[mid_end] & ((1u64 << end_rem).wrapping_sub(1));
+                if last == 0 {
+                    return bit_len;
+                }
+                return (scanned + last.trailing_zeros() as usize).min(bit_len);
             }
-            return scanned.min(bit_len);
+            return bit_len;
         }
 
-        // SSE2  (128‑bit, 2 × u64)
-        #[cfg(all(
-            target_arch = "x86_64",
-            target_feature = "sse2",
-            not(target_feature = "avx2")
-        ))]
-        {
-            use core::arch::x86_64::{
-                __m128i, _mm_cmpeq_epi32, _mm_loadu_si128, _mm_movemask_epi8, _mm_setzero_si128,
-            };
-            const LANES: usize = 2;
-
-            let end = unsafe { words_ptr.add(mid_end) };
-            let limit = unsafe { end.sub(LANES) };
-            let zero = unsafe { _mm_setzero_si128() };
-            let mut p = words_ptr;
-
-            while p <= limit {
-                let all_zero = unsafe {
-                    let data = _mm_loadu_si128(p.cast::<__m128i>());
-                    let cmp = _mm_cmpeq_epi32(data, zero);
-                    _mm_movemask_epi8(cmp) == 0xFFFF
-                };
-                if !all_zero {
-                    break;
-                }
-                p = unsafe { p.add(LANES) };
-            }
-
-            let done = (p as usize - words_ptr as usize) / 8;
-            scanned = done * WORD_BITS;
-
-            let rem = (end as usize - p as usize) / 8;
-            for _ in 0..rem {
-                let w = unsafe { *p };
-                if w != 0 {
-                    scanned += w.trailing_zeros() as usize;
-                    return scanned.min(bit_len);
-                }
-                scanned += WORD_BITS;
-                p = unsafe { p.add(1) };
-            }
-            if end_rem != 0 {
-                let last = unsafe { *p } & low_mask(end_rem);
-                scanned += last.trailing_zeros() as usize;
-            }
-            return scanned.min(bit_len);
-        }
-
-        // NEON  (aarch64, 128‑bit, 2 × u64)
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            use core::arch::aarch64::{vceqq_u64, vdupq_n_u64, vgetq_lane_u64, vld1q_u64};
-            const LANES: usize = 2;
-
-            let end = unsafe { words_ptr.add(mid_end) };
-            let limit = unsafe { end.sub(LANES) };
-            let mut p = words_ptr;
-
-            while p <= limit {
-                let all_zero = unsafe {
-                    let data = vld1q_u64(p);
-                    let cmp = vceqq_u64(data, vdupq_n_u64(0));
-                    vgetq_lane_u64(cmp, 0) != 0 && vgetq_lane_u64(cmp, 1) != 0
-                };
-                if !all_zero {
-                    break;
-                }
-                p = unsafe { p.add(LANES) };
-            }
-
-            let done = (p as usize - words_ptr as usize) / 8;
-            scanned = done * WORD_BITS;
-
-            let rem = (end as usize - p as usize) / 8;
-            for _ in 0..rem {
-                let w = unsafe { *p };
-                if w != 0 {
-                    scanned += w.trailing_zeros() as usize;
-                    return scanned.min(bit_len);
-                }
-                scanned += WORD_BITS;
-                p = unsafe { p.add(1) };
-            }
-            if end_rem != 0 {
-                let last = unsafe { *p } & low_mask(end_rem);
-                scanned += last.trailing_zeros() as usize;
-            }
-            return scanned.min(bit_len);
-        }
-
-        // Scalar fallback.
-        #[cfg(not(any(
-            all(
-                target_arch = "x86_64",
-                any(target_feature = "avx2", target_feature = "sse2")
-            ),
-            all(target_arch = "aarch64", target_feature = "neon"),
-        )))]
-        {
-            let end = unsafe { words_ptr.add(mid_end) };
-            scanned = 0;
-            let mut p = words_ptr;
-
-            while p < end {
-                let w = unsafe { *p };
-                if w != 0 {
-                    scanned += w.trailing_zeros() as usize;
-                    return scanned.min(bit_len);
-                }
-                scanned += WORD_BITS;
-                p = unsafe { p.add(1) };
-            }
-            if end_rem != 0 {
-                let last = unsafe { *p } & low_mask(end_rem);
-                scanned += last.trailing_zeros() as usize;
-            }
-            scanned.min(bit_len)
-        }
+        // ── SIMD via trait ────────────────────────────────────────
+        // All full SIMD logic lives in `WordsScan::leading_value_bits`.
+        words.leading_value_bits::<FILL_ZEROS, true>(0, bit_len)
     }
 
     /// Returns the number of consecutive `true` bits from the start.
@@ -311,252 +58,41 @@ impl BitString {
         if bit_len == 0 {
             return 0;
         }
-        let words_ptr = self.words.as_ptr();
+        let words = self.words();
+
+        let w0 = words[0];
+        if w0 != u64::MAX {
+            return ((!w0).trailing_zeros() as usize).min(bit_len);
+        }
 
         let last_wi = (bit_len - 1) / WORD_BITS;
         let end_rem = bit_len % WORD_BITS;
         let mid_end = if end_rem == 0 { last_wi + 1 } else { last_wi };
-
         if mid_end < SMALL_WORDS {
-            match mid_end {
-                0 => {
-                    let last = unsafe { *words_ptr } & low_mask(end_rem);
-                    if last == low_mask(end_rem) {
-                        return bit_len;
-                    }
-                    return ((!last).trailing_zeros() as usize).min(bit_len);
-                }
-                1 => {
-                    let w0 = unsafe { *words_ptr };
-                    if w0 != u64::MAX {
-                        return ((!w0).trailing_zeros() as usize).min(bit_len);
-                    }
-                    if end_rem == 0 {
-                        return bit_len;
-                    }
-                    let last = unsafe { *words_ptr.add(1) } & low_mask(end_rem);
-                    if last == low_mask(end_rem) {
-                        return bit_len;
-                    }
-                    return (64 + (!last).trailing_zeros() as usize).min(bit_len);
-                }
-                2 => {
-                    let w0 = unsafe { *words_ptr };
-                    if w0 != u64::MAX {
-                        return ((!w0).trailing_zeros() as usize).min(bit_len);
-                    }
-                    let w1 = unsafe { *words_ptr.add(1) };
-                    if w1 != u64::MAX {
-                        return (64 + (!w1).trailing_zeros() as usize).min(bit_len);
-                    }
-                    if end_rem == 0 {
-                        return bit_len;
-                    }
-                    let last = unsafe { *words_ptr.add(2) } & low_mask(end_rem);
-                    if last == low_mask(end_rem) {
-                        return bit_len;
-                    }
-                    return (128 + (!last).trailing_zeros() as usize).min(bit_len);
-                }
-                _ => {
-                    // 3 full words
-                    let w0 = unsafe { *words_ptr };
-                    if w0 != u64::MAX {
-                        return ((!w0).trailing_zeros() as usize).min(bit_len);
-                    }
-                    let w1 = unsafe { *words_ptr.add(1) };
-                    if w1 != u64::MAX {
-                        return (64 + (!w1).trailing_zeros() as usize).min(bit_len);
-                    }
-                    let w2 = unsafe { *words_ptr.add(2) };
-                    if w2 != u64::MAX {
-                        return (128 + (!w2).trailing_zeros() as usize).min(bit_len);
-                    }
-                    if end_rem == 0 {
-                        return bit_len;
-                    }
-                    let last = unsafe { *words_ptr.add(3) } & low_mask(end_rem);
-                    if last == low_mask(end_rem) {
-                        return bit_len;
-                    }
-                    return (192 + (!last).trailing_zeros() as usize).min(bit_len);
-                }
-            }
-        }
-
-        let mut scanned: usize;
-
-        #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-        {
-            use core::arch::x86_64::{
-                __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256,
-                _mm256_xor_si256,
-            };
-            const LANES: usize = 4;
-
-            let end = unsafe { words_ptr.add(mid_end) };
-            let limit = unsafe { end.sub(LANES) };
-            let fill = unsafe { _mm256_set1_epi64x(-1) };
-            let mut p = words_ptr;
-
-            while p <= limit {
-                let all_ones = unsafe {
-                    let data = _mm256_loadu_si256(p.cast::<__m256i>());
-                    let xor = _mm256_xor_si256(data, fill);
-                    _mm256_testz_si256(xor, xor) != 0
-                };
-                if !all_ones {
-                    break;
-                }
-                p = unsafe { p.add(LANES) };
-            }
-
-            let done = (p as usize - words_ptr as usize) / 8;
-            scanned = done * WORD_BITS;
-
-            let rem = (end as usize - p as usize) / 8;
-            for _ in 0..rem {
-                let w = unsafe { *p };
+            let mut scanned = WORD_BITS;
+            for i in 1..mid_end {
+                let w = words[i];
                 if w != u64::MAX {
-                    scanned += (!w).trailing_zeros() as usize;
-                    return scanned.min(bit_len);
+                    return (scanned + (!w).trailing_zeros() as usize).min(bit_len);
                 }
                 scanned += WORD_BITS;
-                p = unsafe { p.add(1) };
             }
             if end_rem != 0 {
-                let last = unsafe { *p } & low_mask(end_rem);
-                scanned += (!last).trailing_zeros() as usize;
+                let last = words[mid_end] & ((1u64 << end_rem).wrapping_sub(1));
+                if last == ((1u64 << end_rem).wrapping_sub(1)) {
+                    return bit_len;
+                }
+                return (scanned + (!last).trailing_zeros() as usize).min(bit_len);
             }
-            return scanned.min(bit_len);
+            return bit_len;
         }
 
-        #[cfg(all(
-            target_arch = "x86_64",
-            target_feature = "sse2",
-            not(target_feature = "avx2")
-        ))]
-        {
-            use core::arch::x86_64::{
-                __m128i, _mm_cmpeq_epi32, _mm_loadu_si128, _mm_movemask_epi8, _mm_set1_epi64x,
-                _mm_setzero_si128, _mm_xor_si128,
-            };
-            const LANES: usize = 2;
-
-            let end = unsafe { words_ptr.add(mid_end) };
-            let limit = unsafe { end.sub(LANES) };
-            let zero = unsafe { _mm_setzero_si128() };
-            let fill_vec = unsafe { _mm_set1_epi64x(-1) };
-            let mut p = words_ptr;
-
-            while p <= limit {
-                let all_ones = unsafe {
-                    let data = _mm_loadu_si128(p.cast::<__m128i>());
-                    let xor = _mm_xor_si128(data, fill_vec);
-                    let cmp = _mm_cmpeq_epi32(xor, zero);
-                    _mm_movemask_epi8(cmp) == 0xFFFF
-                };
-                if !all_ones {
-                    break;
-                }
-                p = unsafe { p.add(LANES) };
-            }
-
-            let done = (p as usize - words_ptr as usize) / 8;
-            scanned = done * WORD_BITS;
-
-            let rem = (end as usize - p as usize) / 8;
-            for _ in 0..rem {
-                let w = unsafe { *p };
-                if w != u64::MAX {
-                    scanned += (!w).trailing_zeros() as usize;
-                    return scanned.min(bit_len);
-                }
-                scanned += WORD_BITS;
-                p = unsafe { p.add(1) };
-            }
-            if end_rem != 0 {
-                let last = unsafe { *p } & low_mask(end_rem);
-                scanned += (!last).trailing_zeros() as usize;
-            }
-            return scanned.min(bit_len);
-        }
-
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            use core::arch::aarch64::{vceqq_u64, vdupq_n_u64, vgetq_lane_u64, vld1q_u64};
-            const LANES: usize = 2;
-
-            let end = unsafe { words_ptr.add(mid_end) };
-            let limit = unsafe { end.sub(LANES) };
-            let fill = u64::MAX;
-            let mut p = words_ptr;
-
-            while p <= limit {
-                let all_ones = unsafe {
-                    let data = vld1q_u64(p);
-                    let cmp = vceqq_u64(data, vdupq_n_u64(fill));
-                    vgetq_lane_u64(cmp, 0) != 0 && vgetq_lane_u64(cmp, 1) != 0
-                };
-                if !all_ones {
-                    break;
-                }
-                p = unsafe { p.add(LANES) };
-            }
-
-            let done = (p as usize - words_ptr as usize) / 8;
-            scanned = done * WORD_BITS;
-
-            let rem = (end as usize - p as usize) / 8;
-            for _ in 0..rem {
-                let w = unsafe { *p };
-                if w != u64::MAX {
-                    scanned += (!w).trailing_zeros() as usize;
-                    return scanned.min(bit_len);
-                }
-                scanned += WORD_BITS;
-                p = unsafe { p.add(1) };
-            }
-            if end_rem != 0 {
-                let last = unsafe { *p } & low_mask(end_rem);
-                scanned += (!last).trailing_zeros() as usize;
-            }
-            return scanned.min(bit_len);
-        }
-
-        #[cfg(not(any(
-            all(
-                target_arch = "x86_64",
-                any(target_feature = "avx2", target_feature = "sse2")
-            ),
-            all(target_arch = "aarch64", target_feature = "neon"),
-        )))]
-        {
-            let end = unsafe { words_ptr.add(mid_end) };
-            scanned = 0;
-            let mut p = words_ptr;
-
-            while p < end {
-                let w = unsafe { *p };
-                if w != u64::MAX {
-                    scanned += (!w).trailing_zeros() as usize;
-                    return scanned.min(bit_len);
-                }
-                scanned += WORD_BITS;
-                p = unsafe { p.add(1) };
-            }
-            if end_rem != 0 {
-                let last = unsafe { *p } & low_mask(end_rem);
-                scanned += (!last).trailing_zeros() as usize;
-            }
-            scanned.min(bit_len)
-        }
+        words.leading_value_bits::<FILL_ONES, true>(0, bit_len)
     }
 
     /// Returns the number of consecutive `false` bits from the end.
     #[inline]
     pub fn trailing_zeros(&self) -> usize {
-        use crate::FILL_ZEROS;
         self.words()
             .trailing_value_bits::<FILL_ZEROS, true>(0, self.bit_len)
     }
@@ -564,7 +100,6 @@ impl BitString {
     /// Returns the number of consecutive `true` bits from the end.
     #[inline]
     pub fn trailing_ones(&self) -> usize {
-        use crate::FILL_ONES;
         self.words()
             .trailing_value_bits::<FILL_ONES, true>(0, self.bit_len)
     }
