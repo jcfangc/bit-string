@@ -67,17 +67,20 @@ pub(super) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             let base = unsafe { bits.as_ptr().add(wi) };
             let end = unsafe { base.add(total) };
 
+            // First-word fast path — catches early non-FILL.
             let w0 = unsafe { *base };
             if w0 != FILL {
                 return (scanned + count_trailing::<FILL>(w0)).min(bit_len);
             }
-            let mut p = unsafe { base.add(1) };
-            let simd_total = total - 1;
+            // Start SIMD from `base` (not base+1).  Word 0 is
+            // double‑checked (fast path + SIMD) but this keeps
+            // the iteration count a clean multiple of STRIDE.
+            let mut p = base;
 
             // ── SIMD scan ─────────────────────────────────────────
-            // Exactly one cfg block is compiled.  The entire SIMD
-            // section is inline here (no helper calls) so LLVM can
-            // optimise it as part of the monomorphised `leading`.
+            // Raw SIMD intrinsics are inlined directly here (not
+            // behind a #[target_feature] call gate) so LLVM can
+            // fully inline through the entire call chain.
             //
             // AVX2
             #[cfg(all(
@@ -85,7 +88,55 @@ pub(super) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
                 target_feature = "avx2"
             ))]
             unsafe {
-                if simd_total >= ALIGN_THRESHOLD {
+                #[cfg(target_arch = "x86")]
+                use core::arch::x86::{
+                    __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_set1_epi64x,
+                    _mm256_testz_si256, _mm256_xor_si256,
+                };
+                #[cfg(target_arch = "x86_64")]
+                use core::arch::x86_64::{
+                    __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_set1_epi64x,
+                    _mm256_testz_si256, _mm256_xor_si256,
+                };
+                const LANES: usize = 4;
+                const STRIDE: usize = 8;
+
+                // Inline helper for the unaligned 2× check.
+                macro_rules! is_all_fill_2x {
+                    ($ptr:expr) => {
+                        if FILL == 0 {
+                            let d0 = _mm256_loadu_si256($ptr.cast::<__m256i>());
+                            let d1 = _mm256_loadu_si256($ptr.add(LANES).cast::<__m256i>());
+                            _mm256_testz_si256(d0, d0) != 0 && _mm256_testz_si256(d1, d1) != 0
+                        } else {
+                            let fill_vec = _mm256_set1_epi64x(FILL as i64);
+                            let d0 = _mm256_loadu_si256($ptr.cast::<__m256i>());
+                            let x0 = _mm256_xor_si256(d0, fill_vec);
+                            let d1 = _mm256_loadu_si256($ptr.add(LANES).cast::<__m256i>());
+                            let x1 = _mm256_xor_si256(d1, fill_vec);
+                            _mm256_testz_si256(x0, x0) != 0 && _mm256_testz_si256(x1, x1) != 0
+                        }
+                    };
+                }
+                // Inline helper for the aligned 2× check.
+                macro_rules! is_all_fill_2x_aligned {
+                    ($ptr:expr) => {
+                        if FILL == 0 {
+                            let d0 = _mm256_load_si256($ptr.cast::<__m256i>());
+                            let d1 = _mm256_load_si256($ptr.add(LANES).cast::<__m256i>());
+                            _mm256_testz_si256(d0, d0) != 0 && _mm256_testz_si256(d1, d1) != 0
+                        } else {
+                            let fill_vec = _mm256_set1_epi64x(FILL as i64);
+                            let d0 = _mm256_load_si256($ptr.cast::<__m256i>());
+                            let x0 = _mm256_xor_si256(d0, fill_vec);
+                            let d1 = _mm256_load_si256($ptr.add(LANES).cast::<__m256i>());
+                            let x1 = _mm256_xor_si256(d1, fill_vec);
+                            _mm256_testz_si256(x0, x0) != 0 && _mm256_testz_si256(x1, x1) != 0
+                        }
+                    };
+                }
+
+                if total >= ALIGN_THRESHOLD {
                     let misalign = (base as usize % 32) / 8;
                     if misalign > 0 {
                         let prefix_end = base.add(misalign);
@@ -99,21 +150,21 @@ pub(super) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
                         }
                     }
                     let mut iters =
-                        (end as usize - p as usize) / (LANES_2X * core::mem::size_of::<u64>());
+                        (end as usize - p as usize) / (STRIDE * core::mem::size_of::<u64>());
                     while iters > 0 {
-                        if !chunk_eq_2x_aligned::<FILL>(p) {
+                        if !is_all_fill_2x_aligned!(p) {
                             break;
                         }
-                        p = p.add(LANES_2X);
+                        p = p.add(STRIDE);
                         iters -= 1;
                     }
                 } else {
-                    let mut iters = simd_total / LANES_2X;
+                    let mut iters = total / STRIDE;
                     while iters > 0 {
-                        if !chunk_eq_2x::<FILL>(p) {
+                        if !is_all_fill_2x!(p) {
                             break;
                         }
-                        p = p.add(LANES_2X);
+                        p = p.add(STRIDE);
                         iters -= 1;
                     }
                 }
@@ -126,7 +177,7 @@ pub(super) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
                 not(target_feature = "avx2")
             ))]
             unsafe {
-                let mut iters = simd_total / LANES_2X;
+                let mut iters = total / LANES_2X;
                 while iters > 0 {
                     if !chunk_eq_2x::<FILL>(p) {
                         break;
@@ -146,7 +197,7 @@ pub(super) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             // NEON
             #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
             unsafe {
-                let mut iters = simd_total / LANES_2X;
+                let mut iters = total / LANES_2X;
                 while iters > 0 {
                     if !chunk_eq_2x::<FILL>(p) {
                         break;
