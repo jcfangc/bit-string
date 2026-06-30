@@ -13,6 +13,10 @@ enum Pattern {
     Dense,
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// trailing_zeros
+// ═══════════════════════════════════════════════════════════════════════
+
 #[divan::bench(name = "trailing_zeros/len_65/all_zeros/ours_str")]
 fn trailing_65_zeros_str(b: Bencher) {
     bench_str(b, 65, Pattern::Zeros);
@@ -85,6 +89,39 @@ fn trailing_unaligned_63_4096_zeros_str(b: Bencher) {
     bench_unaligned_str(b, 4096, 63, Pattern::Zeros);
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// trailing_ones
+// ═══════════════════════════════════════════════════════════════════════
+
+#[divan::bench(name = "trailing_ones/len_65/all_zeros/ours_str")]
+fn trailing_ones_65_zeros_str(b: Bencher) {
+    bench_str_trailing_ones(b, 65, Pattern::Zeros);
+}
+#[divan::bench(name = "trailing_ones/len_65/all_zeros/ours_string")]
+fn trailing_ones_65_zeros_string(b: Bencher) {
+    bench_string_trailing_ones(b, 65, Pattern::Zeros);
+}
+
+#[divan::bench(name = "trailing_ones/len_65/dense/ours_str")]
+fn trailing_ones_65_dense_str(b: Bencher) {
+    bench_str_trailing_ones(b, 65, Pattern::Dense);
+}
+#[divan::bench(name = "trailing_ones/len_65/dense/ours_string")]
+fn trailing_ones_65_dense_string(b: Bencher) {
+    bench_string_trailing_ones(b, 65, Pattern::Dense);
+}
+
+#[divan::bench(name = "trailing_ones/len_4096/all_zeros/ours_str")]
+fn trailing_ones_4096_zeros_str(b: Bencher) {
+    bench_str_trailing_ones(b, 4096, Pattern::Zeros);
+}
+#[divan::bench(name = "trailing_ones/len_4096/all_zeros/ours_string")]
+fn trailing_ones_4096_zeros_string(b: Bencher) {
+    bench_string_trailing_ones(b, 4096, Pattern::Zeros);
+}
+
+// ── trailing_zeros helpers ────────────────────────────────────────────
+
 fn bench_str(b: Bencher, len: usize, p: Pattern) {
     let bits: BitString = (0..len).map(|i| bit(i, p)).collect();
     let v = bits.as_bit_str();
@@ -105,6 +142,20 @@ fn bench_unaligned_str(b: Bencher, len: usize, skip: usize, p: Pattern) {
         .slice(UsizeCO::try_new(skip, skip + len).unwrap());
     b.bench(|| black_box(&sub).trailing_zeros());
 }
+
+// ── trailing_ones helpers ─────────────────────────────────────────────
+
+fn bench_str_trailing_ones(b: Bencher, len: usize, p: Pattern) {
+    let bits: BitString = (0..len).map(|i| bit(i, p)).collect();
+    let v = bits.as_bit_str();
+    b.bench(|| black_box(&v).trailing_ones());
+}
+fn bench_string_trailing_ones(b: Bencher, len: usize, p: Pattern) {
+    let bits: BitString = (0..len).map(|i| bit(i, p)).collect();
+    b.bench(|| black_box(&bits).trailing_ones());
+}
+
+// ── data helpers ──────────────────────────────────────────────────────
 
 fn bit(i: usize, p: Pattern) -> bool {
     match p {
