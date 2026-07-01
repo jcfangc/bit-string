@@ -25,8 +25,6 @@ pub(crate) trait WordsScan {
     ) -> usize;
 }
 
-pub(crate) mod funcs_for_chunk_eq;
 pub(crate) mod funcs_for_count_ones;
-pub(crate) mod funcs_for_leading_core;
-pub(crate) mod funcs_for_trailing_core;
+pub(crate) mod funcs_for_ends;
 pub(crate) mod impls_for_u64_slice;

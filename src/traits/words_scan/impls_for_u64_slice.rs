@@ -1,7 +1,6 @@
 use super::WordsScan;
 use super::funcs_for_count_ones;
-use super::funcs_for_leading_core;
-use super::funcs_for_trailing_core;
+use super::funcs_for_ends;
 
 impl WordsScan for [u64] {
     #[inline]
@@ -15,7 +14,7 @@ impl WordsScan for [u64] {
         start_offset: u32,
         bit_len: usize,
     ) -> usize {
-        funcs_for_leading_core::leading::<FILL, WORD_ALIGNED>(self, start_offset, bit_len)
+        funcs_for_ends::leading::<FILL, WORD_ALIGNED>(self, start_offset, bit_len)
     }
 
     #[inline]
@@ -24,6 +23,6 @@ impl WordsScan for [u64] {
         start_offset: u32,
         bit_len: usize,
     ) -> usize {
-        funcs_for_trailing_core::trailing::<FILL, WORD_ALIGNED>(self, start_offset, bit_len)
+        funcs_for_ends::trailing::<FILL, WORD_ALIGNED>(self, start_offset, bit_len)
     }
 }

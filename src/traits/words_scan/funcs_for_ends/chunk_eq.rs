@@ -9,6 +9,10 @@
     target_feature = "avx2"
 ))]
 mod imp {
+    // These SIMD primitives exist for API symmetry with SSE2/NEON/scalar.
+    // The AVX2 leading/trailing paths inline raw intrinsics directly, so
+    // LANES and chunk_eq are unused on this backend.
+    #![allow(dead_code)]
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
         __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256, _mm256_xor_si256,
@@ -138,90 +142,21 @@ mod imp {
     }
 }
 
+#[cfg(not(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+)))]
 pub(crate) use imp::{LANES, chunk_eq};
 
 // ═══════════════════════════════════════════════════════════════════════
-// 2×‑unrolled and aligned chunk‑eq primitives.
+// 2×‑unrolled chunk‑eq primitives.
 // Each `#[cfg]` block below is mutually exclusive — exactly one is
 // compiled per target tuple.  Callers use the bare name (e.g.
 // `chunk_eq_2x::<FILL>(ptr)`) without a module prefix.
+//
+// NOTE: There is no AVX2 block here — the leading/trailing AVX2 paths
+// inline raw intrinsics directly, bypassing these helpers entirely.
 // ═══════════════════════════════════════════════════════════════════════
-
-// ── AVX2 ─────────────────────────────────────────────────────────────
-#[cfg(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "avx2"
-))]
-mod chunk_eq_avx2_extras {
-    #[cfg(target_arch = "x86")]
-    use core::arch::x86::{
-        __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256,
-        _mm256_xor_si256,
-    };
-    #[cfg(target_arch = "x86_64")]
-    use core::arch::x86_64::{
-        __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256,
-        _mm256_xor_si256,
-    };
-
-    pub(crate) const LANES_2X: usize = 8;
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    pub(crate) unsafe fn chunk_eq_2x<const FILL: u64>(ptr: *const u64) -> bool {
-        unsafe {
-            let d0 = _mm256_loadu_si256(ptr.cast::<__m256i>());
-            let d1 = _mm256_loadu_si256(ptr.add(4).cast::<__m256i>());
-            if FILL == 0 {
-                _mm256_testz_si256(d0, d0) != 0 && _mm256_testz_si256(d1, d1) != 0
-            } else {
-                let fill_vec = _mm256_set1_epi64x(FILL as i64);
-                let x0 = _mm256_xor_si256(d0, fill_vec);
-                let x1 = _mm256_xor_si256(d1, fill_vec);
-                _mm256_testz_si256(x0, x0) != 0 && _mm256_testz_si256(x1, x1) != 0
-            }
-        }
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    pub(crate) unsafe fn chunk_eq_aligned<const FILL: u64>(ptr: *const u64) -> bool {
-        unsafe {
-            let data = _mm256_load_si256(ptr.cast::<__m256i>());
-            if FILL == 0 {
-                _mm256_testz_si256(data, data) != 0
-            } else {
-                let fill_vec = _mm256_set1_epi64x(FILL as i64);
-                let xor = _mm256_xor_si256(data, fill_vec);
-                _mm256_testz_si256(xor, xor) != 0
-            }
-        }
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    pub(crate) unsafe fn chunk_eq_2x_aligned<const FILL: u64>(ptr: *const u64) -> bool {
-        unsafe {
-            let d0 = _mm256_load_si256(ptr.cast::<__m256i>());
-            let d1 = _mm256_load_si256(ptr.add(4).cast::<__m256i>());
-            if FILL == 0 {
-                _mm256_testz_si256(d0, d0) != 0 && _mm256_testz_si256(d1, d1) != 0
-            } else {
-                let fill_vec = _mm256_set1_epi64x(FILL as i64);
-                let x0 = _mm256_xor_si256(d0, fill_vec);
-                let x1 = _mm256_xor_si256(d1, fill_vec);
-                _mm256_testz_si256(x0, x0) != 0 && _mm256_testz_si256(x1, x1) != 0
-            }
-        }
-    }
-}
-#[cfg(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "avx2"
-))]
-pub(crate) use chunk_eq_avx2_extras::{
-    LANES_2X, chunk_eq_2x, chunk_eq_2x_aligned, chunk_eq_aligned,
-};
 
 // ── SSE2 (x86 baseline, no AVX2) ──────────────────────────────────────
 #[cfg(all(
@@ -234,9 +169,15 @@ mod chunk_eq_sse2_extras {
 
     pub(crate) const LANES_2X: usize = LANES * 2; // 4
 
+    /// # Safety
+    ///
+    /// `ptr` must be valid for reads of `LANES_2X` u64 values.
     #[inline]
     pub(crate) unsafe fn chunk_eq_2x<const FILL: u64>(ptr: *const u64) -> bool {
         use super::imp::chunk_eq;
+        // SAFETY: `ptr` is valid for `LANES_2X` = 2×LANES u64 reads
+        // per caller guarantee.  Both `ptr` and `ptr.add(LANES)` are
+        // within the promised range.
         unsafe { chunk_eq::<FILL>(ptr) && chunk_eq::<FILL>(ptr.add(LANES)) }
     }
 }
@@ -261,9 +202,14 @@ mod chunk_eq_neon_extras {
 
     pub(crate) const LANES_2X: usize = LANES * 2; // 4
 
+    /// # Safety
+    ///
+    /// `ptr` must be valid for reads of `LANES_2X` u64 values.
     #[inline]
     pub(crate) unsafe fn chunk_eq_2x<const FILL: u64>(ptr: *const u64) -> bool {
         use super::imp::chunk_eq;
+        // SAFETY: `ptr` is valid for `LANES_2X` u64 reads per caller
+        // guarantee.
         unsafe { chunk_eq::<FILL>(ptr) && chunk_eq::<FILL>(ptr.add(LANES)) }
     }
 }
@@ -286,9 +232,14 @@ mod chunk_eq_scalar_extras {
 
     pub(crate) const LANES_2X: usize = LANES * 2; // 2
 
+    /// # Safety
+    ///
+    /// `ptr` must be valid for reads of `LANES_2X` u64 values.
     #[inline]
     pub(crate) unsafe fn chunk_eq_2x<const FILL: u64>(ptr: *const u64) -> bool {
         use super::imp::chunk_eq;
+        // SAFETY: `ptr` is valid for `LANES_2X` u64 reads per caller
+        // guarantee.
         unsafe { chunk_eq::<FILL>(ptr) && chunk_eq::<FILL>(ptr.add(LANES)) }
     }
 }

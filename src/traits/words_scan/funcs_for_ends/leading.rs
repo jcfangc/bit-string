@@ -2,12 +2,11 @@
 //!
 //! Parameterised by `const FILL: u64` and `const WORD_ALIGNED: bool`.
 
-use super::funcs_for_chunk_eq::{LANES, LANES_2X, chunk_eq, chunk_eq_2x};
-#[cfg(all(
+#[cfg(not(all(
     any(target_arch = "x86", target_arch = "x86_64"),
     target_feature = "avx2"
-))]
-use super::funcs_for_chunk_eq::{chunk_eq_2x_aligned, chunk_eq_aligned};
+)))]
+use super::chunk_eq::{LANES, LANES_2X, chunk_eq, chunk_eq_2x};
 
 use crate::{SMALL_WORDS, WORD_BITS, low_mask};
 
@@ -20,10 +19,14 @@ fn count_trailing<const FILL: u64>(val: u64) -> usize {
     }
 }
 
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
 const ALIGN_THRESHOLD: usize = 128;
 
 #[inline(always)]
-pub(super) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
+pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
     bits: &[u64],
     start_offset: u32,
     bit_len: usize,
@@ -244,7 +247,6 @@ pub(super) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
                 unsafe {
                     if *p != FILL {
                         scanned += count_trailing::<FILL>(*p);
-                        wi = mid_end;
                         return (scanned).min(bit_len);
                     }
                     scanned += WORD_BITS;

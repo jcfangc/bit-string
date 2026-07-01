@@ -4,7 +4,11 @@
 //! When `WORD_ALIGNED` is `true` the caller guarantees `start_offset == 0`,
 //! allowing the compiler to eliminate the first-word LZCNT phase.
 
-use super::funcs_for_chunk_eq::{LANES, LANES_2X, chunk_eq, chunk_eq_2x};
+#[cfg(not(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+)))]
+use super::chunk_eq::{LANES, LANES_2X, chunk_eq, chunk_eq_2x};
 use crate::{SMALL_WORDS, WORD_BITS, low_mask};
 
 /// Counts leading bits within a single u64 word that match `FILL`.
@@ -32,7 +36,7 @@ fn count_leading_within<const FILL: u64>(val: u64, limit: usize) -> usize {
 }
 
 #[inline(always)]
-pub(super) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
+pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
     bits: &[u64],
     start_offset: u32,
     bit_len: usize,
