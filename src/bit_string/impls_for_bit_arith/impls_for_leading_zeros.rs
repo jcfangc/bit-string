@@ -16,6 +16,8 @@ impl BitString {
         let words_ptr = self.words.as_ptr();
 
         // ── First-word fast path ──────────────────────────────────
+        // SAFETY: `bit_len > 0` (guarded above), so `words` has at least
+        // one element per the BitString invariant.
         let w0 = unsafe { *words_ptr };
         if w0 != 0 {
             return (w0.trailing_zeros() as usize).min(bit_len);
@@ -27,6 +29,9 @@ impl BitString {
         let mid_end = if end_rem == 0 { last_wi + 1 } else { last_wi };
         if mid_end < SMALL_WORDS {
             let mut scanned = WORD_BITS; // word 0 already checked above
+            // SAFETY: `i` ranges in `1..mid_end`.  `words` contains at
+            // least `mid_end + (end_rem != 0) as usize` elements by the
+            // BitString invariant (backing storage covers all bits).
             for i in 1..mid_end {
                 let w = unsafe { *words_ptr.add(i) };
                 if w != 0 {
@@ -35,6 +40,9 @@ impl BitString {
                 scanned += WORD_BITS;
             }
             if end_rem != 0 {
+                // SAFETY: `mid_end` is the index of the last partial word;
+                // it is within bounds because `end_rem != 0` implies an
+                // extra word exists beyond `mid_end - 1`.
                 let last = unsafe { *words_ptr.add(mid_end) } & ((1u64 << end_rem).wrapping_sub(1));
                 if last == 0 {
                     return bit_len;
@@ -58,6 +66,8 @@ impl BitString {
         }
         let words_ptr = self.words.as_ptr();
 
+        // SAFETY: `bit_len > 0` (guarded above), so `words` has at least
+        // one element per the BitString invariant.
         let w0 = unsafe { *words_ptr };
         if w0 != u64::MAX {
             return ((!w0).trailing_zeros() as usize).min(bit_len);
@@ -68,6 +78,8 @@ impl BitString {
         let mid_end = if end_rem == 0 { last_wi + 1 } else { last_wi };
         if mid_end < SMALL_WORDS {
             let mut scanned = WORD_BITS;
+            // SAFETY: `i < mid_end`.  `words` has at least
+            // `mid_end + (end_rem != 0) as usize` elements.
             for i in 1..mid_end {
                 let w = unsafe { *words_ptr.add(i) };
                 if w != u64::MAX {
@@ -76,6 +88,8 @@ impl BitString {
                 scanned += WORD_BITS;
             }
             if end_rem != 0 {
+                // SAFETY: `mid_end` is the index of the last partial word
+                // and is within bounds (backing storage covers all bits).
                 let last = unsafe { *words_ptr.add(mid_end) } & ((1u64 << end_rem).wrapping_sub(1));
                 if last == ((1u64 << end_rem).wrapping_sub(1)) {
                     return bit_len;
@@ -102,6 +116,8 @@ impl BitString {
         let end_rem = bit_len % WORD_BITS;
         if end_rem != 0 {
             let last_wi = (bit_len - 1) / WORD_BITS;
+            // SAFETY: `last_wi` is a valid index — `bit_len > 0` and
+            // `words` always has ≥ (bit_len + 63) / 64 elements.
             let last = unsafe { *words_ptr.add(last_wi) } & ((1u64 << end_rem).wrapping_sub(1));
             if last != 0 {
                 let shifted = last << (WORD_BITS - end_rem);
@@ -116,6 +132,8 @@ impl BitString {
             } else {
                 (bit_len - 1) / WORD_BITS
             };
+            // SAFETY: `last_full < (bit_len + 63) / 64`, so it is a valid
+            // index into `words` (backing storage covers all bits).
             let w = unsafe { *words_ptr.add(last_full) };
             if w != 0 {
                 let tail = if end_rem != 0 { end_rem } else { 0 };
@@ -139,6 +157,8 @@ impl BitString {
         let end_rem = bit_len % WORD_BITS;
         if end_rem != 0 {
             let last_wi = (bit_len - 1) / WORD_BITS;
+            // SAFETY: `last_wi` is a valid index per the same invariant
+            // as trailing_zeros (BitString backing storage covers all bits).
             let last = unsafe { *words_ptr.add(last_wi) } & ((1u64 << end_rem).wrapping_sub(1));
             if last != ((1u64 << end_rem).wrapping_sub(1)) {
                 let shifted = (!last) << (WORD_BITS - end_rem);
@@ -152,6 +172,8 @@ impl BitString {
             } else {
                 (bit_len - 1) / WORD_BITS
             };
+            // SAFETY: `last_full` is a valid index into `words` per the
+            // BitString backing-storage invariant.
             let w = unsafe { *words_ptr.add(last_full) };
             if w != u64::MAX {
                 let tail = if end_rem != 0 { end_rem } else { 0 };
