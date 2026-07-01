@@ -52,44 +52,72 @@ pub(super) fn assign(bits: &mut [u64], bit_len: usize) {
 ///   - be exactly equal to `src`.
 #[inline]
 unsafe fn dispatch(dst: *mut u64, src: *const u64, len: usize) {
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "avx2"
-    ))]
+    #[cfg(not(feature = "compile-time-dispatch"))]
     {
-        // SAFETY:
-        // - Forwarded from `dispatch`'s safety contract.
-        // - This branch is compiled only when AVX2 is enabled.
-        unsafe { avx2::words(dst, src, len) };
-        return;
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
+            let has_avx2 = {
+                #[cfg(target_arch = "x86_64")]
+                {
+                    unsafe { core::arch::x86_64::__cpuid_count(7, 0).ebx & (1 << 5) != 0 }
+                }
+                #[cfg(target_arch = "x86")]
+                {
+                    unsafe { core::arch::x86::__cpuid_count(7, 0).ebx & (1 << 5) != 0 }
+                }
+            };
+            if has_avx2 {
+                unsafe { avx2::words(dst, src, len) };
+                return;
+            }
+        }
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            any(target_feature = "sse2", target_feature = "avx2")
+        ))]
+        {
+            unsafe { sse2::words(dst, src, len) };
+            return;
+        }
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+        {
+            unsafe { neon::words(dst, src, len) };
+            return;
+        }
+        #[allow(unused)]
+        unsafe {
+            scalar::words(dst, src, len)
+        };
     }
 
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2",
-        not(target_feature = "avx2")
-    ))]
+    #[cfg(feature = "compile-time-dispatch")]
     {
-        // SAFETY:
-        // - Forwarded from `dispatch`'s safety contract.
-        // - This branch is compiled only when SSE2 is enabled.
-        unsafe { sse2::words(dst, src, len) };
-        return;
-    }
-
-    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-    {
-        // SAFETY:
-        // - Forwarded from `dispatch`'s safety contract.
-        // - This branch is compiled only when NEON is enabled.
-        unsafe { neon::words(dst, src, len) };
-        return;
-    }
-
-    #[allow(unused)]
-    // SAFETY: Forwarded from `dispatch`'s safety contract.
-    unsafe {
-        scalar::words(dst, src, len);
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "avx2"
+        ))]
+        {
+            unsafe { avx2::words(dst, src, len) };
+            return;
+        }
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "sse2",
+            not(target_feature = "avx2")
+        ))]
+        {
+            unsafe { sse2::words(dst, src, len) };
+            return;
+        }
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+        {
+            unsafe { neon::words(dst, src, len) };
+            return;
+        }
+        #[allow(unused)]
+        unsafe {
+            scalar::words(dst, src, len)
+        };
     }
 }
 
