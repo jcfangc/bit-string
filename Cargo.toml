@@ -11,6 +11,10 @@ categories = ["data-structures", "no-std"]
 exclude = ["/benches", "/src/**/tests_for_*", "/tests", ".github/"]
 
 
+[features]
+default = []
+compile-time-dispatch = []
+
 [dependencies]
 int-interval = "0.9.6"
 witnessed = "0.8.0"
