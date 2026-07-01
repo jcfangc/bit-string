@@ -67,10 +67,18 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             }
             wi = mid_end;
         } else {
+            // SAFETY: `wi < mid_end` (guarded above) and `total = mid_end - wi`,
+            // so `bits[wi..mid_end]` is within the input slice.  `base` points to
+            // the first word of the SIMD scan range.
             let base = unsafe { bits.as_ptr().add(wi) };
+            // SAFETY: `end` is one past the last word in the scan range —
+            // `base.add(total)` does not alias any other allocation and is only
+            // used as a limit pointer (never dereferenced directly).
             let end = unsafe { base.add(total) };
 
             // First-word fast path — catches early non-FILL.
+            // SAFETY: `total > 0` (we are in the `total >= SMALL_WORDS` branch),
+            // so `base` is valid for at least one u64 read.
             let w0 = unsafe { *base };
             if w0 != FILL {
                 return (scanned + count_trailing::<FILL>(w0)).min(bit_len);
@@ -90,6 +98,8 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
                 any(target_arch = "x86", target_arch = "x86_64"),
                 target_feature = "avx2"
             ))]
+            // SAFETY: `p` starts at `base` and advances by STRIDE ≤ end - p.
+            // AVX2 is available per the `#[target_feature]` gating.
             unsafe {
                 #[cfg(target_arch = "x86")]
                 use core::arch::x86::{
@@ -179,6 +189,11 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
                 target_feature = "sse2",
                 not(target_feature = "avx2")
             ))]
+            // SAFETY: `p` points into `[base, end)`.  `chunk_eq` and
+            // `chunk_eq_2x` require their ptr argument to be valid for
+            // `LANES` / `LANES_2X` reads, which is ensured by the loop
+            // bounds (`p + LANES_2X ≤ end`, `p + LANES ≤ end`).
+            // SSE2 is baseline on x86-64 and always available.
             unsafe {
                 let mut iters = total / LANES_2X;
                 while iters > 0 {
@@ -199,6 +214,8 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
 
             // NEON
             #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+            // SAFETY: same pointer-bound invariant as SSE2 path.
+            // NEON is available per `#[target_feature]` gating.
             unsafe {
                 let mut iters = total / LANES_2X;
                 while iters > 0 {
@@ -225,6 +242,9 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
                 ),
                 all(target_arch = "aarch64", target_feature = "neon"),
             )))]
+            // SAFETY: `p` is within `[base, end)`.  `chunk_eq` requires
+            // `LANES` valid u64 reads; the loop bound `p + LANES ≤ end`
+            // ensures this.
             unsafe {
                 let limit = end.sub(LANES);
                 while p <= limit {
@@ -243,6 +263,9 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             }
 
             let rem = (end as usize - p as usize) / 8;
+            // SAFETY: `rem` is computed from `end - p`, so `p` through
+            // `p.add(rem - 1)` lies within `[base, end)`.  The loop runs
+            // exactly `rem` times, never exceeding bounds.
             for _ in 0..rem {
                 unsafe {
                     if *p != FILL {
