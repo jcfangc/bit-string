@@ -116,6 +116,11 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
                 any(target_arch = "x86", target_arch = "x86_64"),
                 target_feature = "avx2"
             ))]
+            // SAFETY: `ptr = bits.as_ptr()` is valid for the entire slice.
+            // `chunk_start = wi_end + 1 - (done + STRIDE)` is ≥ 0 because
+            // `done + STRIDE ≤ total_words = wi_end + 1 - mid_first ≤ wi_end + 1`.
+            // The `ptr.add(chunk_start)` thus stays within `[ptr, ptr + wi_end + 1)`.
+            // AVX2 is available per `#[target_feature]` gating.
             unsafe {
                 #[cfg(target_arch = "x86")]
                 use core::arch::x86::{
@@ -172,6 +177,8 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
                 target_feature = "sse2",
                 not(target_feature = "avx2")
             ))]
+            // SAFETY: same chunk_start bound as AVX2 (adjusted for LANES_2X/ LANES).
+            // SSE2 is baseline on x86-64 per `#[cfg(target_feature = "sse2")]`.
             unsafe {
                 while done + LANES_2X <= total_words {
                     let chunk_start = wi_end + 1 - (done + LANES_2X);
@@ -193,6 +200,8 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
 
             // ── NEON ─────────────────────────────────────────────────
             #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+            // SAFETY: same pointer-bound invariant as SSE2 path.
+            // NEON is available per `#[target_feature]` gating.
             unsafe {
                 while done + LANES_2X <= total_words {
                     let chunk_start = wi_end + 1 - (done + LANES_2X);
@@ -220,6 +229,9 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
                 ),
                 all(target_arch = "aarch64", target_feature = "neon"),
             )))]
+            // SAFETY: same chunk_start bound as the SIMD paths above.
+            // `chunk_eq` requires `LANES` valid u64 reads, ensured by
+            // `done + LANES ≤ total_words`.
             unsafe {
                 while done + LANES <= total_words {
                     let chunk_start = wi_end + 1 - (done + LANES);
