@@ -11,6 +11,85 @@
 use super::chunk_eq::{LANES, LANES_2X, chunk_eq, chunk_eq_2x};
 use crate::{SMALL_WORDS, WORD_BITS, low_mask};
 
+// ═══════════════════════════════════════════════════════════════════════
+// AVX2 backend — extracted for runtime dispatch.
+// ═══════════════════════════════════════════════════════════════════════
+
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    any(not(feature = "compile-time-dispatch"), target_feature = "avx2")
+))]
+mod avx2 {
+    #![cfg_attr(feature = "compile-time-dispatch", allow(dead_code))]
+    #[cfg(target_arch = "x86")]
+    use core::arch::x86::{
+        __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256, _mm256_xor_si256,
+    };
+    #[cfg(target_arch = "x86_64")]
+    use core::arch::x86_64::{
+        __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256, _mm256_xor_si256,
+    };
+
+    const LANES: usize = 4;
+    const STRIDE: usize = 8;
+
+    /// AVX2 reverse scan: scans backwards from `wi_end` and advances `done`
+    /// past all-FILL 256-bit chunks.
+    ///
+    /// Returns the updated `done` count (total words consumed from right).
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure AVX2 is available (checked via CPUID).
+    /// `ptr` through `ptr.add(wi_end + 1)` must be valid for u64 reads.
+    #[target_feature(enable = "avx2")]
+    pub(super) unsafe fn trailing_scan<const FILL: u64>(
+        ptr: *const u64,
+        wi_end: usize,
+        mut done: usize,
+        total_words: usize,
+    ) -> usize {
+        // SAFETY: only callable when AVX2 is available (caller verified
+        // via CPUID).  All pointer arithmetic stays within bounds.
+        unsafe {
+            macro_rules! is_all_fill_chunk {
+                ($ptr:expr) => {
+                    if FILL == 0 {
+                        let d = _mm256_loadu_si256($ptr.cast::<__m256i>());
+                        _mm256_testz_si256(d, d) != 0
+                    } else {
+                        let fill_vec = _mm256_set1_epi64x(FILL as i64);
+                        let d = _mm256_loadu_si256($ptr.cast::<__m256i>());
+                        let x = _mm256_xor_si256(d, fill_vec);
+                        _mm256_testz_si256(x, x) != 0
+                    }
+                };
+            }
+
+            // 2×‑unrolled
+            while done + STRIDE <= total_words {
+                let chunk_start = wi_end + 1 - (done + STRIDE);
+                let d0_ok = is_all_fill_chunk!(ptr.add(chunk_start));
+                let d1_ok = is_all_fill_chunk!(ptr.add(chunk_start + LANES));
+                if !d0_ok || !d1_ok {
+                    break;
+                }
+                done += STRIDE;
+            }
+            // Single-chunk remainder
+            while done + LANES <= total_words {
+                let chunk_start = wi_end + 1 - (done + LANES);
+                if !is_all_fill_chunk!(ptr.add(chunk_start)) {
+                    break;
+                }
+                done += LANES;
+            }
+
+            done
+        }
+    }
+}
+
 /// Counts leading bits within a single u64 word that match `FILL`.
 #[inline]
 fn count_leading<const FILL: u64>(val: u64) -> usize {
@@ -111,137 +190,155 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
             }
             // All full words match FILL — skip SIMD.
         } else {
-            // ── AVX2 (2×‑unrolled reverse) ───────────────────────
+            // ── Runtime AVX2 detection (default mode) ──────────────
+            #[allow(unused_mut)]
+            let mut simd_done = false;
+
             #[cfg(all(
-                any(target_arch = "x86", target_arch = "x86_64"),
-                target_feature = "avx2"
+                not(feature = "compile-time-dispatch"),
+                any(target_arch = "x86", target_arch = "x86_64")
             ))]
-            // SAFETY: `ptr = bits.as_ptr()` is valid for the entire slice.
-            // `chunk_start = wi_end + 1 - (done + STRIDE)` is ≥ 0 because
-            // `done + STRIDE ≤ total_words = wi_end + 1 - mid_first ≤ wi_end + 1`.
-            // The `ptr.add(chunk_start)` thus stays within `[ptr, ptr + wi_end + 1)`.
-            // AVX2 is available per `#[target_feature]` gating.
-            unsafe {
-                #[cfg(target_arch = "x86")]
-                use core::arch::x86::{
-                    __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256,
-                    _mm256_xor_si256,
-                };
-                #[cfg(target_arch = "x86_64")]
-                use core::arch::x86_64::{
-                    __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256,
-                    _mm256_xor_si256,
-                };
-                const LANES: usize = 4;
-                const STRIDE: usize = 8;
-
-                macro_rules! is_all_fill_chunk {
-                    ($ptr:expr) => {
-                        if FILL == 0 {
-                            let d = _mm256_loadu_si256($ptr.cast::<__m256i>());
-                            _mm256_testz_si256(d, d) != 0
-                        } else {
-                            let fill_vec = _mm256_set1_epi64x(FILL as i64);
-                            let d = _mm256_loadu_si256($ptr.cast::<__m256i>());
-                            let x = _mm256_xor_si256(d, fill_vec);
-                            _mm256_testz_si256(x, x) != 0
-                        }
-                    };
-                }
-
-                // 2×‑unrolled
-                while done + STRIDE <= total_words {
-                    let chunk_start = wi_end + 1 - (done + STRIDE);
-                    let d0_ok = is_all_fill_chunk!(ptr.add(chunk_start));
-                    let d1_ok = is_all_fill_chunk!(ptr.add(chunk_start + LANES));
-                    if !d0_ok || !d1_ok {
-                        break;
-                    }
-                    scanned += STRIDE * WORD_BITS;
-                    done += STRIDE;
-                }
-                // Single-chunk remainder
-                while done + LANES <= total_words {
-                    let chunk_start = wi_end + 1 - (done + LANES);
-                    if !is_all_fill_chunk!(ptr.add(chunk_start)) {
-                        break;
-                    }
-                    scanned += LANES * WORD_BITS;
-                    done += LANES;
-                }
+            if super::runtime::has_avx2() {
+                let done_before = done;
+                // SAFETY: CPUID confirmed AVX2 is available.
+                done = unsafe { avx2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
+                scanned += (done - done_before) * WORD_BITS;
+                simd_done = true;
             }
 
-            // ── SSE2 ─────────────────────────────────────────────────
-            #[cfg(all(
-                any(target_arch = "x86", target_arch = "x86_64"),
-                target_feature = "sse2",
-                not(target_feature = "avx2")
-            ))]
-            // SAFETY: same chunk_start bound as AVX2 (adjusted for LANES_2X/ LANES).
-            // SSE2 is baseline on x86-64 per `#[cfg(target_feature = "sse2")]`.
-            unsafe {
-                while done + LANES_2X <= total_words {
-                    let chunk_start = wi_end + 1 - (done + LANES_2X);
-                    if !chunk_eq_2x::<FILL>(ptr.add(chunk_start)) {
-                        break;
-                    }
-                    scanned += LANES_2X * WORD_BITS;
-                    done += LANES_2X;
-                }
-                while done + LANES <= total_words {
-                    let chunk_start = wi_end + 1 - (done + LANES);
-                    if !chunk_eq::<FILL>(ptr.add(chunk_start)) {
-                        break;
-                    }
-                    scanned += LANES * WORD_BITS;
-                    done += LANES;
-                }
-            }
-
-            // ── NEON ─────────────────────────────────────────────────
-            #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-            // SAFETY: same pointer-bound invariant as SSE2 path.
-            // NEON is available per `#[target_feature]` gating.
-            unsafe {
-                while done + LANES_2X <= total_words {
-                    let chunk_start = wi_end + 1 - (done + LANES_2X);
-                    if !chunk_eq_2x::<FILL>(ptr.add(chunk_start)) {
-                        break;
-                    }
-                    scanned += LANES_2X * WORD_BITS;
-                    done += LANES_2X;
-                }
-                while done + LANES <= total_words {
-                    let chunk_start = wi_end + 1 - (done + LANES);
-                    if !chunk_eq::<FILL>(ptr.add(chunk_start)) {
-                        break;
-                    }
-                    scanned += LANES * WORD_BITS;
-                    done += LANES;
-                }
-            }
-
-            // ── Scalar ───────────────────────────────────────────────
-            #[cfg(not(any(
-                all(
+            if !simd_done {
+                // ── AVX2 (2×‑unrolled reverse) ───────────────────────
+                #[cfg(all(
                     any(target_arch = "x86", target_arch = "x86_64"),
-                    any(target_feature = "avx2", target_feature = "sse2")
-                ),
-                all(target_arch = "aarch64", target_feature = "neon"),
-            )))]
-            // SAFETY: same chunk_start bound as the SIMD paths above.
-            // `chunk_eq` requires `LANES` valid u64 reads, ensured by
-            // `done + LANES ≤ total_words`.
-            unsafe {
-                while done + LANES <= total_words {
-                    let chunk_start = wi_end + 1 - (done + LANES);
-                    if !chunk_eq::<FILL>(ptr.add(chunk_start)) {
-                        break;
+                    target_feature = "avx2"
+                ))]
+                // SAFETY: `ptr = bits.as_ptr()` is valid for the entire slice.
+                // `chunk_start = wi_end + 1 - (done + STRIDE)` is ≥ 0 because
+                // `done + STRIDE ≤ total_words = wi_end + 1 - mid_first ≤ wi_end + 1`.
+                // The `ptr.add(chunk_start)` thus stays within `[ptr, ptr + wi_end + 1)`.
+                // AVX2 is available per `#[target_feature]` gating.
+                unsafe {
+                    #[cfg(target_arch = "x86")]
+                    use core::arch::x86::{
+                        __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256,
+                        _mm256_xor_si256,
+                    };
+                    #[cfg(target_arch = "x86_64")]
+                    use core::arch::x86_64::{
+                        __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256,
+                        _mm256_xor_si256,
+                    };
+                    const LANES: usize = 4;
+                    const STRIDE: usize = 8;
+
+                    macro_rules! is_all_fill_chunk {
+                        ($ptr:expr) => {
+                            if FILL == 0 {
+                                let d = _mm256_loadu_si256($ptr.cast::<__m256i>());
+                                _mm256_testz_si256(d, d) != 0
+                            } else {
+                                let fill_vec = _mm256_set1_epi64x(FILL as i64);
+                                let d = _mm256_loadu_si256($ptr.cast::<__m256i>());
+                                let x = _mm256_xor_si256(d, fill_vec);
+                                _mm256_testz_si256(x, x) != 0
+                            }
+                        };
                     }
-                    scanned += LANES * WORD_BITS;
-                    done += LANES;
+
+                    // 2×‑unrolled
+                    while done + STRIDE <= total_words {
+                        let chunk_start = wi_end + 1 - (done + STRIDE);
+                        let d0_ok = is_all_fill_chunk!(ptr.add(chunk_start));
+                        let d1_ok = is_all_fill_chunk!(ptr.add(chunk_start + LANES));
+                        if !d0_ok || !d1_ok {
+                            break;
+                        }
+                        scanned += STRIDE * WORD_BITS;
+                        done += STRIDE;
+                    }
+                    // Single-chunk remainder
+                    while done + LANES <= total_words {
+                        let chunk_start = wi_end + 1 - (done + LANES);
+                        if !is_all_fill_chunk!(ptr.add(chunk_start)) {
+                            break;
+                        }
+                        scanned += LANES * WORD_BITS;
+                        done += LANES;
+                    }
                 }
-            }
+
+                // ── SSE2 ─────────────────────────────────────────────────
+                #[cfg(all(
+                    any(target_arch = "x86", target_arch = "x86_64"),
+                    target_feature = "sse2",
+                    not(target_feature = "avx2")
+                ))]
+                // SAFETY: same chunk_start bound as AVX2 (adjusted for LANES_2X/ LANES).
+                // SSE2 is baseline on x86-64 per `#[cfg(target_feature = "sse2")]`.
+                unsafe {
+                    while done + LANES_2X <= total_words {
+                        let chunk_start = wi_end + 1 - (done + LANES_2X);
+                        if !chunk_eq_2x::<FILL>(ptr.add(chunk_start)) {
+                            break;
+                        }
+                        scanned += LANES_2X * WORD_BITS;
+                        done += LANES_2X;
+                    }
+                    while done + LANES <= total_words {
+                        let chunk_start = wi_end + 1 - (done + LANES);
+                        if !chunk_eq::<FILL>(ptr.add(chunk_start)) {
+                            break;
+                        }
+                        scanned += LANES * WORD_BITS;
+                        done += LANES;
+                    }
+                }
+
+                // ── NEON ─────────────────────────────────────────────────
+                #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+                // SAFETY: same pointer-bound invariant as SSE2 path.
+                // NEON is available per `#[target_feature]` gating.
+                unsafe {
+                    while done + LANES_2X <= total_words {
+                        let chunk_start = wi_end + 1 - (done + LANES_2X);
+                        if !chunk_eq_2x::<FILL>(ptr.add(chunk_start)) {
+                            break;
+                        }
+                        scanned += LANES_2X * WORD_BITS;
+                        done += LANES_2X;
+                    }
+                    while done + LANES <= total_words {
+                        let chunk_start = wi_end + 1 - (done + LANES);
+                        if !chunk_eq::<FILL>(ptr.add(chunk_start)) {
+                            break;
+                        }
+                        scanned += LANES * WORD_BITS;
+                        done += LANES;
+                    }
+                }
+
+                // ── Scalar ───────────────────────────────────────────────
+                #[cfg(not(any(
+                    all(
+                        any(target_arch = "x86", target_arch = "x86_64"),
+                        any(target_feature = "avx2", target_feature = "sse2")
+                    ),
+                    all(target_arch = "aarch64", target_feature = "neon"),
+                )))]
+                // SAFETY: same chunk_start bound as the SIMD paths above.
+                // `chunk_eq` requires `LANES` valid u64 reads, ensured by
+                // `done + LANES ≤ total_words`.
+                unsafe {
+                    while done + LANES <= total_words {
+                        let chunk_start = wi_end + 1 - (done + LANES);
+                        if !chunk_eq::<FILL>(ptr.add(chunk_start)) {
+                            break;
+                        }
+                        scanned += LANES * WORD_BITS;
+                        done += LANES;
+                    }
+                }
+            } // !simd_done
         } // else (SIMD path)
 
         // ── Scalar tail ──────────────────────────────────────────
