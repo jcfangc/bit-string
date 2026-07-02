@@ -56,46 +56,41 @@ pub(super) fn assign<const OP: u8>(lhs: &mut [u64], rhs: &[u64]) {
 /// - `dst` must not overlap `rhs`.
 #[inline]
 unsafe fn dispatch<const OP: u8>(dst: *mut u64, lhs: *const u64, rhs: *const u64, len: usize) {
-    // ── Default: runtime AVX2 detection ──────────────────────────
+    // ── Default: runtime SIMD detection ──────────────────────────
     #[cfg(not(feature = "compile-time-dispatch"))]
     {
         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         {
-            // SAFETY: CPUID leaf 7, subleaf 0: EBX bit 5 = AVX2.
-            let has_avx2 = {
+            let (has_avx2, has_sse2) = {
                 #[cfg(target_arch = "x86_64")]
                 {
-                    unsafe { core::arch::x86_64::__cpuid_count(7, 0).ebx & (1 << 5) != 0 }
+                    let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
+                    let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
+                    (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
                 }
                 #[cfg(target_arch = "x86")]
                 {
-                    unsafe { core::arch::x86::__cpuid_count(7, 0).ebx & (1 << 5) != 0 }
+                    let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
+                    let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
+                    (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
                 }
             };
             if has_avx2 {
-                // SAFETY: runtime CPUID confirmed AVX2 is available.
                 unsafe { avx2::words::<OP>(dst, lhs, rhs, len) };
                 return;
             }
+            if has_sse2 {
+                unsafe { sse2::words::<OP>(dst, lhs, rhs, len) };
+                return;
+            }
         }
-        // Fallback: SSE2 (x86_64 baseline), NEON (aarch64), scalar.
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            any(target_feature = "sse2", target_feature = "avx2")
-        ))]
-        {
-            // SAFETY: SSE2 is baseline on x86-64.
-            unsafe { sse2::words::<OP>(dst, lhs, rhs, len) };
-            return;
-        }
+        // Non-x86 fallbacks: NEON (aarch64), scalar.
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
-            // SAFETY: NEON is available per `#[target_feature]` gating.
             unsafe { neon::words::<OP>(dst, lhs, rhs, len) };
             return;
         }
         #[allow(unused)]
-        // SAFETY: Forwarded from `dispatch`'s safety contract.
         unsafe {
             scalar::words::<OP>(dst, lhs, rhs, len);
         }

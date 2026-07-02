@@ -30,35 +30,80 @@ pub(super) fn copy_words_shifted(dst: &mut [u64], src: &[u64], count: usize, shi
         return;
     }
 
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "avx2"
-    ))]
+    // ── Default: runtime SIMD detection ─────────────────────────
+    #[cfg(not(feature = "compile-time-dispatch"))]
     {
-        unsafe { avx2::copy_words_shifted(dst, src, count, shift) };
-        return;
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
+            let (has_avx2, has_sse2) = {
+                #[cfg(target_arch = "x86_64")]
+                {
+                    let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
+                    let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
+                    (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
+                }
+                #[cfg(target_arch = "x86")]
+                {
+                    let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
+                    let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
+                    (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
+                }
+            };
+            if has_avx2 {
+                unsafe { avx2::copy_words_shifted(dst, src, count, shift) };
+                return;
+            }
+            if has_sse2 {
+                unsafe { sse2::copy_words_shifted(dst, src, count, shift) };
+                return;
+            }
+        }
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+        {
+            unsafe { neon::copy_words_shifted(dst, src, count, shift) };
+            return;
+        }
+        #[allow(unused)]
+        {
+            for i in 0..count {
+                dst[i] = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
+            }
+        }
     }
 
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2",
-        not(target_feature = "avx2")
-    ))]
+    // ── compile-time-dispatch: pure #[cfg] cascade ──────────────
+    #[cfg(feature = "compile-time-dispatch")]
     {
-        unsafe { sse2::copy_words_shifted(dst, src, count, shift) };
-        return;
-    }
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "avx2"
+        ))]
+        {
+            unsafe { avx2::copy_words_shifted(dst, src, count, shift) };
+            return;
+        }
 
-    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-    {
-        unsafe { neon::copy_words_shifted(dst, src, count, shift) };
-        return;
-    }
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "sse2",
+            not(target_feature = "avx2")
+        ))]
+        {
+            unsafe { sse2::copy_words_shifted(dst, src, count, shift) };
+            return;
+        }
 
-    #[allow(unused)]
-    {
-        for i in 0..count {
-            dst[i] = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+        {
+            unsafe { neon::copy_words_shifted(dst, src, count, shift) };
+            return;
+        }
+
+        #[allow(unused)]
+        {
+            for i in 0..count {
+                dst[i] = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
+            }
         }
     }
 }

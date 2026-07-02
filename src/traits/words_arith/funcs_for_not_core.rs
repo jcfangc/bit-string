@@ -56,28 +56,28 @@ unsafe fn dispatch(dst: *mut u64, src: *const u64, len: usize) {
     {
         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         {
-            let has_avx2 = {
+            let (has_avx2, has_sse2) = {
                 #[cfg(target_arch = "x86_64")]
                 {
-                    unsafe { core::arch::x86_64::__cpuid_count(7, 0).ebx & (1 << 5) != 0 }
+                    let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
+                    let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
+                    (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
                 }
                 #[cfg(target_arch = "x86")]
                 {
-                    unsafe { core::arch::x86::__cpuid_count(7, 0).ebx & (1 << 5) != 0 }
+                    let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
+                    let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
+                    (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
                 }
             };
             if has_avx2 {
                 unsafe { avx2::words(dst, src, len) };
                 return;
             }
-        }
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            any(target_feature = "sse2", target_feature = "avx2")
-        ))]
-        {
-            unsafe { sse2::words(dst, src, len) };
-            return;
+            if has_sse2 {
+                unsafe { sse2::words(dst, src, len) };
+                return;
+            }
         }
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {

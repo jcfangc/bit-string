@@ -31,36 +31,72 @@ where
         return scalar_rfind(haystack, needle_key, needle_mask, last_start, verify);
     }
 
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "avx2"
-    ))]
+    // ── Default: runtime SIMD detection ─────────────────────────
+    #[cfg(not(feature = "compile-time-dispatch"))]
     {
-        unsafe {
-            return avx2::rfind(haystack, needle_key, needle_mask, last_start, verify);
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
+            let (has_avx2, has_sse41) = {
+                #[cfg(target_arch = "x86_64")]
+                {
+                    let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
+                    let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
+                    (leaf7.ebx & (1 << 5) != 0, leaf1.ecx & (1 << 19) != 0)
+                }
+                #[cfg(target_arch = "x86")]
+                {
+                    let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
+                    let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
+                    (leaf7.ebx & (1 << 5) != 0, leaf1.ecx & (1 << 19) != 0)
+                }
+            };
+            if has_avx2 {
+                return unsafe {
+                    avx2::rfind(haystack, needle_key, needle_mask, last_start, verify)
+                };
+            }
+            if has_sse41 {
+                return unsafe {
+                    sse41::rfind(haystack, needle_key, needle_mask, last_start, verify)
+                };
+            }
         }
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+        {
+            return unsafe { neon::rfind(haystack, needle_key, needle_mask, last_start, verify) };
+        }
+        #[allow(unused)]
+        scalar_rfind(haystack, needle_key, needle_mask, last_start, verify)
     }
 
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse4.1",
-        not(target_feature = "avx2")
-    ))]
+    // ── compile-time-dispatch: pure #[cfg] cascade ──────────────
+    #[cfg(feature = "compile-time-dispatch")]
     {
-        unsafe {
-            return sse41::rfind(haystack, needle_key, needle_mask, last_start, verify);
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "avx2"
+        ))]
+        {
+            return unsafe { avx2::rfind(haystack, needle_key, needle_mask, last_start, verify) };
         }
-    }
 
-    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-    {
-        unsafe {
-            return neon::rfind(haystack, needle_key, needle_mask, last_start, verify);
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "sse4.1",
+            not(target_feature = "avx2")
+        ))]
+        {
+            return unsafe { sse41::rfind(haystack, needle_key, needle_mask, last_start, verify) };
         }
-    }
 
-    #[allow(unused)]
-    scalar_rfind(haystack, needle_key, needle_mask, last_start, verify)
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+        {
+            return unsafe { neon::rfind(haystack, needle_key, needle_mask, last_start, verify) };
+        }
+
+        #[allow(unused)]
+        scalar_rfind(haystack, needle_key, needle_mask, last_start, verify)
+    }
 }
 
 // ---------------------------------------------------------------------------

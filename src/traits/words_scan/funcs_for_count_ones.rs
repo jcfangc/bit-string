@@ -47,50 +47,83 @@ unsafe fn dispatch(src: *const u64, len: usize) -> usize {
     // Small inputs: skip SIMD setup overhead, go straight to scalar popcnt.
     // Threshold equals the backend's LANES count.
 
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "avx2"
-    ))]
+    // ── Default: runtime SIMD detection ─────────────────────────
+    #[cfg(not(feature = "compile-time-dispatch"))]
     {
-        if len >= 4 {
-            // SAFETY:
-            // - Forwarded from `dispatch`'s safety contract.
-            // - This branch is compiled only when AVX2 is enabled.
-            return unsafe { avx2::count_words(src, len) };
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
+            let (has_avx2, has_ssse3) = {
+                #[cfg(target_arch = "x86_64")]
+                {
+                    let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
+                    let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
+                    (leaf7.ebx & (1 << 5) != 0, leaf1.ecx & (1 << 9) != 0)
+                }
+                #[cfg(target_arch = "x86")]
+                {
+                    let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
+                    let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
+                    (leaf7.ebx & (1 << 5) != 0, leaf1.ecx & (1 << 9) != 0)
+                }
+            };
+            if has_avx2 {
+                if len >= 4 {
+                    return unsafe { avx2::count_words(src, len) };
+                }
+            }
+            if has_ssse3 {
+                if len >= 2 {
+                    return unsafe { ssse3::count_words(src, len) };
+                }
+            }
         }
-        // len < 4: fall through to scalar below.
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+        {
+            if len >= 2 {
+                return unsafe { neon::count_words(src, len) };
+            }
+        }
+        #[allow(unused)]
+        unsafe {
+            scalar::count_words(src, len)
+        }
     }
 
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "ssse3",
-        not(target_feature = "avx2")
-    ))]
+    // ── compile-time-dispatch: pure #[cfg] cascade ──────────────
+    #[cfg(feature = "compile-time-dispatch")]
     {
-        if len >= 2 {
-            // SAFETY:
-            // - Forwarded from `dispatch`'s safety contract.
-            // - This branch is compiled only when SSSE3 is enabled.
-            return unsafe { ssse3::count_words(src, len) };
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "avx2"
+        ))]
+        {
+            if len >= 4 {
+                return unsafe { avx2::count_words(src, len) };
+            }
         }
-        // len < 2: fall through to scalar below.
-    }
 
-    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-    {
-        if len >= 2 {
-            // SAFETY:
-            // - Forwarded from `dispatch`'s safety contract.
-            // - This branch is compiled only when NEON is enabled.
-            return unsafe { neon::count_words(src, len) };
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "ssse3",
+            not(target_feature = "avx2")
+        ))]
+        {
+            if len >= 2 {
+                return unsafe { ssse3::count_words(src, len) };
+            }
         }
-        // len < 2: fall through to scalar below.
-    }
 
-    #[allow(unused)]
-    // SAFETY: Forwarded from `dispatch`'s safety contract.
-    unsafe {
-        scalar::count_words(src, len)
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+        {
+            if len >= 2 {
+                return unsafe { neon::count_words(src, len) };
+            }
+        }
+
+        #[allow(unused)]
+        unsafe {
+            scalar::count_words(src, len)
+        }
     }
 }
 
