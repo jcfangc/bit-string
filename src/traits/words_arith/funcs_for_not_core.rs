@@ -59,32 +59,40 @@ unsafe fn dispatch(dst: *mut u64, src: *const u64, len: usize) {
             let (has_avx2, has_sse2) = {
                 #[cfg(target_arch = "x86_64")]
                 {
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
                     (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
                 }
                 #[cfg(target_arch = "x86")]
                 {
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
                     (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
                 }
             };
             if has_avx2 {
+                // SAFETY: caller guarantees `dst`/`src` pointer validity and word length. AVX2 availability was confirmed by CPUID.
                 unsafe { avx2::words(dst, src, len) };
                 return;
             }
             if has_sse2 {
+                // SAFETY: caller guarantees `dst`/`src` pointer validity and word length. SSE2 availability was confirmed by CPUID.
                 unsafe { sse2::words(dst, src, len) };
                 return;
             }
         }
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
+            // SAFETY: caller guarantees `dst`/`src` pointer validity and word length. NEON availability was confirmed by CPUID.
             unsafe { neon::words(dst, src, len) };
             return;
         }
         #[allow(unused)]
+        // SAFETY: caller guarantees pointer validity. Scalar backend is always safe.
         unsafe {
             scalar::words(dst, src, len)
         };
@@ -97,6 +105,9 @@ unsafe fn dispatch(dst: *mut u64, src: *const u64, len: usize) {
             target_feature = "avx2"
         ))]
         {
+            // SAFETY:
+            // - Forwarded from `dispatch`'s safety contract.
+            // - This branch is compiled only when AVX2 is enabled.
             unsafe { avx2::words(dst, src, len) };
             return;
         }
@@ -106,15 +117,22 @@ unsafe fn dispatch(dst: *mut u64, src: *const u64, len: usize) {
             not(target_feature = "avx2")
         ))]
         {
+            // SAFETY:
+            // - Forwarded from `dispatch`'s safety contract.
+            // - This branch is compiled only when SSE2 is enabled.
             unsafe { sse2::words(dst, src, len) };
             return;
         }
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
+            // SAFETY:
+            // - Forwarded from `dispatch`'s safety contract.
+            // - This branch is compiled only when NEON is enabled.
             unsafe { neon::words(dst, src, len) };
             return;
         }
         #[allow(unused)]
+        // SAFETY: Forwarded from `dispatch`'s safety contract.
         unsafe {
             scalar::words(dst, src, len)
         };

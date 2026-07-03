@@ -32,26 +32,36 @@ pub(super) fn cmp_unaligned_words(
             let (has_avx2, has_sse41) = {
                 #[cfg(target_arch = "x86_64")]
                 {
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 —
+                    // it is a read-only instruction that queries CPU capabilities.
                     let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
+                    // SAFETY: same reasoning as above — another `__cpuid_count` query.
                     let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
                     (leaf7.ebx & (1 << 5) != 0, leaf1.ecx & (1 << 19) != 0)
                 }
                 #[cfg(target_arch = "x86")]
                 {
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 —
+                    // it is a read-only instruction that queries CPU capabilities.
                     let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
+                    // SAFETY: same reasoning as above — another `__cpuid_count` query.
                     let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
                     (leaf7.ebx & (1 << 5) != 0, leaf1.ecx & (1 << 19) != 0)
                 }
             };
             if has_avx2 {
+                // SAFETY: pointer validity guaranteed by caller. Backend selected via CPUID verification.
                 return unsafe { avx2::cmp_unaligned(src, other, count, shift) };
             }
             if has_sse41 {
+                // SAFETY: pointer validity guaranteed by caller. Backend selected via CPUID verification.
                 return unsafe { sse41::cmp_unaligned(src, other, count, shift) };
             }
         }
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
+            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
+            // enabled by `#[target_feature]` at compile time.
             return unsafe { neon::cmp_unaligned(src, other, count, shift) };
         }
         #[allow(unreachable_code)]
@@ -66,6 +76,8 @@ pub(super) fn cmp_unaligned_words(
             target_feature = "avx2"
         ))]
         {
+            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
+            // enabled by `#[target_feature]` at compile time.
             return unsafe { avx2::cmp_unaligned(src, other, count, shift) };
         }
 
@@ -75,11 +87,15 @@ pub(super) fn cmp_unaligned_words(
             not(target_feature = "avx2")
         ))]
         {
+            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
+            // enabled by `#[target_feature]` at compile time.
             return unsafe { sse41::cmp_unaligned(src, other, count, shift) };
         }
 
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
+            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
+            // enabled by `#[target_feature]` at compile time.
             return unsafe { neon::cmp_unaligned(src, other, count, shift) };
         }
 

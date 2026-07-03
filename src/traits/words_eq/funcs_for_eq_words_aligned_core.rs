@@ -30,26 +30,33 @@ pub(super) fn eq_words_aligned(src: &[u64], other: &[u64], count: usize) -> bool
             let (has_avx2, has_sse41) = {
                 #[cfg(target_arch = "x86_64")]
                 {
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
+                    // SAFETY: same as above
                     let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
                     (leaf7.ebx & (1 << 5) != 0, leaf1.ecx & (1 << 19) != 0)
                 }
                 #[cfg(target_arch = "x86")]
                 {
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
+                    // SAFETY: same as above
                     let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
                     (leaf7.ebx & (1 << 5) != 0, leaf1.ecx & (1 << 19) != 0)
                 }
             };
             if has_avx2 {
+                // SAFETY: `src`/`other` are valid for `count` words. Backend was selected via CPUID verification.
                 return unsafe { avx2::eq_words(src, other, count) };
             }
             if has_sse41 {
+                // SAFETY: `src`/`other` are valid for `count` words. Backend was selected via CPUID verification.
                 return unsafe { sse41::eq_words(src, other, count) };
             }
         }
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
+            // SAFETY: `src`/`other` are valid for `count` words. Backend feature is enabled by the `#[cfg]` gate on this block.
             return unsafe { neon::eq_words(src, other, count) };
         }
         #[allow(unused)]
@@ -71,6 +78,7 @@ pub(super) fn eq_words_aligned(src: &[u64], other: &[u64], count: usize) -> bool
             target_feature = "avx2"
         ))]
         {
+            // SAFETY: `src`/`other` are valid for `count` words. Backend feature is guaranteed by compile-time `#[cfg]` gate.
             return unsafe { avx2::eq_words(src, other, count) };
         }
 
@@ -80,11 +88,13 @@ pub(super) fn eq_words_aligned(src: &[u64], other: &[u64], count: usize) -> bool
             not(target_feature = "avx2")
         ))]
         {
+            // SAFETY: `src`/`other` are valid for `count` words. Backend feature is guaranteed by compile-time `#[cfg]` gate.
             return unsafe { sse41::eq_words(src, other, count) };
         }
 
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
+            // SAFETY: `src`/`other` are valid for `count` words. Backend feature is enabled by the `#[cfg]` gate on this block.
             return unsafe { neon::eq_words(src, other, count) };
         }
 
@@ -112,9 +122,14 @@ mod avx2 {
     pub(super) unsafe fn eq_words(src: &[u64], other: &[u64], len: usize) -> bool {
         let mut i = 0;
         while i + 4 <= len {
+            // SAFETY: `#[target_feature(enable = "avx2")]` ensures AVX2 is enabled.
+            // Pointers `src` and `other` are valid for `len` elements (guaranteed by caller).
             let a = unsafe { _mm256_loadu_si256(src.as_ptr().add(i).cast::<__m256i>()) };
+            // SAFETY: same as above; load from `other`.
             let b = unsafe { _mm256_loadu_si256(other.as_ptr().add(i).cast::<__m256i>()) };
+            // SAFETY: `_mm256_cmpeq_epi64` and `_mm256_movemask_pd` are pure register operations; AVX2 is enabled by `#[target_feature]`.
             let cmp = unsafe { _mm256_cmpeq_epi64(a, b) };
+            // SAFETY: same as above
             if unsafe { _mm256_movemask_pd(core::mem::transmute(cmp)) } as u32 != 0b1111 {
                 return false;
             }
@@ -142,9 +157,14 @@ mod sse41 {
     pub(super) unsafe fn eq_words(src: &[u64], other: &[u64], len: usize) -> bool {
         let mut i = 0;
         while i + 2 <= len {
+            // SAFETY: `#[target_feature(enable = "sse4.1")]` ensures SSE4.1 is enabled.
+            // Pointers `src` and `other` are valid for `len` elements (guaranteed by caller).
             let a = unsafe { _mm_loadu_si128(src.as_ptr().add(i).cast::<__m128i>()) };
+            // SAFETY: same as above; load from `other`.
             let b = unsafe { _mm_loadu_si128(other.as_ptr().add(i).cast::<__m128i>()) };
+            // SAFETY: `_mm_cmpeq_epi64` and `_mm_movemask_epi8` are pure register operations; SSE4.1 is enabled by `#[target_feature]`.
             let cmp = unsafe { _mm_cmpeq_epi64(a, b) };
+            // SAFETY: same as above
             if unsafe { _mm_movemask_epi8(cmp) } as u32 != 0xFFFF {
                 return false;
             }
@@ -169,9 +189,14 @@ mod neon {
     pub(super) unsafe fn eq_words(src: &[u64], other: &[u64], len: usize) -> bool {
         let mut i = 0;
         while i + 2 <= len {
+            // SAFETY: `#[target_feature(enable = "neon")]` ensures NEON is enabled.
+            // Pointers `src` and `other` are valid for `len` elements (guaranteed by caller).
             let a = unsafe { vld1q_u64(src.as_ptr().add(i)) };
+            // SAFETY: same as above; load from `other`.
             let b = unsafe { vld1q_u64(other.as_ptr().add(i)) };
+            // SAFETY: `vceqq_u64` and `vgetq_lane_u64` are pure register operations; NEON is enabled by `#[target_feature]`.
             let cmp = unsafe { vceqq_u64(a, b) };
+            // SAFETY: same as above
             if unsafe { vgetq_lane_u64(cmp, 0) } == 0 || unsafe { vgetq_lane_u64(cmp, 1) } == 0 {
                 return false;
             }

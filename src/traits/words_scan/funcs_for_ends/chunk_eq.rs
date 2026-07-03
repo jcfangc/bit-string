@@ -69,6 +69,8 @@ mod runtime {
     fn detect() -> u8 {
         #[cfg(target_arch = "x86_64")]
         {
+            // SAFETY: `__cpuid_count` is always safe to call on x86_64 —
+            // it is a read-only instruction that queries CPU capabilities.
             let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
             let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
             let has_avx2 = leaf7.ebx & (1 << 5) != 0;
@@ -85,6 +87,8 @@ mod runtime {
         }
         #[cfg(target_arch = "x86")]
         {
+            // SAFETY: `__cpuid_count` is always safe to call on x86 —
+            // it is a read-only instruction that queries CPU capabilities.
             let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
             let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
             let has_avx2 = leaf7.ebx & (1 << 5) != 0;
@@ -142,16 +146,24 @@ pub(crate) unsafe fn chunk_eq<const FILL: u64>(ptr: *const u64) -> bool {
         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         {
             if runtime::has_avx2() {
+                // SAFETY: `ptr` is valid for LANES u64 reads (caller
+                // guarantee).  AVX2 availability was confirmed by CPUID.
                 return unsafe { avx2::chunk_eq::<FILL>(ptr) };
             }
             if runtime::has_sse2() {
+                // SAFETY: `ptr` is valid for LANES u64 reads (caller
+                // guarantee).  SSE2 availability was confirmed by CPUID.
                 return unsafe { sse2::chunk_eq::<FILL>(ptr) };
             }
         }
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
+            // SAFETY: `ptr` is valid for LANES u64 reads (caller
+            // guarantee).  NEON is available per `#[target_feature]`.
             return unsafe { neon::chunk_eq::<FILL>(ptr) };
         }
+        // SAFETY: `ptr` is valid for LANES u64 reads (caller guarantee).
+        // Scalar backend is always safe.
         #[allow(unused)]
         unsafe {
             scalar::chunk_eq::<FILL>(ptr)

@@ -44,6 +44,11 @@ impl<'bs> BitStr<'bs> {
         }
 
         // Reconstruct slice for the trait call.
+        // SAFETY: `words_ptr` is derived from `all_words.as_ptr()` with
+        // `word_start ≤ all_words.len()` (guaranteed by BitStr invariant).
+        // The sub-slice `all_words.len() - word_start` is valid and
+        // stays within the allocation.  This slice is only used for the
+        // duration of the trait method call below.
         let words = unsafe { core::slice::from_raw_parts(words_ptr, all_words.len() - word_start) };
         words.leading_value_bits::<FILL, WORD_ALIGNED>(start_offset, self.bit_len)
     }

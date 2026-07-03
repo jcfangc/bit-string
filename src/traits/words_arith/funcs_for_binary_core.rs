@@ -64,22 +64,28 @@ unsafe fn dispatch<const OP: u8>(dst: *mut u64, lhs: *const u64, rhs: *const u64
             let (has_avx2, has_sse2) = {
                 #[cfg(target_arch = "x86_64")]
                 {
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
                     (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
                 }
                 #[cfg(target_arch = "x86")]
                 {
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
                     (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
                 }
             };
             if has_avx2 {
+                // SAFETY: caller guarantees `dst`/`src` pointer validity and word length. AVX2 availability was confirmed by CPUID.
                 unsafe { avx2::words::<OP>(dst, lhs, rhs, len) };
                 return;
             }
             if has_sse2 {
+                // SAFETY: caller guarantees `dst`/`src` pointer validity and word length. SSE2 availability was confirmed by CPUID.
                 unsafe { sse2::words::<OP>(dst, lhs, rhs, len) };
                 return;
             }
@@ -87,10 +93,12 @@ unsafe fn dispatch<const OP: u8>(dst: *mut u64, lhs: *const u64, rhs: *const u64
         // Non-x86 fallbacks: NEON (aarch64), scalar.
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
+            // SAFETY: caller guarantees `dst`/`src` pointer validity and word length. NEON availability was confirmed by CPUID.
             unsafe { neon::words::<OP>(dst, lhs, rhs, len) };
             return;
         }
         #[allow(unused)]
+        // SAFETY: caller guarantees pointer validity. Scalar backend is always safe.
         unsafe {
             scalar::words::<OP>(dst, lhs, rhs, len);
         }

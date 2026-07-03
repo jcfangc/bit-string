@@ -12,6 +12,8 @@ static DETECTED: AtomicU8 = AtomicU8::new(UNINIT);
 #[cold]
 fn detect() -> u8 {
     // CPUID leaf 7, subleaf 0: EBX bit 5 = AVX2.
+    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 —
+    // it is a read-only instruction that queries CPU capabilities.
     #[cfg(target_arch = "x86_64")]
     let res = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
     #[cfg(target_arch = "x86")]

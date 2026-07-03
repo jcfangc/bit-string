@@ -38,28 +38,35 @@ pub(super) fn copy_words_shifted(dst: &mut [u64], src: &[u64], count: usize, shi
             let (has_avx2, has_sse2) = {
                 #[cfg(target_arch = "x86_64")]
                 {
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
                     (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
                 }
                 #[cfg(target_arch = "x86")]
                 {
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
+                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
                     let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
                     (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
                 }
             };
             if has_avx2 {
+                // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). AVX2 availability was confirmed by CPUID.
                 unsafe { avx2::copy_words_shifted(dst, src, count, shift) };
                 return;
             }
             if has_sse2 {
+                // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). SSE2 availability was confirmed by CPUID.
                 unsafe { sse2::copy_words_shifted(dst, src, count, shift) };
                 return;
             }
         }
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
+            // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). NEON availability is confirmed at compile time by `target_feature = "neon"`.
             unsafe { neon::copy_words_shifted(dst, src, count, shift) };
             return;
         }
@@ -79,6 +86,7 @@ pub(super) fn copy_words_shifted(dst: &mut [u64], src: &[u64], count: usize, shi
             target_feature = "avx2"
         ))]
         {
+            // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). AVX2 availability is confirmed at compile time.
             unsafe { avx2::copy_words_shifted(dst, src, count, shift) };
             return;
         }
@@ -89,12 +97,14 @@ pub(super) fn copy_words_shifted(dst: &mut [u64], src: &[u64], count: usize, shi
             not(target_feature = "avx2")
         ))]
         {
+            // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). SSE2 availability is confirmed at compile time.
             unsafe { sse2::copy_words_shifted(dst, src, count, shift) };
             return;
         }
 
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
+            // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). NEON availability is confirmed at compile time.
             unsafe { neon::copy_words_shifted(dst, src, count, shift) };
             return;
         }
@@ -135,15 +145,23 @@ mod avx2 {
         len: usize,
         shift: usize,
     ) {
+        // SAFETY: `#[target_feature(enable = "avx2")]` guarantees the CPU supports AVX2; the `unsafe fn` contract guarantees pointer validity.
         let count_lo = unsafe { _mm_set1_epi64x(shift as i64) };
+        // SAFETY: Same as above.
         let count_hi = unsafe { _mm_set1_epi64x((WORD_BITS - shift) as i64) };
         let mut i = 0;
         while i + 4 <= len {
+            // SAFETY: `src` pointers are valid for `len + 1` words (caller guarantee); `_mm256_loadu_si256` uses unaligned loads so alignment is not required.
             let w0 = unsafe { _mm256_loadu_si256(src.as_ptr().add(i).cast::<__m256i>()) };
+            // SAFETY: Same as above.
             let w1 = unsafe { _mm256_loadu_si256(src.as_ptr().add(i + 1).cast::<__m256i>()) };
+            // SAFETY: Pure register operations; no memory access.
             let lo = unsafe { _mm256_srl_epi64(w0, count_lo) };
+            // SAFETY: Same as above.
             let hi = unsafe { _mm256_sll_epi64(w1, count_hi) };
+            // SAFETY: Same as above.
             let window = unsafe { _mm256_or_si256(lo, hi) };
+            // SAFETY: `dst` pointer is valid for `len` words (caller guarantee); `_mm256_storeu_si256` uses unaligned stores.
             unsafe { _mm256_storeu_si256(dst.as_mut_ptr().add(i).cast::<__m256i>(), window) };
             i += 4;
         }
@@ -181,15 +199,23 @@ mod sse2 {
         len: usize,
         shift: usize,
     ) {
+        // SAFETY: `#[target_feature(enable = "sse2")]` guarantees the CPU supports SSE2; the `unsafe fn` contract guarantees pointer validity.
         let count_lo = unsafe { _mm_set1_epi64x(shift as i64) };
+        // SAFETY: Same as above.
         let count_hi = unsafe { _mm_set1_epi64x((WORD_BITS - shift) as i64) };
         let mut i = 0;
         while i + 2 <= len {
+            // SAFETY: `src` pointers are valid for `len + 1` words (caller guarantee); `_mm_loadu_si128` uses unaligned loads so alignment is not required.
             let w0 = unsafe { _mm_loadu_si128(src.as_ptr().add(i).cast::<__m128i>()) };
+            // SAFETY: Same as above.
             let w1 = unsafe { _mm_loadu_si128(src.as_ptr().add(i + 1).cast::<__m128i>()) };
+            // SAFETY: Pure register operations; no memory access.
             let lo = unsafe { _mm_srl_epi64(w0, count_lo) };
+            // SAFETY: Same as above.
             let hi = unsafe { _mm_sll_epi64(w1, count_hi) };
+            // SAFETY: Same as above.
             let window = unsafe { _mm_or_si128(lo, hi) };
+            // SAFETY: `dst` pointer is valid for `len` words (caller guarantee); `_mm_storeu_si128` uses unaligned stores.
             unsafe { _mm_storeu_si128(dst.as_mut_ptr().add(i).cast::<__m128i>(), window) };
             i += 2;
         }
@@ -217,16 +243,24 @@ mod neon {
         len: usize,
         shift: usize,
     ) {
+        // SAFETY: `#[target_feature(enable = "neon")]` guarantees the CPU supports NEON; the `unsafe fn` contract guarantees pointer validity.
         let neg_shift = unsafe { vdupq_n_s64(-(shift as i64)) };
+        // SAFETY: Same as above.
         let pos_shift = unsafe { vdupq_n_s64((WORD_BITS - shift) as i64) };
 
         let mut i = 0;
         while i + 2 <= len {
+            // SAFETY: `src` pointers are valid for `len + 1` words (caller guarantee).
             let w0 = unsafe { vld1q_u64(src.as_ptr().add(i)) };
+            // SAFETY: Same as above.
             let w1 = unsafe { vld1q_u64(src.as_ptr().add(i + 1)) };
+            // SAFETY: Pure register operations; no memory access.
             let lo = unsafe { vshlq_u64(w0, neg_shift) };
+            // SAFETY: Same as above.
             let hi = unsafe { vshlq_u64(w1, pos_shift) };
+            // SAFETY: Same as above.
             let window = unsafe { vorrq_u64(lo, hi) };
+            // SAFETY: `dst` pointer is valid for `len` words (caller guarantee).
             unsafe { vst1q_u64(dst.as_mut_ptr().add(i), window) };
             i += 2;
         }
