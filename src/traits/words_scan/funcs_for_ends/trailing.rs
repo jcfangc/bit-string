@@ -9,7 +9,7 @@
     target_feature = "avx2"
 )))]
 use super::chunk_eq::{LANES, LANES_2X, chunk_eq, chunk_eq_2x};
-use crate::{SMALL_WORDS, WORD_BITS, low_mask};
+use crate::{SMALL_WORDS, WORD_BITS};
 
 // ═══════════════════════════════════════════════════════════════════════
 // AVX2 backend — extracted for runtime dispatch.
@@ -100,20 +100,6 @@ fn count_leading<const FILL: u64>(val: u64) -> usize {
     }
 }
 
-/// Counts leading bits of `val` within its highest `limit` bits.
-#[inline]
-fn count_leading_within<const FILL: u64>(val: u64, limit: usize) -> usize {
-    if limit == 0 {
-        return 0;
-    }
-    let shifted = val << (WORD_BITS - limit);
-    if FILL == 0 {
-        (shifted.leading_zeros() as usize).min(limit)
-    } else {
-        ((!shifted).leading_zeros() as usize).min(limit)
-    }
-}
-
 #[inline(always)]
 pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
     bits: &[u64],
@@ -137,12 +123,8 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
         } else {
             end_rem
         };
-        let last_val = if last_wi == 0 {
-            bits[0] >> start_offset
-        } else {
-            bits[last_wi] & low_mask(end_rem)
-        };
-        let last_count = count_leading_within::<FILL>(last_val, last_limit);
+        let shifted = bits[last_wi] << (WORD_BITS - end_rem);
+        let last_count = count_leading::<FILL>(shifted).min(last_limit);
         if last_count < last_limit {
             return last_count;
         }
@@ -356,9 +338,8 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
     // ── First-word partial (trailing side) ───────────────────────
     if !WORD_ALIGNED && start_offset > 0 {
         let first_limit = WORD_BITS - start_offset as usize;
-        let first_val = bits[0] >> start_offset;
-        let first_count = count_leading_within::<FILL>(first_val, first_limit);
-        scanned += first_count.min(first_limit);
+        let first_count = count_leading::<FILL>(bits[0]).min(first_limit);
+        scanned += first_count;
     }
 
     scanned.min(bit_len)
