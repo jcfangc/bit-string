@@ -19,12 +19,6 @@ fn count_trailing<const FILL: u64>(val: u64) -> usize {
     }
 }
 
-#[cfg(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "avx2"
-))]
-const ALIGN_THRESHOLD: usize = 128;
-
 // ═══════════════════════════════════════════════════════════════════════
 // AVX2 backend — extracted for runtime dispatch.
 // ═══════════════════════════════════════════════════════════════════════
@@ -48,7 +42,7 @@ mod avx2 {
 
     const LANES: usize = 4;
     const STRIDE: usize = 8;
-    const ALIGN_THRESHOLD: usize = 128;
+    pub(super) const ALIGN_THRESHOLD: usize = 128;
 
     /// AVX2 forward scan: advances `p` past all-FILL 256-bit chunks.
     ///
@@ -294,7 +288,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
                         };
                     }
 
-                    if total >= ALIGN_THRESHOLD {
+                    if total >= avx2::ALIGN_THRESHOLD {
                         let misalign = (base as usize % 32) / 8;
                         if misalign > 0 {
                             let prefix_end = base.add(misalign);
