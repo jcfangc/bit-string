@@ -429,3 +429,368 @@ fn attack_bitstring_leading_trailing_ones_complex() {
         );
     }
 }
+
+// ===========================================================================
+// J. Exhaustive leading_ones / trailing_ones — all lengths 0..256
+// ===========================================================================
+
+#[test]
+fn attack_bitstring_leading_trailing_ones_exhaustive() {
+    // Mirror of Section A: all-ones background with a single zero at each
+    // position, verifying both leading_ones and trailing_ones.
+    for len in 0..=256 {
+        // Pure ones
+        let all = BitString::ones(len);
+        assert_eq!(all.leading_ones(), len, "all-ones leading_ones len={len}");
+        assert_eq!(all.trailing_ones(), len, "all-ones trailing_ones len={len}");
+
+        // Single zero at each position
+        for pos in 0..len {
+            let mut bits = BitString::ones(len);
+            bits.set(pos, false);
+
+            let expected_leading = if pos == 0 { 0 } else { pos };
+            let expected_trailing = len - pos - 1;
+            assert_eq!(
+                bits.leading_ones(),
+                expected_leading,
+                "leading_ones len={len} zero@pos={pos}"
+            );
+            assert_eq!(
+                bits.trailing_ones(),
+                expected_trailing,
+                "trailing_ones len={len} zero@pos={pos}"
+            );
+        }
+    }
+}
+
+// ===========================================================================
+// K. Very long strings — exercise SIMD + ALIGN_THRESHOLD boundary
+// ===========================================================================
+
+#[test]
+fn attack_bitstring_leading_long_simd() {
+    // Exercise the AVX2 aligned-load path (total >= 128 words = 8192 bits)
+    // and the SSE2 unaligned path.  Vary lengths above and below
+    // alignment-sensitive boundaries.
+    let lengths: &[usize] = &[
+        256,   // well below ALIGN_THRESHOLD
+        1023,  // just under 1k bits
+        4096,  // 64 words — SSE2 territory, small AVX2 path
+        8192,  // 128 words — ALIGN_THRESHOLD boundary
+        8193,  // just over boundary
+        10000, // odd size
+        16384, // 256 words
+        32768, // 512 words
+        65535, // odd large
+        65536, // 1024 words — well above threshold
+    ];
+    for &len in lengths {
+        let z = BitString::zeros(len);
+        assert_eq!(z.leading_zeros(), len, "zeros leading_zeros len={len}");
+        assert_eq!(z.leading_ones(), 0, "zeros leading_ones len={len}");
+        assert_eq!(z.trailing_zeros(), len, "zeros trailing_zeros len={len}");
+        assert_eq!(z.trailing_ones(), 0, "zeros trailing_ones len={len}");
+
+        let o = BitString::ones(len);
+        assert_eq!(o.leading_zeros(), 0, "ones leading_zeros len={len}");
+        assert_eq!(o.leading_ones(), len, "ones leading_ones len={len}");
+        assert_eq!(o.trailing_zeros(), 0, "ones trailing_zeros len={len}");
+        assert_eq!(o.trailing_ones(), len, "ones trailing_ones len={len}");
+
+        // Single break near start / middle / end
+        for pos in [0, 1, 63, 64, 65, len / 2, len - 2, len - 1] {
+            if pos >= len {
+                continue;
+            }
+            let mut bits = BitString::ones(len);
+            bits.set(pos, false);
+            assert_eq!(
+                bits.leading_ones(),
+                pos,
+                "len={len} zero@pos={pos} leading_ones"
+            );
+            assert_eq!(
+                bits.trailing_ones(),
+                len - pos - 1,
+                "len={len} zero@pos={pos} trailing_ones"
+            );
+        }
+    }
+}
+
+// ===========================================================================
+// L. BitStr deep unaligned — start beyond first word, unaligned offset
+// ===========================================================================
+
+#[test]
+fn attack_bitstr_deep_unaligned_views() {
+    // Create a long backing string, then take sub-views with various
+    // start offsets (including deep into the backing) and lengths,
+    // verifying against a round-tripped BitString.
+    let backing_len = 2048;
+    let backing = {
+        let mut bs = BitString::zeros(backing_len);
+        // Put a pattern: 128 zeros, then alternating groups of 64 ones / 64 zeros
+        for i in 128..backing_len {
+            bs.set(i, (i / 64) % 2 == 1);
+        }
+        bs
+    };
+    let full = backing.as_bit_str();
+
+    // Non-word-aligned start offsets deep in the backing
+    let start_offsets: &[usize] = &[0, 1, 3, 31, 63, 64, 65, 100, 127, 128, 129, 500, 1023];
+    for &start in start_offsets {
+        for &len in &[1, 2, 31, 63, 64, 65, 127, 128, 129, 256] {
+            if start + len > backing_len {
+                continue;
+            }
+            let view = full.slice(UsizeCO::try_new(start, start + len).unwrap());
+            // Round-trip oracle
+            let rt = bs(&view.to_string());
+            assert_eq!(
+                view.leading_zeros(),
+                rt.leading_zeros(),
+                "leading_zeros start={start} len={len}"
+            );
+            assert_eq!(
+                view.leading_ones(),
+                rt.leading_ones(),
+                "leading_ones start={start} len={len}"
+            );
+            assert_eq!(
+                view.trailing_zeros(),
+                rt.trailing_zeros(),
+                "trailing_zeros start={start} len={len}"
+            );
+            assert_eq!(
+                view.trailing_ones(),
+                rt.trailing_ones(),
+                "trailing_ones start={start} len={len}"
+            );
+        }
+    }
+
+    // All-zeros and all-ones sub-views at deep unaligned starts
+    for &start in &[0, 7, 63, 64, 65, 128, 129, 500] {
+        let zs = BitString::zeros(backing_len);
+        let zf = zs.as_bit_str();
+        for &len in &[1, 63, 64, 65, 128, 256] {
+            if start + len > backing_len {
+                continue;
+            }
+            let zv = zf.slice(UsizeCO::try_new(start, start + len).unwrap());
+            assert_eq!(
+                zv.leading_zeros(),
+                len,
+                "all-zeros leading_zeros start={start} len={len}"
+            );
+            assert_eq!(
+                zv.trailing_zeros(),
+                len,
+                "all-zeros trailing_zeros start={start} len={len}"
+            );
+            assert_eq!(
+                zv.leading_ones(),
+                0,
+                "all-zeros leading_ones start={start} len={len}"
+            );
+        }
+    }
+}
+
+// ===========================================================================
+// M. Leading/trailing cross-word boundary — ones variant
+// ===========================================================================
+
+#[test]
+fn attack_bitstring_leading_trailing_ones_cross_word() {
+    // Mirror Section C for ones: all-ones background with a zero that
+    // crosses word boundaries.
+    for n_words in 0..10 {
+        for extra_bits in [0, 1, 63] {
+            let k = n_words * 64 + extra_bits;
+            if k == 0 {
+                continue;
+            }
+
+            // leading_ones: k ones, then a zero
+            let mut bits = BitString::ones(k + 1);
+            bits.set(k, false);
+            assert_eq!(
+                bits.leading_ones(),
+                k,
+                "leading_ones k={k} ({} words + {} bits)",
+                n_words,
+                extra_bits
+            );
+
+            // trailing_ones: a zero, then k ones
+            let mut bits = BitString::ones(k + 1);
+            bits.set(0, false);
+            assert_eq!(
+                bits.trailing_ones(),
+                k,
+                "trailing_ones k={k} ({} words + {} bits)",
+                n_words,
+                extra_bits
+            );
+        }
+    }
+}
+
+// ===========================================================================
+// N. Randomized cross-operation invariants
+// ===========================================================================
+
+/// Simple LCG for deterministic pseudo-random bits.
+fn lcg_step(state: &mut u64) {
+    *state = state
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
+}
+
+#[test]
+fn attack_leading_trailing_random_invariants() {
+    // Generate 200 pseudo-random BitStrings and verify cross-operation
+    // invariants on both BitString and BitStr views.
+    let mut rng: u64 = 0xdead_beef_cafe_babe;
+    for _ in 0..200 {
+        lcg_step(&mut rng);
+        let seed = rng;
+        lcg_step(&mut rng);
+        let len = (rng as usize % 1024) + 1;
+        let mut bits = BitString::zeros(len);
+        for i in 0..len {
+            lcg_step(&mut rng);
+            bits.set(i, rng & 1 != 0);
+        }
+
+        // BitString invariants
+        let lz = bits.leading_zeros();
+        let lo = bits.leading_ones();
+        let tz = bits.trailing_zeros();
+        let to = bits.trailing_ones();
+        assert!(lz <= len, "lz={lz} > len={len} seed={seed}");
+        assert!(lo <= len, "lo={lo} > len={len} seed={seed}");
+        assert!(tz <= len, "tz={tz} > len={len} seed={seed}");
+        assert!(to <= len, "to={to} > len={len} seed={seed}");
+        // At least one of lz, lo is 0 (first bit is either 0 or 1)
+        assert!(
+            lz == 0 || lo == 0,
+            "lz={lz} lo={lo} seed={seed} — first bit cannot be both 0 and 1"
+        );
+        // At least one of tz, to is 0 (last bit is either 0 or 1)
+        assert!(
+            tz == 0 || to == 0,
+            "tz={tz} to={to} seed={seed} — last bit cannot be both 0 and 1"
+        );
+
+        // BitStr oracle comparison for random sub-views
+        let full = bits.as_bit_str();
+        lcg_step(&mut rng);
+        let start = (rng as usize) % len;
+        lcg_step(&mut rng);
+        let sub_len = if start < len {
+            ((rng as usize) % (len - start)).max(1)
+        } else {
+            1
+        };
+        if start + sub_len <= len {
+            let view = full.slice(UsizeCO::try_new(start, start + sub_len).unwrap());
+            let rt = bs(&view.to_string());
+            assert_eq!(
+                view.leading_zeros(),
+                rt.leading_zeros(),
+                "random view lz seed={seed} start={start} len={sub_len}"
+            );
+            assert_eq!(
+                view.trailing_zeros(),
+                rt.trailing_zeros(),
+                "random view tz seed={seed} start={start} len={sub_len}"
+            );
+            assert_eq!(
+                view.leading_ones(),
+                rt.leading_ones(),
+                "random view lo seed={seed} start={start} len={sub_len}"
+            );
+            assert_eq!(
+                view.trailing_ones(),
+                rt.trailing_ones(),
+                "random view to seed={seed} start={start} len={sub_len}"
+            );
+        }
+    }
+}
+
+// ===========================================================================
+// O. Stress interleaving mutation with leading/trailing counts
+// ===========================================================================
+
+#[test]
+fn attack_leading_trailing_after_mutation() {
+    // Verify that mutating a BitString (set, push, pop, slice, truncate)
+    // produces correct counts afterward.  This stresses the last-word
+    // mask invariant and boundary recalculations.
+    for word_len in [1, 2, 63, 64, 65, 128, 129] {
+        // Build: word_len zeros, then a single 1
+        let mut bits = BitString::zeros(word_len + 1);
+        bits.set(word_len, true);
+
+        // push more zeros after the 1
+        bits.push(false);
+        bits.push(false);
+        assert_eq!(
+            bits.leading_zeros(),
+            word_len,
+            "after push zeros, word_len={word_len}"
+        );
+        assert_eq!(
+            bits.trailing_zeros(),
+            2,
+            "after push zeros trailing, word_len={word_len}"
+        );
+
+        // pop them back
+        bits.pop();
+        bits.pop();
+        assert_eq!(
+            bits.leading_zeros(),
+            word_len,
+            "after pop, word_len={word_len}"
+        );
+        assert_eq!(
+            bits.trailing_zeros(),
+            0,
+            "after pop trailing, word_len={word_len}"
+        );
+
+        // truncate to the 1-bit
+        bits.truncate(word_len);
+        assert_eq!(
+            bits.leading_zeros(),
+            word_len,
+            "after truncate, word_len={word_len}"
+        );
+        assert_eq!(
+            bits.trailing_zeros(),
+            word_len,
+            "after truncate trailing, word_len={word_len}"
+        );
+
+        // set a bit near a word boundary
+        bits.set(0, true);
+        assert_eq!(
+            bits.leading_zeros(),
+            0,
+            "after set pos=0, word_len={word_len}"
+        );
+        assert_eq!(
+            bits.leading_ones(),
+            1,
+            "after set pos=0 ones, word_len={word_len}"
+        );
+    }
+}
