@@ -1,4 +1,4 @@
 /target
 /.vscode
 /.venv
-/proptest-regressions
+/proptest-regressions.cargo/config.toml

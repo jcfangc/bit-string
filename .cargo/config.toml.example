@@ -1,0 +1,8 @@
+# Copy this file to .cargo/config.toml for local maximum-performance benchmarks:
+#   cp .cargo/config.toml.example .cargo/config.toml
+#
+# This file is gitignored because CI already sets target-cpu=native for
+# bench-pages, and the gate workflow needs a scalar baseline variant.
+
+[target.'cfg(any(target_arch = "x86_64", target_arch = "x86"))']
+rustflags = ["-C", "target-cpu=native"]
