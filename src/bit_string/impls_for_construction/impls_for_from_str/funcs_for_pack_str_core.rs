@@ -43,35 +43,72 @@ pub(super) fn str_core(src: *const u8, bit_len: usize) -> Result<Vec<u64>, (usiz
 /// - `dst` must be valid for writes of `ceil(bit_len / 64)` u64 values.
 #[inline]
 unsafe fn dispatch(dst: *mut u64, src: *const u8, bit_len: usize) -> Option<(usize, u8)> {
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "avx2"
-    ))]
+    // ── Default: runtime SIMD detection ─────────────────────────
+    #[cfg(not(feature = "compile-time-dispatch"))]
     {
-        // SAFETY: forwarded from `dispatch`'s safety contract.
-        return unsafe { avx2::words(dst, src, bit_len) };
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
+            let f = crate::cpuid::features();
+            if f.avx2 {
+                // SAFETY: caller guarantees `dst`/`src` pointer validity and byte count.
+                // AVX2 availability was confirmed by CPUID check above.
+                return unsafe { avx2::words(dst, src, bit_len) };
+            }
+            if f.sse2 {
+                // SAFETY: caller guarantees `dst`/`src` pointer validity and byte count.
+                // SSE2 availability was confirmed by CPUID check above.
+                return unsafe { sse2::words(dst, src, bit_len) };
+            }
+        }
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+        {
+            // SAFETY: caller guarantees `dst`/`src` pointer validity and byte count.
+            // NEON is guaranteed by `#[cfg(target_feature = "neon")]`.
+            return unsafe { neon::words(dst, src, bit_len) };
+        }
+        #[allow(unused)]
+        // SAFETY: caller guarantees pointer validity. Scalar backend is always safe.
+        unsafe {
+            scalar::words(dst, src, bit_len)
+        }
     }
 
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2",
-        not(target_feature = "avx2")
-    ))]
+    // ── compile-time-dispatch: pure #[cfg] cascade ──────────────
+    #[cfg(feature = "compile-time-dispatch")]
     {
-        // SAFETY: forwarded from `dispatch`'s safety contract.
-        return unsafe { sse2::words(dst, src, bit_len) };
-    }
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "avx2"
+        ))]
+        {
+            // SAFETY: caller guarantees `dst`/`src` pointer validity and byte count.
+            // AVX2 is guaranteed by `#[cfg(target_feature = "avx2")]`.
+            return unsafe { avx2::words(dst, src, bit_len) };
+        }
 
-    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-    {
-        // SAFETY: forwarded from `dispatch`'s safety contract.
-        return unsafe { neon::words(dst, src, bit_len) };
-    }
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "sse2",
+            not(target_feature = "avx2")
+        ))]
+        {
+            // SAFETY: caller guarantees `dst`/`src` pointer validity and byte count.
+            // SSE2 is guaranteed by `#[cfg(target_feature = "sse2")]`.
+            return unsafe { sse2::words(dst, src, bit_len) };
+        }
 
-    #[allow(unused)]
-    // SAFETY: forwarded from `dispatch`'s safety contract.
-    unsafe {
-        scalar::words(dst, src, bit_len)
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+        {
+            // SAFETY: caller guarantees `dst`/`src` pointer validity and byte count.
+            // NEON is guaranteed by `#[cfg(target_feature = "neon")]`.
+            return unsafe { neon::words(dst, src, bit_len) };
+        }
+
+        #[allow(unused)]
+        // SAFETY: caller guarantees pointer validity. Scalar backend is always safe.
+        unsafe {
+            scalar::words(dst, src, bit_len)
+        }
     }
 }
 
@@ -290,6 +327,7 @@ mod sse2 {
             let mask3 = _mm_movemask_epi8(valid3) as u16;
 
             if mask0 != 0xFFFF || mask1 != 0xFFFF || mask2 != 0xFFFF || mask3 != 0xFFFF {
+                // SAFETY: caller guarantees pointer validity. Scalar backend is always safe.
                 let (i, b) =
                     unsafe { scalar::words(dst, src, 64) }.expect("chunk has invalid byte");
                 return Some((global_offset + i, b));
@@ -349,6 +387,8 @@ mod neon {
     ) -> Option<(usize, u8)> {
         let zero_byte = vdup_n_u8(b'0');
         let one_byte = vdup_n_u8(b'1');
+        // SAFETY: `BIT_MASKS` is a static array of 8 u8 values, so its pointer is
+        // valid for reads of 8 bytes.
         let bit_masks = unsafe { vld1_u8(BIT_MASKS.as_ptr()) };
         let mut global_offset = 0usize;
 
@@ -375,6 +415,7 @@ mod neon {
                 if invalid_u64 != 0 {
                     // Fall back to scalar for exact error position within
                     // this 64-byte chunk.
+                    // SAFETY: caller guarantees pointer validity. Scalar backend is always safe.
                     let (i, b) =
                         unsafe { scalar::words(dst, src, 64) }.expect("chunk has invalid byte");
                     return Some((global_offset + i, b));

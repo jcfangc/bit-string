@@ -5,6 +5,6 @@ use crate::BitString;
 impl Hash for BitString {
     #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.as_bit_str().hash(state);
+        self.as_bit_str().hash_inner::<true, H>(state);
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "bit-string"
-version = "0.4.4"
+version = "0.4.5"
 edition = "2024"
 description = "A compact owned bit string type with editing, matching, and bitwise operations."
 readme = "README.md"
@@ -11,8 +11,13 @@ categories = ["data-structures", "no-std"]
 exclude = ["/benches", "/src/**/tests_for_*", "/tests", ".github/"]
 
 
+[features]
+default = []
+compile-time-dispatch = []
+
 [dependencies]
 int-interval = "0.9.6"
+once_cell = "1"
 witnessed = "0.8.0"
 
 [lib]
@@ -118,4 +123,12 @@ harness = false
 
 [[bench]]
 name = "ord"
+harness = false
+
+[[bench]]
+name = "bit_ops_leading"
+harness = false
+
+[[bench]]
+name = "bit_ops_trailing"
 harness = false

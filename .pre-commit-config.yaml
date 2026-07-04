@@ -16,8 +16,8 @@ repos:
         always_run: true
 
       - id: cargo-test
-        name: cargo test
-        entry: cargo test --quiet
+        name: cargo test (native SIMD)
+        entry: bash -c 'RUSTFLAGS="-C target-cpu=native" cargo test --quiet'
         language: system
         pass_filenames: false
         always_run: true

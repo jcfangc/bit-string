@@ -57,35 +57,35 @@ fn no_case(len: usize, pat_len: usize, index: usize) -> Case {
 // 65-bit haystack (small — scalar path)
 // ---------------------------------------------------------------------------
 
-#[divan::bench(name = "matches_at/len_65/yes/aligned/bit_string")]
+#[divan::bench(name = "matches_at_str/len_65/yes/aligned/ours_string_str")]
 fn m65ya(b: Bencher) {
     b_bit(b, make_case(65, 4, 64));
 }
-#[divan::bench(name = "matches_at/len_65/yes/aligned/string")]
+#[divan::bench(name = "matches_at_str/len_65/yes/aligned/string")]
 fn m65yas(b: Bencher) {
     b_str(b, make_case(65, 4, 64));
 }
-#[divan::bench(name = "matches_at/len_65/yes/unaligned/bit_string")]
+#[divan::bench(name = "matches_at_str/len_65/yes/unaligned/ours_string_str")]
 fn m65yu(b: Bencher) {
     b_bit(b, make_case(65, 4, 3));
 }
-#[divan::bench(name = "matches_at/len_65/yes/unaligned/string")]
+#[divan::bench(name = "matches_at_str/len_65/yes/unaligned/string")]
 fn m65yus(b: Bencher) {
     b_str(b, make_case(65, 4, 3));
 }
-#[divan::bench(name = "matches_at/len_65/no/aligned/bit_string")]
+#[divan::bench(name = "matches_at_str/len_65/no/aligned/ours_string_str")]
 fn m65na(b: Bencher) {
     b_bit(b, no_case(65, 4, 64));
 }
-#[divan::bench(name = "matches_at/len_65/no/aligned/string")]
+#[divan::bench(name = "matches_at_str/len_65/no/aligned/string")]
 fn m65nas(b: Bencher) {
     b_str(b, no_case(65, 4, 64));
 }
-#[divan::bench(name = "matches_at/len_65/no/unaligned/bit_string")]
+#[divan::bench(name = "matches_at_str/len_65/no/unaligned/ours_string_str")]
 fn m65nu(b: Bencher) {
     b_bit(b, no_case(65, 4, 3));
 }
-#[divan::bench(name = "matches_at/len_65/no/unaligned/string")]
+#[divan::bench(name = "matches_at_str/len_65/no/unaligned/string")]
 fn m65nus(b: Bencher) {
     b_str(b, no_case(65, 4, 3));
 }
@@ -94,35 +94,35 @@ fn m65nus(b: Bencher) {
 // 65536-bit haystack (large — SIMD path)
 // ---------------------------------------------------------------------------
 
-#[divan::bench(name = "matches_at/len_65536/yes/aligned/bit_string")]
+#[divan::bench(name = "matches_at_str/len_65536/yes/aligned/ours_string_str")]
 fn m6ya(b: Bencher) {
     b_bit(b, make_case(65_536, 128, 64));
 }
-#[divan::bench(name = "matches_at/len_65536/yes/aligned/string")]
+#[divan::bench(name = "matches_at_str/len_65536/yes/aligned/string")]
 fn m6yas(b: Bencher) {
     b_str(b, make_case(65_536, 128, 64));
 }
-#[divan::bench(name = "matches_at/len_65536/yes/unaligned/bit_string")]
+#[divan::bench(name = "matches_at_str/len_65536/yes/unaligned/ours_string_str")]
 fn m6yu(b: Bencher) {
     b_bit(b, make_case(65_536, 128, 3));
 }
-#[divan::bench(name = "matches_at/len_65536/yes/unaligned/string")]
+#[divan::bench(name = "matches_at_str/len_65536/yes/unaligned/string")]
 fn m6yus(b: Bencher) {
     b_str(b, make_case(65_536, 128, 3));
 }
-#[divan::bench(name = "matches_at/len_65536/no/aligned/bit_string")]
+#[divan::bench(name = "matches_at_str/len_65536/no/aligned/ours_string_str")]
 fn m6na(b: Bencher) {
     b_bit(b, no_case(65_536, 128, 64));
 }
-#[divan::bench(name = "matches_at/len_65536/no/aligned/string")]
+#[divan::bench(name = "matches_at_str/len_65536/no/aligned/string")]
 fn m6nas(b: Bencher) {
     b_str(b, no_case(65_536, 128, 64));
 }
-#[divan::bench(name = "matches_at/len_65536/no/unaligned/bit_string")]
+#[divan::bench(name = "matches_at_str/len_65536/no/unaligned/ours_string_str")]
 fn m6nu(b: Bencher) {
     b_bit(b, no_case(65_536, 128, 3));
 }
-#[divan::bench(name = "matches_at/len_65536/no/unaligned/string")]
+#[divan::bench(name = "matches_at_str/len_65536/no/unaligned/string")]
 fn m6nus(b: Bencher) {
     b_str(b, no_case(65_536, 128, 3));
 }
@@ -133,7 +133,7 @@ fn m6nus(b: Bencher) {
 
 fn b_bit(b: Bencher, c: Case) {
     b.bench(|| {
-        black_box(&c.haystack_bits).matches_at(c.index, black_box(c.pattern_bits.as_bit_str()))
+        black_box(&c.haystack_bits).matches_at_str(c.index, black_box(c.pattern_bits.as_bit_str()))
     });
 }
 

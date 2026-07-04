@@ -71,6 +71,8 @@ mod tests_for_editing;
 mod tests_for_fmt;
 #[path = "adversarial/tests_for_iter.rs"]
 mod tests_for_iter;
+#[path = "adversarial/tests_for_leading_trailing.rs"]
+mod tests_for_leading_trailing;
 #[path = "adversarial/tests_for_matching.rs"]
 mod tests_for_matching;
 #[path = "adversarial/tests_for_ord_hash.rs"]

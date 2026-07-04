@@ -1,180 +1,68 @@
-use crate::traits::*;
-use crate::{SMALL_WORDS, WORD_BITS};
-
 use crate::BitStr;
+use crate::WORD_BITS;
+
+mod inner;
 
 impl<'bs> BitStr<'bs> {
-    /// Returns `true` if `needle` is contained within `self`.
     #[inline]
-    pub fn contains(&self, needle: BitStr<'_>) -> bool {
-        if needle.bit_len == 0 {
-            return true;
+    pub fn contains_str(&self, needle: BitStr<'_>) -> bool {
+        let hs_aligned = self.start % WORD_BITS == 0;
+        let nd_aligned = needle.start % WORD_BITS == 0;
+        match (hs_aligned, nd_aligned) {
+            (true, true) => self.contains_inner::<true, true>(needle),
+            (true, false) => self.contains_inner::<true, false>(needle),
+            (false, true) => self.contains_inner::<false, true>(needle),
+            (false, false) => self.contains_inner::<false, false>(needle),
         }
-        if needle.bit_len > self.bit_len {
-            return false;
-        }
-
-        let words = self.source.words();
-        let sw = self.start / WORD_BITS;
-        let so = self.start % WORD_BITS;
-        let needle_words = needle.source.words();
-        let needle_len = needle.bit_len;
-
-        // Unaligned start: check the first partial word before delegating to
-        // SIMD on the aligned remainder.
-        if so != 0 {
-            let first_bits = (WORD_BITS - so).min(self.bit_len);
-            let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
-            for p in 0..=max {
-                if self.bits_equal_at(p, needle) {
-                    return true;
-                }
-            }
-            let remaining = self.bit_len - first_bits;
-            if remaining == 0 {
-                return false;
-            }
-            let aligned = &words[sw + 1..];
-            return aligned
-                .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
-                    self.bits_equal_at(pos + first_bits, needle)
-                })
-                .is_some();
-        }
-
-        // Word-aligned: full SIMD on the relevant suffix.
-        words[sw..]
-            .find_any_candidate(self.bit_len, needle_words, needle_len, &mut |pos| {
-                self.bits_equal_at(pos, needle)
-            })
-            .is_some()
     }
-
-    /// Returns the index of the first occurrence of `needle`, or `None`.
     #[inline]
-    pub fn find(&self, needle: BitStr<'_>) -> Option<usize> {
-        if needle.bit_len == 0 {
-            return Some(0);
+    pub fn contains_string(&self, needle: &crate::BitString) -> bool {
+        let n = needle.as_bit_str();
+        if self.start % WORD_BITS == 0 {
+            self.contains_inner::<true, true>(n)
+        } else {
+            self.contains_inner::<false, true>(n)
         }
-        if needle.bit_len > self.bit_len {
-            return None;
-        }
-
-        let words = self.source.words();
-        let sw = self.start / WORD_BITS;
-        let so = self.start % WORD_BITS;
-        let needle_words = needle.source.words();
-        let needle_len = needle.bit_len;
-
-        // Word-aligned fast path.
-        if so == 0 {
-            return words[sw..].find_first_word(
-                self.bit_len,
-                needle_words,
-                needle_len,
-                &mut |pos| self.bits_equal_at(pos, needle),
-            );
-        }
-
-        // Unaligned: scan the first partial word, then SIMD for the rest.
-        let first_bits = (WORD_BITS - so).min(self.bit_len);
-        let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
-        for p in 0..=max {
-            if self.bits_equal_at(p, needle) {
-                return Some(p);
-            }
-        }
-
-        let remaining = self.bit_len - first_bits;
-        if remaining == 0 {
-            return None;
-        }
-
-        let aligned = &words[sw + 1..];
-
-        // Quick rejection before the more expensive word-outer scan.
-        if aligned.len() >= SMALL_WORDS
-            && !aligned
-                .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
-                    self.bits_equal_at(pos + first_bits, needle)
-                })
-                .is_some()
-        {
-            return None;
-        }
-
-        aligned
-            .find_first_word(remaining, needle_words, needle_len, &mut |pos| {
-                self.bits_equal_at(pos + first_bits, needle)
-            })
-            .map(|pos| pos + first_bits)
     }
-
-    /// Returns the index of the last occurrence of `needle`, or `None`.
     #[inline]
-    pub fn rfind(&self, needle: BitStr<'_>) -> Option<usize> {
-        if needle.bit_len == 0 {
-            return Some(self.bit_len);
+    pub fn find_str(&self, needle: BitStr<'_>) -> Option<usize> {
+        let hs_a = self.start % WORD_BITS == 0;
+        let nd_a = needle.start % WORD_BITS == 0;
+        match (hs_a, nd_a) {
+            (true, true) => self.find_inner::<true, true>(needle),
+            (true, false) => self.find_inner::<true, false>(needle),
+            (false, true) => self.find_inner::<false, true>(needle),
+            (false, false) => self.find_inner::<false, false>(needle),
         }
-        if needle.bit_len > self.bit_len {
-            return None;
+    }
+    #[inline]
+    pub fn find_string(&self, needle: &crate::BitString) -> Option<usize> {
+        let n = needle.as_bit_str();
+        if self.start % WORD_BITS == 0 {
+            self.find_inner::<true, true>(n)
+        } else {
+            self.find_inner::<false, true>(n)
         }
-
-        let words = self.source.words();
-        let sw = self.start / WORD_BITS;
-        let so = self.start % WORD_BITS;
-        let needle_words = needle.source.words();
-        let needle_len = needle.bit_len;
-
-        // Word-aligned fast path.
-        if so == 0 {
-            return words[sw..].find_last_word(
-                self.bit_len,
-                needle_words,
-                needle_len,
-                &mut |pos| self.bits_equal_at(pos, needle),
-            );
+    }
+    #[inline]
+    pub fn rfind_str(&self, needle: BitStr<'_>) -> Option<usize> {
+        let hs_a = self.start % WORD_BITS == 0;
+        let nd_a = needle.start % WORD_BITS == 0;
+        match (hs_a, nd_a) {
+            (true, true) => self.rfind_inner::<true, true>(needle),
+            (true, false) => self.rfind_inner::<true, false>(needle),
+            (false, true) => self.rfind_inner::<false, true>(needle),
+            (false, false) => self.rfind_inner::<false, false>(needle),
         }
-
-        // Unaligned: SIMD on the aligned remainder first (reverse),
-        // then fall back to the first partial word.
-        let first_bits = (WORD_BITS - so).min(self.bit_len);
-        let remaining = self.bit_len - first_bits;
-
-        if remaining > 0 {
-            let aligned = &words[sw + 1..];
-
-            // Quick rejection via SIMD candidate scan — only when the
-            // aligned portion is large enough to amortize setup cost.
-            // When it's too small we skip the gate and scan directly
-            // (find_last_word has its own scalar fallback).
-            let maybe_candidate = aligned.len() < SMALL_WORDS
-                || aligned
-                    .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
-                        self.bits_equal_at(pos + first_bits, needle)
-                    })
-                    .is_some();
-
-            if maybe_candidate {
-                if let Some(pos) =
-                    aligned.find_last_word(remaining, needle_words, needle_len, &mut |pos| {
-                        self.bits_equal_at(pos + first_bits, needle)
-                    })
-                {
-                    return Some(pos + first_bits);
-                }
-            }
+    }
+    #[inline]
+    pub fn rfind_string(&self, needle: &crate::BitString) -> Option<usize> {
+        let n = needle.as_bit_str();
+        if self.start % WORD_BITS == 0 {
+            self.rfind_inner::<true, true>(n)
+        } else {
+            self.rfind_inner::<false, true>(n)
         }
-
-        // Check the first partial word.
-        let max = first_bits.min(self.bit_len.saturating_sub(needle_len));
-        for p in (0..=max).rev() {
-            if self.bits_equal_at(p, needle) {
-                return Some(p);
-            }
-        }
-
-        None
     }
 }
 

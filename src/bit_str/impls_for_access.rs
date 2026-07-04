@@ -35,7 +35,10 @@ impl<'bs> BitStr<'bs> {
         if valid_bits == 0 {
             return 0;
         }
-        let raw = self.source.words().read_word_at(self.start + bit_start);
+        let raw = self
+            .source
+            .words()
+            .read_word_at::<false>(self.start + bit_start);
         raw & low_mask(valid_bits)
     }
 }

@@ -24,3 +24,10 @@ pub(crate) const SMALL_WORDS: usize = 2;
     all(target_arch = "aarch64", target_feature = "neon"),
 )))]
 pub(crate) const SMALL_WORDS: usize = 0;
+
+/// Fill-value constants for leading-/trailing-value-word scans.
+/// Passed as `const FILL: u64` generic parameters so the two
+/// variants (`0` / `u64::MAX`) are monomorphised separately,
+/// eliminating runtime branches.
+pub(crate) const FILL_ZEROS: u64 = 0;
+pub(crate) const FILL_ONES: u64 = u64::MAX;

@@ -12,7 +12,7 @@ struct NeedleCase {
     needle_string: String,
 }
 
-#[divan::bench(name = "strip_prefix/len_65/hit/bit_string")]
+#[divan::bench(name = "strip_prefix/len_65/hit/ours_string")]
 fn strip_prefix_len_65_hit_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, hit_case(65));
 }
@@ -22,7 +22,7 @@ fn strip_prefix_len_65_hit_string(bencher: Bencher) {
     bench_string(bencher, hit_case(65));
 }
 
-#[divan::bench(name = "strip_prefix/len_65/miss/bit_string")]
+#[divan::bench(name = "strip_prefix/len_65/miss/ours_string")]
 fn strip_prefix_len_65_miss_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, miss_case(65));
 }
@@ -32,7 +32,7 @@ fn strip_prefix_len_65_miss_string(bencher: Bencher) {
     bench_string(bencher, miss_case(65));
 }
 
-#[divan::bench(name = "strip_prefix/len_65536/hit/bit_string")]
+#[divan::bench(name = "strip_prefix/len_65536/hit/ours_string")]
 fn strip_prefix_len_65536_hit_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, hit_case(65_536));
 }
@@ -42,7 +42,7 @@ fn strip_prefix_len_65536_hit_string(bencher: Bencher) {
     bench_string(bencher, hit_case(65_536));
 }
 
-#[divan::bench(name = "strip_prefix/len_65536/miss/bit_string")]
+#[divan::bench(name = "strip_prefix/len_65536/miss/ours_string")]
 fn strip_prefix_len_65536_miss_bit_string(bencher: Bencher) {
     bench_bit_string(bencher, miss_case(65_536));
 }
@@ -54,7 +54,7 @@ fn strip_prefix_len_65536_miss_string(bencher: Bencher) {
 
 fn bench_bit_string(bencher: Bencher, case: NeedleCase) {
     bencher.bench(|| {
-        black_box(&case.haystack_bits).strip_prefix(black_box(case.needle_bits.as_bit_str()))
+        black_box(&case.haystack_bits).strip_prefix_str(black_box(case.needle_bits.as_bit_str()))
     });
 }
 
