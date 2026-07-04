@@ -9,6 +9,7 @@ use once_cell::sync::OnceCell;
 #[allow(dead_code)]
 pub(crate) struct CpuFeatures {
     pub(crate) avx2: bool,
+    pub(crate) bmi1: bool,
     pub(crate) sse41: bool,
     pub(crate) ssse3: bool,
     pub(crate) sse2: bool,
@@ -41,6 +42,7 @@ pub(crate) fn features() -> &'static CpuFeatures {
             };
             CpuFeatures {
                 avx2: leaf7.ebx & (1 << 5) != 0,
+                bmi1: leaf7.ebx & (1 << 3) != 0,
                 sse41: leaf1.ecx & (1 << 19) != 0,
                 ssse3: leaf1.ecx & (1 << 9) != 0,
                 sse2: leaf1.edx & (1 << 26) != 0,
@@ -49,6 +51,7 @@ pub(crate) fn features() -> &'static CpuFeatures {
         #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
         CpuFeatures {
             avx2: false,
+            bmi1: false,
             sse41: false,
             ssse3: false,
             sse2: false,
