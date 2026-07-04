@@ -2,12 +2,6 @@
 //!
 //! Parameterised by `const FILL: u64` and `const WORD_ALIGNED: bool`.
 
-#[cfg(not(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "avx2"
-)))]
-use super::chunk_eq::{LANES, LANES_2X, chunk_eq, chunk_eq_2x};
-
 use crate::{SMALL_WORDS, WORD_BITS, low_mask};
 
 #[inline]
@@ -23,14 +17,9 @@ fn count_trailing<const FILL: u64>(val: u64) -> usize {
 // AVX2 backend — extracted for runtime dispatch.
 // ═══════════════════════════════════════════════════════════════════════
 
-#[cfg(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    any(not(feature = "compile-time-dispatch"), target_feature = "avx2")
-))]
+#[allow(unused)]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 mod avx2 {
-    // When compile-time-dispatch is enabled, the inline AVX2 block
-    // handles the scan and this module is unused.
-    #![cfg_attr(feature = "compile-time-dispatch", allow(dead_code))]
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
         __m256i, _mm256_load_si256, _mm256_set1_epi64x, _mm256_testz_si256, _mm256_xor_si256,
@@ -131,8 +120,96 @@ mod avx2 {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// SSE2 backend — 2×-unrolled chunk_eq scan.
+// ═══════════════════════════════════════════════════════════════════════
 
-#[inline(always)]
+#[allow(unused)]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+mod sse2 {
+    use super::super::chunk_eq::{LANES, LANES_2X, chunk_eq, chunk_eq_2x};
+
+    /// SSE2 forward scan: advances `p` past all-FILL chunks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure SSE2 is available (baseline on x86-64).
+    /// `p` through `end` must be valid for u64 reads.
+    #[target_feature(enable = "sse2")]
+    pub(super) unsafe fn leading_scan<const FILL: u64>(
+        mut p: *const u64,
+        end: *const u64,
+        total: usize,
+    ) -> *const u64 {
+        // SAFETY: only callable when SSE2 is available (caller verified
+        // via CPUID, or SSE2 is baseline).  All pointer arithmetic stays within bounds.
+        unsafe {
+            let mut iters = total / LANES_2X;
+            while iters > 0 {
+                if !chunk_eq_2x::<FILL>(p) {
+                    return p;
+                }
+                p = p.add(LANES_2X);
+                iters -= 1;
+            }
+            let limit = end.sub(LANES);
+            while p <= limit {
+                if !chunk_eq::<FILL>(p) {
+                    break;
+                }
+                p = p.add(LANES);
+            }
+            p
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// NEON backend — 2×-unrolled chunk_eq scan.
+// ═══════════════════════════════════════════════════════════════════════
+
+#[allow(unused)]
+#[cfg(target_arch = "aarch64")]
+mod neon {
+    use super::super::chunk_eq::{LANES, LANES_2X, chunk_eq, chunk_eq_2x};
+
+    /// NEON forward scan: advances `p` past all-FILL chunks.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure NEON is available.
+    /// `p` through `end` must be valid for u64 reads.
+    #[target_feature(enable = "neon")]
+    pub(super) unsafe fn leading_scan<const FILL: u64>(
+        mut p: *const u64,
+        end: *const u64,
+        total: usize,
+    ) -> *const u64 {
+        // SAFETY: only callable when NEON is available.  All pointer
+        // arithmetic stays within `[p, end)`.
+        unsafe {
+            let mut iters = total / LANES_2X;
+            while iters > 0 {
+                if !chunk_eq_2x::<FILL>(p) {
+                    return p;
+                }
+                p = p.add(LANES_2X);
+                iters -= 1;
+            }
+            let limit = end.sub(LANES);
+            while p <= limit {
+                if !chunk_eq::<FILL>(p) {
+                    break;
+                }
+                p = p.add(LANES);
+            }
+            p
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+
+#[inline]
 pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
     bits: &[u64],
     start_offset: u32,
@@ -195,207 +272,69 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             // the iteration count a clean multiple of STRIDE.
             let mut p = base;
 
-            // ── SIMD scan ─────────────────────────────────────────
-            // Two modes, selected at compile time:
-            //
-            // 1. Default: runtime CPUID check for AVX2.  If AVX2 is
-            //    present, use the extracted `avx2::leading_scan` backend.
-            //    Otherwise, fall through to the cfg-gated blocks which
-            //    select SSE2 / NEON / scalar at compile time.
-            //
-            // 2. `compile-time-dispatch` feature: skip runtime detection;
-            //    use only the cfg-gated blocks (current behaviour).
-            //
-            // The `simd_done` flag prevents double-scanning when runtime
-            // AVX2 already handled the scan.
-
-            #[allow(unused_mut)]
-            let mut simd_done = false;
-
-            #[cfg(all(
-                not(feature = "compile-time-dispatch"),
-                any(target_arch = "x86", target_arch = "x86_64")
-            ))]
-            if super::runtime::has_avx2() {
-                // SAFETY: CPUID confirmed AVX2 is available.
-                // `p` is within `[base, end)`.
-                p = unsafe { avx2::leading_scan::<FILL>(p, end, base, total) };
-                simd_done = true;
+            // ── Default: runtime SIMD detection ─────────────────────
+            #[cfg(not(feature = "compile-time-dispatch"))]
+            {
+                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+                if super::runtime::has_avx2() {
+                    // SAFETY: CPUID confirmed AVX2 is available.
+                    // `p` is within `[base, end)`.
+                    p = unsafe { avx2::leading_scan::<FILL>(p, end, base, total) };
+                } else {
+                    // SAFETY: SSE2 is baseline on x86-64.
+                    // `p` is within `[base, end)`.
+                    p = unsafe { sse2::leading_scan::<FILL>(p, end, total) };
+                }
+                #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+                {
+                    // SAFETY: NEON is available per `#[cfg]` gate.
+                    // `p` is within `[base, end)`.
+                    p = unsafe { neon::leading_scan::<FILL>(p, end, total) };
+                }
+                #[allow(unused)]
+                {
+                    // Scalar fallback: `p` stays at base; shared tail below
+                    // scans word-by-word.
+                }
             }
 
-            if !simd_done {
-                // ── Compile-time SIMD scan ────────────────────────────
-                // When `compile-time-dispatch` is enabled, or when
-                // runtime AVX2 was not available, these cfg-gated blocks
-                // select the best backend at compile time.
-                // Raw SIMD intrinsics are inlined directly here (not
-                // behind a #[target_feature] call gate) so LLVM can
-                // fully inline through the entire call chain.
-
-                // AVX2 (compile-time dispatch only)
+            // ── compile-time-dispatch: pure #[cfg] cascade ──────────
+            #[cfg(feature = "compile-time-dispatch")]
+            {
                 #[cfg(all(
                     any(target_arch = "x86", target_arch = "x86_64"),
                     target_feature = "avx2"
                 ))]
-                // SAFETY: `p` starts at `base` and advances by STRIDE ≤ end - p.
-                // AVX2 is available per the `#[target_feature]` gating.
-                unsafe {
-                    #[cfg(target_arch = "x86")]
-                    use core::arch::x86::{
-                        __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_set1_epi64x,
-                        _mm256_testz_si256, _mm256_xor_si256,
-                    };
-                    #[cfg(target_arch = "x86_64")]
-                    use core::arch::x86_64::{
-                        __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_set1_epi64x,
-                        _mm256_testz_si256, _mm256_xor_si256,
-                    };
-                    const LANES: usize = 4;
-                    const STRIDE: usize = 8;
-
-                    // Inline helper for the unaligned 2× check.
-                    macro_rules! is_all_fill_2x {
-                        ($ptr:expr) => {
-                            if FILL == 0 {
-                                let d0 = _mm256_loadu_si256($ptr.cast::<__m256i>());
-                                let d1 = _mm256_loadu_si256($ptr.add(LANES).cast::<__m256i>());
-                                _mm256_testz_si256(d0, d0) != 0 && _mm256_testz_si256(d1, d1) != 0
-                            } else {
-                                let fill_vec = _mm256_set1_epi64x(FILL as i64);
-                                let d0 = _mm256_loadu_si256($ptr.cast::<__m256i>());
-                                let x0 = _mm256_xor_si256(d0, fill_vec);
-                                let d1 = _mm256_loadu_si256($ptr.add(LANES).cast::<__m256i>());
-                                let x1 = _mm256_xor_si256(d1, fill_vec);
-                                _mm256_testz_si256(x0, x0) != 0 && _mm256_testz_si256(x1, x1) != 0
-                            }
-                        };
-                    }
-                    // Inline helper for the aligned 2× check.
-                    macro_rules! is_all_fill_2x_aligned {
-                        ($ptr:expr) => {
-                            if FILL == 0 {
-                                let d0 = _mm256_load_si256($ptr.cast::<__m256i>());
-                                let d1 = _mm256_load_si256($ptr.add(LANES).cast::<__m256i>());
-                                _mm256_testz_si256(d0, d0) != 0 && _mm256_testz_si256(d1, d1) != 0
-                            } else {
-                                let fill_vec = _mm256_set1_epi64x(FILL as i64);
-                                let d0 = _mm256_load_si256($ptr.cast::<__m256i>());
-                                let x0 = _mm256_xor_si256(d0, fill_vec);
-                                let d1 = _mm256_load_si256($ptr.add(LANES).cast::<__m256i>());
-                                let x1 = _mm256_xor_si256(d1, fill_vec);
-                                _mm256_testz_si256(x0, x0) != 0 && _mm256_testz_si256(x1, x1) != 0
-                            }
-                        };
-                    }
-
-                    if total >= avx2::ALIGN_THRESHOLD {
-                        let misalign = (base as usize % 32) / 8;
-                        if misalign > 0 {
-                            let prefix_end = base.add(misalign);
-                            while p < prefix_end {
-                                if *p != FILL {
-                                    let off = (p as usize - base as usize) / 8;
-                                    return (scanned
-                                        + off * WORD_BITS
-                                        + count_trailing::<FILL>(*p))
-                                    .min(bit_len);
-                                }
-                                p = p.add(1);
-                            }
-                        }
-                        let mut iters =
-                            (end as usize - p as usize) / (STRIDE * core::mem::size_of::<u64>());
-                        while iters > 0 {
-                            if !is_all_fill_2x_aligned!(p) {
-                                break;
-                            }
-                            p = p.add(STRIDE);
-                            iters -= 1;
-                        }
-                    } else {
-                        let mut iters = total / STRIDE;
-                        while iters > 0 {
-                            if !is_all_fill_2x!(p) {
-                                break;
-                            }
-                            p = p.add(STRIDE);
-                            iters -= 1;
-                        }
-                    }
+                {
+                    // SAFETY: AVX2 is guaranteed by compile-time `#[cfg]` gate.
+                    // `p` is within `[base, end)`.
+                    p = unsafe { avx2::leading_scan::<FILL>(p, end, base, total) };
                 }
 
-                // SSE2
                 #[cfg(all(
                     any(target_arch = "x86", target_arch = "x86_64"),
                     target_feature = "sse2",
                     not(target_feature = "avx2")
                 ))]
-                // SAFETY: `p` points into `[base, end)`.  `chunk_eq` and
-                // `chunk_eq_2x` require their ptr argument to be valid for
-                // `LANES` / `LANES_2X` reads, which is ensured by the loop
-                // bounds (`p + LANES_2X ≤ end`, `p + LANES ≤ end`).
-                // SSE2 is baseline on x86-64 and always available.
-                unsafe {
-                    let mut iters = total / LANES_2X;
-                    while iters > 0 {
-                        if !chunk_eq_2x::<FILL>(p) {
-                            break;
-                        }
-                        p = p.add(LANES_2X);
-                        iters -= 1;
-                    }
-                    let limit = end.sub(LANES);
-                    while p <= limit {
-                        if !chunk_eq::<FILL>(p) {
-                            break;
-                        }
-                        p = p.add(LANES);
-                    }
+                {
+                    // SAFETY: SSE2 is guaranteed by compile-time `#[cfg]` gate.
+                    // `p` is within `[base, end)`.
+                    p = unsafe { sse2::leading_scan::<FILL>(p, end, total) };
                 }
 
-                // NEON
                 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-                // SAFETY: same pointer-bound invariant as SSE2 path.
-                // NEON is available per `#[target_feature]` gating.
-                unsafe {
-                    let mut iters = total / LANES_2X;
-                    while iters > 0 {
-                        if !chunk_eq_2x::<FILL>(p) {
-                            break;
-                        }
-                        p = p.add(LANES_2X);
-                        iters -= 1;
-                    }
-                    let limit = end.sub(LANES);
-                    while p <= limit {
-                        if !chunk_eq::<FILL>(p) {
-                            break;
-                        }
-                        p = p.add(LANES);
-                    }
+                {
+                    // SAFETY: NEON is guaranteed by compile-time `#[cfg]` gate.
+                    // `p` is within `[base, end)`.
+                    p = unsafe { neon::leading_scan::<FILL>(p, end, total) };
                 }
 
-                // Scalar
-                #[cfg(not(any(
-                    all(
-                        any(target_arch = "x86", target_arch = "x86_64"),
-                        any(target_feature = "avx2", target_feature = "sse2")
-                    ),
-                    all(target_arch = "aarch64", target_feature = "neon"),
-                )))]
-                // SAFETY: `p` is within `[base, end)`.  `chunk_eq` requires
-                // `LANES` valid u64 reads; the loop bound `p + LANES ≤ end`
-                // ensures this.
-                unsafe {
-                    let limit = end.sub(LANES);
-                    while p <= limit {
-                        if !chunk_eq::<FILL>(p) {
-                            break;
-                        }
-                        p = p.add(LANES);
-                    }
+                #[allow(unused)]
+                {
+                    // Scalar fallback: `p` stays at base; shared tail below
+                    // scans word-by-word.
                 }
-            } // !simd_done
+            }
 
             // ── Post-SIMD: shared scalar remainder ─────────────────
             // Executed regardless of which SIMD backend ran (runtime
