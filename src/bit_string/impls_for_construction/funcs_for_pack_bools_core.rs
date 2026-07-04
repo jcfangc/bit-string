@@ -39,30 +39,13 @@ unsafe fn dispatch(dst: *mut u64, src: *const u8, bit_len: usize) {
     {
         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         {
-            let (has_avx2, has_sse2) = {
-                #[cfg(target_arch = "x86_64")]
-                {
-                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
-                    let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
-                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
-                    let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
-                    (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
-                }
-                #[cfg(target_arch = "x86")]
-                {
-                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
-                    let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
-                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
-                    let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
-                    (leaf7.ebx & (1 << 5) != 0, leaf1.edx & (1 << 26) != 0)
-                }
-            };
-            if has_avx2 {
+            let f = crate::cpuid::features();
+            if f.avx2 {
                 // SAFETY: caller guarantees `dst`/`src` pointer validity and word count. AVX2 availability was confirmed by CPUID.
                 unsafe { avx2::words(dst, src, bit_len) };
                 return;
             }
-            if has_sse2 {
+            if f.sse2 {
                 // SAFETY: caller guarantees `dst`/`src` pointer validity and word count. SSE2 availability was confirmed by CPUID.
                 unsafe { sse2::words(dst, src, bit_len) };
                 return;

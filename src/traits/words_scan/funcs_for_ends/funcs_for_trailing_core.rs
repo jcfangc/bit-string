@@ -98,7 +98,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
                 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
                 {
                     let done_before = done;
-                    if super::cpuid::has_avx2() {
+                    if crate::cpuid::features().avx2 {
                         // SAFETY: CPUID confirmed AVX2 is available.
                         done =
                             unsafe { avx2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };

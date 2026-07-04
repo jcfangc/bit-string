@@ -52,31 +52,14 @@ unsafe fn dispatch(src: *const u64, len: usize) -> usize {
     {
         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         {
-            let (has_avx2, has_ssse3) = {
-                #[cfg(target_arch = "x86_64")]
-                {
-                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
-                    let leaf1 = unsafe { core::arch::x86_64::__cpuid_count(1, 0) };
-                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
-                    let leaf7 = unsafe { core::arch::x86_64::__cpuid_count(7, 0) };
-                    (leaf7.ebx & (1 << 5) != 0, leaf1.ecx & (1 << 9) != 0)
-                }
-                #[cfg(target_arch = "x86")]
-                {
-                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
-                    let leaf1 = unsafe { core::arch::x86::__cpuid_count(1, 0) };
-                    // SAFETY: `__cpuid_count` is always safe to call on x86/x86_64 — it is a read-only instruction that queries CPU capabilities.
-                    let leaf7 = unsafe { core::arch::x86::__cpuid_count(7, 0) };
-                    (leaf7.ebx & (1 << 5) != 0, leaf1.ecx & (1 << 9) != 0)
-                }
-            };
-            if has_avx2 {
+            let f = crate::cpuid::features();
+            if f.avx2 {
                 if len >= 4 {
                     // SAFETY: `src` is valid for `len` words. Backend selected via CPUID verification.
                     return unsafe { avx2::count_words(src, len) };
                 }
             }
-            if has_ssse3 {
+            if f.ssse3 {
                 if len >= 2 {
                     // SAFETY: `src` is valid for `len` words. Backend selected via CPUID verification.
                     return unsafe { ssse3::count_words(src, len) };

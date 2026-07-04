@@ -3,6 +3,7 @@
 extern crate alloc;
 
 mod consts_for_bits;
+mod cpuid;
 mod funcs_for_bits;
 
 pub(crate) mod traits;

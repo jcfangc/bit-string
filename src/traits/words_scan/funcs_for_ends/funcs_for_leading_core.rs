@@ -84,7 +84,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             #[cfg(not(feature = "compile-time-dispatch"))]
             {
                 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-                if super::cpuid::has_avx2() {
+                if crate::cpuid::features().avx2 {
                     // SAFETY: CPUID confirmed AVX2 is available.
                     // `p` through `end` are within the input slice.
                     p = unsafe { avx2::leading_scan::<FILL>(p, end, base, total) };
