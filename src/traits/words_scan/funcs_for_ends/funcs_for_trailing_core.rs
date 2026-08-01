@@ -4,19 +4,8 @@
 //! When `WORD_ALIGNED` is `true` the caller guarantees `start_offset == 0`,
 //! allowing the compiler to eliminate the first-word LZCNT phase.
 
+use super::count_matching;
 use crate::{SMALL_WORDS, WORD_BITS};
-
-// ── Scalar helper ──────────────────────────────────────────────────────
-
-/// Counts leading bits within a single u64 word that match `FILL`.
-#[inline]
-fn count_leading<const FILL: u64>(val: u64) -> usize {
-    if FILL == 0 {
-        val.leading_zeros() as usize
-    } else {
-        (!val).leading_zeros() as usize
-    }
-}
 
 // ── Dispatch ───────────────────────────────────────────────────────────
 
@@ -44,7 +33,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
             end_rem
         };
         let shifted = bits[last_wi] << (WORD_BITS - end_rem);
-        let last_count = count_leading::<FILL>(shifted).min(last_limit);
+        let last_count = count_matching::<FILL, true>(shifted).min(last_limit);
         if last_count < last_limit {
             return last_count;
         }
@@ -74,7 +63,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
         {
             let w = bits[wi_end];
             if w != FILL {
-                scanned += count_leading::<FILL>(w);
+                scanned += count_matching::<FILL, true>(w);
                 return scanned.min(bit_len);
             }
         }
@@ -84,7 +73,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
             while done < total_words {
                 let wi = wi_end - done;
                 if bits[wi] != FILL {
-                    scanned += count_leading::<FILL>(bits[wi]);
+                    scanned += count_matching::<FILL, true>(bits[wi]);
                     return scanned.min(bit_len);
                 }
                 scanned += WORD_BITS;
@@ -133,7 +122,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
         while done < total_words {
             let wi = wi_end - done;
             if bits[wi] != FILL {
-                scanned += count_leading::<FILL>(bits[wi]);
+                scanned += count_matching::<FILL, true>(bits[wi]);
                 return scanned.min(bit_len);
             }
             scanned += WORD_BITS;
@@ -144,7 +133,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
     // ── First-word partial (trailing side) ───────────────────────
     if !WORD_ALIGNED && start_offset > 0 {
         let first_limit = WORD_BITS - start_offset as usize;
-        let first_count = count_leading::<FILL>(bits[0]).min(first_limit);
+        let first_count = count_matching::<FILL, true>(bits[0]).min(first_limit);
         scanned += first_count;
     }
 

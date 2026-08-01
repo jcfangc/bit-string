@@ -2,18 +2,8 @@
 //!
 //! Parameterised by `const FILL: u64` and `const WORD_ALIGNED: bool`.
 
+use super::count_matching;
 use crate::{SMALL_WORDS, WORD_BITS, low_mask};
-
-// ── Scalar helper ──────────────────────────────────────────────────────
-
-#[inline]
-fn count_trailing<const FILL: u64>(val: u64) -> usize {
-    if FILL == 0 {
-        val.trailing_zeros() as usize
-    } else {
-        (!val).trailing_zeros() as usize
-    }
-}
 
 // ── Dispatch ───────────────────────────────────────────────────────────
 
@@ -38,7 +28,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
     if !WORD_ALIGNED && start_offset != 0 {
         let first_val = bits[0] >> start_offset;
         let first_limit = (WORD_BITS - start_offset as usize).min(bit_len);
-        let first_count = count_trailing::<FILL>(first_val).min(first_limit);
+        let first_count = count_matching::<FILL, false>(first_val).min(first_limit);
         if first_count < first_limit {
             return first_count;
         }
@@ -55,7 +45,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             for i in 0..total {
                 let w = bits[wi + i];
                 if w != FILL {
-                    return (scanned + count_trailing::<FILL>(w)).min(bit_len);
+                    return (scanned + count_matching::<FILL, false>(w)).min(bit_len);
                 }
                 scanned += WORD_BITS;
             }
@@ -73,7 +63,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             // branch), so `base` is valid for at least one u64 read.
             let w0 = unsafe { *base };
             if w0 != FILL {
-                return (scanned + count_trailing::<FILL>(w0)).min(bit_len);
+                return (scanned + count_matching::<FILL, false>(w0)).min(bit_len);
             }
             // Start SIMD from `base` (not base+1).  Word 0 is
             // double-checked (fast path + SIMD) but this keeps the
@@ -127,7 +117,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             for _ in 0..rem {
                 unsafe {
                     if *p != FILL {
-                        scanned += count_trailing::<FILL>(*p);
+                        scanned += count_matching::<FILL, false>(*p);
                         return (scanned).min(bit_len);
                     }
                     scanned += WORD_BITS;
@@ -140,7 +130,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
 
     if end_rem != 0 && wi == last_wi {
         let last_val = bits[wi] & low_mask(end_rem);
-        scanned += count_trailing::<FILL>(last_val).min(end_rem);
+        scanned += count_matching::<FILL, false>(last_val).min(end_rem);
     }
 
     scanned.min(bit_len)
