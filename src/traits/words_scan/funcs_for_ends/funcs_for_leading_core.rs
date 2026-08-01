@@ -13,6 +13,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
     start_offset: u32,
     bit_len: usize,
 ) -> usize {
+    debug_assert!(!WORD_ALIGNED || start_offset == 0);
     if bit_len == 0 {
         return 0;
     }

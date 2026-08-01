@@ -1,6 +1,88 @@
 use super::*;
 use int_interval::UsizeCO;
 
+fn alignment_pattern(len: usize) -> String {
+    (0..len)
+        .map(|i| if (i * 17 + i / 3) % 11 < 5 { '0' } else { '1' })
+        .collect()
+}
+
+fn padded_bits(text: &str, offset: usize) -> BitString {
+    bs(&cat(&[
+        "1".repeat(offset).as_str(),
+        text,
+        "0".repeat(7).as_str(),
+    ]))
+}
+
+#[test]
+fn attack_matching_alignment_matrix_at_word_boundaries() {
+    for len in [0, 1, 63, 64, 65, 127, 128, 129] {
+        let text = alignment_pattern(len);
+        let owned = bs(&text);
+
+        for hs_offset in [0, 3] {
+            let hs_source = padded_bits(&text, hs_offset);
+            let hs = hs_source
+                .as_bit_str()
+                .slice_from(hs_offset)
+                .slice_until(len);
+
+            assert!(hs.matches_at_string(0, &owned), "len={len} hs={hs_offset}");
+            assert!(hs.starts_with_string(&owned), "len={len} hs={hs_offset}");
+            assert!(hs.ends_with_string(&owned), "len={len} hs={hs_offset}");
+
+            for nd_offset in [0, 5] {
+                let nd_source = padded_bits(&text, nd_offset);
+                let nd = nd_source
+                    .as_bit_str()
+                    .slice_from(nd_offset)
+                    .slice_until(len);
+
+                assert!(
+                    hs.matches_at_str(0, nd),
+                    "matches_at len={len} hs={hs_offset} nd={nd_offset}"
+                );
+                assert!(
+                    hs.starts_with_str(nd),
+                    "starts_with len={len} hs={hs_offset} nd={nd_offset}"
+                );
+                assert!(
+                    hs.ends_with_str(nd),
+                    "ends_with len={len} hs={hs_offset} nd={nd_offset}"
+                );
+
+                if len > 0 {
+                    let mut first_diff = text.clone().into_bytes();
+                    first_diff[0] = if first_diff[0] == b'0' { b'1' } else { b'0' };
+                    let first_diff = String::from_utf8(first_diff).unwrap();
+                    let first_source = padded_bits(&first_diff, nd_offset);
+                    let first = first_source
+                        .as_bit_str()
+                        .slice_from(nd_offset)
+                        .slice_until(len);
+                    assert!(!hs.matches_at_str(0, first));
+                    assert!(!hs.starts_with_str(first));
+                    assert!(!hs.ends_with_str(first));
+
+                    let mut last_diff = text.clone().into_bytes();
+                    let last = len - 1;
+                    last_diff[last] = if last_diff[last] == b'0' { b'1' } else { b'0' };
+                    let last_diff = String::from_utf8(last_diff).unwrap();
+                    let last_source = padded_bits(&last_diff, nd_offset);
+                    let last_view = last_source
+                        .as_bit_str()
+                        .slice_from(nd_offset)
+                        .slice_until(len);
+                    assert!(!hs.matches_at_str(0, last_view));
+                    assert!(!hs.starts_with_str(last_view));
+                    assert!(!hs.ends_with_str(last_view));
+                }
+            }
+        }
+    }
+}
+
 #[test]
 fn attack_matches_at_oob() {
     let bits = bs("10101");

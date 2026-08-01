@@ -12,6 +12,7 @@ impl WordsOrd for [u64] {
         full_words: usize,
         haystack_shift: usize,
     ) -> Option<Ordering> {
+        debug_assert!(!HS_WORD_ALIGNED || haystack_shift == 0);
         if HS_WORD_ALIGNED || haystack_shift == 0 {
             funcs_for_cmp_aligned_core::cmp_aligned_words(self, needle, full_words)
         } else {

@@ -8,6 +8,7 @@ impl WordsEq for [u64] {
         full_words: usize,
         haystack_shift: usize,
     ) -> bool {
+        debug_assert!(!HS_WORD_ALIGNED || haystack_shift == 0);
         if HS_WORD_ALIGNED || haystack_shift == 0 {
             super::funcs_for_eq_words_aligned_core::eq_words_aligned(self, needle, full_words)
         } else {

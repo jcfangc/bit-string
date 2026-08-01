@@ -1,3 +1,6 @@
+//! Alignment consts are caller guarantees when `true`; `false` makes no
+//! alignment guarantee and retains the general path.
+
 use crate::BitStr;
 use crate::traits::*;
 use crate::{WORD_BITS, low_mask};
@@ -18,6 +21,8 @@ impl<'bs> BitStr<'bs> {
         let nd_words = other.source.words();
         let hs_base = self.start;
         let nd_base = other.start;
+        debug_assert!(!HS_WORD_ALIGNED || hs_base.is_multiple_of(WORD_BITS));
+        debug_assert!(!ND_WORD_ALIGNED || nd_base.is_multiple_of(WORD_BITS));
         let full = common / WORD_BITS;
         let nd_is_aligned = ND_WORD_ALIGNED || nd_base % WORD_BITS == 0;
         if nd_is_aligned {

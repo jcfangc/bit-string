@@ -1,3 +1,6 @@
+//! `WORD_ALIGNED = true` is a caller guarantee; `false` makes no alignment
+//! guarantee and retains the general path.
+
 use crate::BitStr;
 use crate::traits::WordsEdit;
 use crate::{WORD_BITS, low_mask};
@@ -7,6 +10,7 @@ impl<'bs> BitStr<'bs> {
     /// Hash with compile-time alignment signal.
     #[inline]
     pub(crate) fn hash_inner<const WORD_ALIGNED: bool, H: Hasher>(&self, state: &mut H) {
+        debug_assert!(!WORD_ALIGNED || self.start.is_multiple_of(WORD_BITS));
         self.bit_len.hash(state);
         if self.bit_len == 0 {
             return;

@@ -1,3 +1,6 @@
+//! `WORD_ALIGNED = true` is a caller guarantee; `false` makes no alignment
+//! guarantee and retains the general path.
+
 use crate::traits::WordsScan;
 use crate::{WORD_BITS, low_mask};
 
@@ -7,6 +10,7 @@ impl<'bs> BitStr<'bs> {
     /// `count_ones` with compile-time alignment signal.
     #[inline]
     pub(crate) fn count_ones_inner<const WORD_ALIGNED: bool>(&self) -> usize {
+        debug_assert!(!WORD_ALIGNED || self.start.is_multiple_of(WORD_BITS));
         if self.bit_len == 0 {
             return 0;
         }

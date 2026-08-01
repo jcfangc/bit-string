@@ -23,6 +23,7 @@ pub(crate) trait WordsOrd {
     /// `haystack_shift` is the intra-word offset within the first word.
     /// When `HS_WORD_ALIGNED` is `true`, `haystack_shift == 0` is
     /// guaranteed and the aligned backend is used unconditionally.
+    /// When it is `false`, no alignment guarantee is made.
     fn cmp_words<const HS_WORD_ALIGNED: bool>(
         &self,
         needle: &[u64],
