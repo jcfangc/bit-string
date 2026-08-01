@@ -56,79 +56,44 @@ pub(super) fn assign<const OP: u8>(lhs: &mut [u64], rhs: &[u64]) {
 /// - `dst` must not overlap `rhs`.
 #[inline]
 unsafe fn dispatch<const OP: u8>(dst: *mut u64, lhs: *const u64, rhs: *const u64, len: usize) {
-    // ── Default: runtime SIMD detection ──────────────────────────
-    #[cfg(not(feature = "compile-time-dispatch"))]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
     {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            let f = crate::cpuid::features();
-            if f.avx2 {
-                // SAFETY: caller guarantees `dst`/`src` pointer validity and word length. AVX2 availability was confirmed by CPUID.
-                unsafe { avx2::words::<OP>(dst, lhs, rhs, len) };
-                return;
-            }
-            if f.sse2 {
-                // SAFETY: caller guarantees `dst`/`src` pointer validity and word length. SSE2 availability was confirmed by CPUID.
-                unsafe { sse2::words::<OP>(dst, lhs, rhs, len) };
-                return;
-            }
-        }
-        // Non-x86 fallbacks: NEON (aarch64), scalar.
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY: caller guarantees `dst`/`src` pointer validity and word length. NEON availability was confirmed by CPUID.
-            unsafe { neon::words::<OP>(dst, lhs, rhs, len) };
-            return;
-        }
-        #[allow(unused)]
-        // SAFETY: caller guarantees pointer validity. Scalar backend is always safe.
-        unsafe {
-            scalar::words::<OP>(dst, lhs, rhs, len);
-        }
+        // SAFETY:
+        // - Forwarded from `dispatch`'s safety contract.
+        // - This branch is compiled only when AVX2 is enabled.
+        unsafe { avx2::words::<OP>(dst, lhs, rhs, len) };
+        return;
     }
 
-    // ── compile-time-dispatch: existing #[cfg] cascade ───────────
-    #[cfg(feature = "compile-time-dispatch")]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "sse2",
+        not(target_feature = "avx2")
+    ))]
     {
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "avx2"
-        ))]
-        {
-            // SAFETY:
-            // - Forwarded from `dispatch`'s safety contract.
-            // - This branch is compiled only when AVX2 is enabled.
-            unsafe { avx2::words::<OP>(dst, lhs, rhs, len) };
-            return;
-        }
+        // SAFETY:
+        // - Forwarded from `dispatch`'s safety contract.
+        // - This branch is compiled only when SSE2 is enabled.
+        unsafe { sse2::words::<OP>(dst, lhs, rhs, len) };
+        return;
+    }
 
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse2",
-            not(target_feature = "avx2")
-        ))]
-        {
-            // SAFETY:
-            // - Forwarded from `dispatch`'s safety contract.
-            // - This branch is compiled only when SSE2 is enabled.
-            unsafe { sse2::words::<OP>(dst, lhs, rhs, len) };
-            return;
-        }
+    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+    {
+        // SAFETY:
+        // - Forwarded from `dispatch`'s safety contract.
+        // - This branch is compiled only when NEON is enabled.
+        unsafe { neon::words::<OP>(dst, lhs, rhs, len) };
+        return;
+    }
 
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY:
-            // - Forwarded from `dispatch`'s safety contract.
-            // - This branch is compiled only when NEON is enabled.
-            unsafe { neon::words::<OP>(dst, lhs, rhs, len) };
-            return;
-        }
-
-        #[allow(unused)]
-        // SAFETY: Forwarded from `dispatch`'s safety contract.
-        unsafe {
-            scalar::words::<OP>(dst, lhs, rhs, len);
-        }
+    #[allow(unused)]
+    // SAFETY: Forwarded from `dispatch`'s safety contract.
+    unsafe {
+        scalar::words::<OP>(dst, lhs, rhs, len);
     }
 }
 

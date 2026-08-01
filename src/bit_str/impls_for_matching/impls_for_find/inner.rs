@@ -1,3 +1,6 @@
+//! Alignment consts are caller guarantees when `true`; `false` makes no
+//! alignment guarantee and retains the general path.
+
 use crate::BitStr;
 use crate::traits::*;
 use crate::{SMALL_WORDS, WORD_BITS};
@@ -17,6 +20,8 @@ impl<'bs> BitStr<'bs> {
         let words = self.source.words();
         let sw = self.start / WORD_BITS;
         let so = self.start % WORD_BITS;
+        debug_assert!(!WORD_ALIGNED || so == 0);
+        debug_assert!(!ND_WORD_ALIGNED || needle.start.is_multiple_of(WORD_BITS));
         let needle_words = needle.source.words();
         let needle_len = needle.bit_len;
         if WORD_ALIGNED || so == 0 {
@@ -69,6 +74,8 @@ impl<'bs> BitStr<'bs> {
         let words = self.source.words();
         let sw = self.start / WORD_BITS;
         let so = self.start % WORD_BITS;
+        debug_assert!(!WORD_ALIGNED || so == 0);
+        debug_assert!(!ND_WORD_ALIGNED || needle.start.is_multiple_of(WORD_BITS));
         let needle_words = needle.source.words();
         let needle_len = needle.bit_len;
         if WORD_ALIGNED || so == 0 {
@@ -122,6 +129,8 @@ impl<'bs> BitStr<'bs> {
         let words = self.source.words();
         let sw = self.start / WORD_BITS;
         let so = self.start % WORD_BITS;
+        debug_assert!(!HS_WORD_ALIGNED || so == 0);
+        debug_assert!(!ND_WORD_ALIGNED || needle.start.is_multiple_of(WORD_BITS));
         let needle_words = needle.source.words();
         let needle_len = needle.bit_len;
         if !HS_WORD_ALIGNED && so != 0 {

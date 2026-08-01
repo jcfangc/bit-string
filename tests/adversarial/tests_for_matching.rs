@@ -1,6 +1,88 @@
 use super::*;
 use int_interval::UsizeCO;
 
+fn alignment_pattern(len: usize) -> String {
+    (0..len)
+        .map(|i| if (i * 17 + i / 3) % 11 < 5 { '0' } else { '1' })
+        .collect()
+}
+
+fn padded_bits(text: &str, offset: usize) -> BitString {
+    bs(&cat(&[
+        "1".repeat(offset).as_str(),
+        text,
+        "0".repeat(7).as_str(),
+    ]))
+}
+
+#[test]
+fn attack_matching_alignment_matrix_at_word_boundaries() {
+    for len in [0, 1, 63, 64, 65, 127, 128, 129] {
+        let text = alignment_pattern(len);
+        let owned = bs(&text);
+
+        for hs_offset in [0, 3] {
+            let hs_source = padded_bits(&text, hs_offset);
+            let hs = hs_source
+                .as_bit_str()
+                .slice_from(hs_offset)
+                .slice_until(len);
+
+            assert!(hs.matches_at_string(0, &owned), "len={len} hs={hs_offset}");
+            assert!(hs.starts_with_string(&owned), "len={len} hs={hs_offset}");
+            assert!(hs.ends_with_string(&owned), "len={len} hs={hs_offset}");
+
+            for nd_offset in [0, 5] {
+                let nd_source = padded_bits(&text, nd_offset);
+                let nd = nd_source
+                    .as_bit_str()
+                    .slice_from(nd_offset)
+                    .slice_until(len);
+
+                assert!(
+                    hs.matches_at_str(0, nd),
+                    "matches_at len={len} hs={hs_offset} nd={nd_offset}"
+                );
+                assert!(
+                    hs.starts_with_str(nd),
+                    "starts_with len={len} hs={hs_offset} nd={nd_offset}"
+                );
+                assert!(
+                    hs.ends_with_str(nd),
+                    "ends_with len={len} hs={hs_offset} nd={nd_offset}"
+                );
+
+                if len > 0 {
+                    let mut first_diff = text.clone().into_bytes();
+                    first_diff[0] = if first_diff[0] == b'0' { b'1' } else { b'0' };
+                    let first_diff = String::from_utf8(first_diff).unwrap();
+                    let first_source = padded_bits(&first_diff, nd_offset);
+                    let first = first_source
+                        .as_bit_str()
+                        .slice_from(nd_offset)
+                        .slice_until(len);
+                    assert!(!hs.matches_at_str(0, first));
+                    assert!(!hs.starts_with_str(first));
+                    assert!(!hs.ends_with_str(first));
+
+                    let mut last_diff = text.clone().into_bytes();
+                    let last = len - 1;
+                    last_diff[last] = if last_diff[last] == b'0' { b'1' } else { b'0' };
+                    let last_diff = String::from_utf8(last_diff).unwrap();
+                    let last_source = padded_bits(&last_diff, nd_offset);
+                    let last_view = last_source
+                        .as_bit_str()
+                        .slice_from(nd_offset)
+                        .slice_until(len);
+                    assert!(!hs.matches_at_str(0, last_view));
+                    assert!(!hs.starts_with_str(last_view));
+                    assert!(!hs.ends_with_str(last_view));
+                }
+            }
+        }
+    }
+}
+
 #[test]
 fn attack_matches_at_oob() {
     let bits = bs("10101");
@@ -20,6 +102,29 @@ fn attack_matches_at_oob() {
     let empty = empty_binding.as_bit_str();
     assert!(bits.matches_at_str(0, empty));
     assert!(bits.matches_at_str(5, empty));
+}
+
+#[test]
+fn attack_bitstring_matches_at_long_pattern_unaligned_offsets() {
+    let pattern_text = "10110010".repeat(17); // 136 bits: forces the multi-word path.
+    let pattern = bs(&pattern_text);
+
+    for index in [1, 3, 63, 65] {
+        let haystack = bs(&cat(&[
+            "0".repeat(index).as_str(),
+            pattern_text.as_str(),
+            "111",
+        ]));
+
+        assert!(
+            haystack.matches_at_string(index, &pattern),
+            "matches_at_string failed at unaligned index {index}"
+        );
+        assert!(
+            haystack.matches_at_str(index, pattern.as_bit_str()),
+            "matches_at_str failed at unaligned index {index}"
+        );
+    }
 }
 
 #[test]
@@ -134,6 +239,34 @@ fn attack_strip_prefix_suffix() {
 
     let stripped = bits.strip_suffix_str(bs("01").as_bit_str()).unwrap();
     assert_eq!(stripped.to_string(), "101");
+}
+
+#[test]
+fn attack_bitstring_strip_suffix_long_pattern_at_unaligned_offset() {
+    let prefix = "011";
+    let suffix_text = "10110010".repeat(17); // 136 bits: forces the multi-word path.
+    let suffix = bs(&suffix_text);
+    let bits = bs(&cat(&[prefix, suffix_text.as_str()]));
+
+    assert_eq!(
+        bits.strip_suffix_string(&suffix).unwrap().to_string(),
+        prefix
+    );
+    assert_eq!(
+        bits.strip_suffix_str(suffix.as_bit_str())
+            .unwrap()
+            .to_string(),
+        prefix
+    );
+}
+
+#[test]
+fn attack_bitstring_strip_suffix_longer_returns_none() {
+    let bits = bs("10101");
+    let longer = bs("101010");
+
+    assert!(bits.strip_suffix_string(&longer).is_none());
+    assert!(bits.strip_suffix_str(longer.as_bit_str()).is_none());
 }
 
 // ===========================================================================

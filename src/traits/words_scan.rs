@@ -9,6 +9,7 @@ pub(crate) trait WordsScan {
     /// `start_offset` is `physical_start % WORD_BITS`.
     /// When `WORD_ALIGNED` is `true`, `start_offset` is guaranteed to be 0
     /// and the first-word phase is eliminated at compile time.
+    /// When it is `false`, no alignment guarantee is made.
     fn leading_value_bits<const FILL: u64, const WORD_ALIGNED: bool>(
         &self,
         start_offset: u32,

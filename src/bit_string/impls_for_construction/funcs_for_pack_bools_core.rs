@@ -34,72 +34,38 @@ pub(super) fn bools_core(src: *const u8, bit_len: usize) -> Vec<u64> {
 /// - `dst` must be valid for writes of `ceil(bit_len / 64)` u64 values.
 #[inline]
 unsafe fn dispatch(dst: *mut u64, src: *const u8, bit_len: usize) {
-    // ── Default: runtime SIMD detection ─────────────────────────
-    #[cfg(not(feature = "compile-time-dispatch"))]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
     {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            let f = crate::cpuid::features();
-            if f.avx2 {
-                // SAFETY: caller guarantees `dst`/`src` pointer validity and word count. AVX2 availability was confirmed by CPUID.
-                unsafe { avx2::words(dst, src, bit_len) };
-                return;
-            }
-            if f.sse2 {
-                // SAFETY: caller guarantees `dst`/`src` pointer validity and word count. SSE2 availability was confirmed by CPUID.
-                unsafe { sse2::words(dst, src, bit_len) };
-                return;
-            }
-        }
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY: caller guarantees `dst`/`src` pointer validity and word count. NEON availability was confirmed by `#[target_feature]`.
-            unsafe { neon::words(dst, src, bit_len) };
-            return;
-        }
-        // SAFETY: caller guarantees pointer validity. Scalar backend is always safe.
-        #[allow(unused)]
-        unsafe {
-            scalar::words(dst, src, bit_len);
-        }
+        // SAFETY: caller guarantees `dst`/`src` pointer validity and word count. AVX2 availability was confirmed by `#[target_feature]`.
+        unsafe { avx2::words(dst, src, bit_len) };
+        return;
     }
 
-    // ── compile-time-dispatch: pure #[cfg] cascade ──────────────
-    #[cfg(feature = "compile-time-dispatch")]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "sse2",
+        not(target_feature = "avx2")
+    ))]
     {
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "avx2"
-        ))]
-        {
-            // SAFETY: caller guarantees `dst`/`src` pointer validity and word count. AVX2 availability was confirmed by `#[target_feature]`.
-            unsafe { avx2::words(dst, src, bit_len) };
-            return;
-        }
+        // SAFETY: caller guarantees `dst`/`src` pointer validity and word count. SSE2 availability was confirmed by `#[target_feature]`.
+        unsafe { sse2::words(dst, src, bit_len) };
+        return;
+    }
 
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse2",
-            not(target_feature = "avx2")
-        ))]
-        {
-            // SAFETY: caller guarantees `dst`/`src` pointer validity and word count. SSE2 availability was confirmed by `#[target_feature]`.
-            unsafe { sse2::words(dst, src, bit_len) };
-            return;
-        }
+    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+    {
+        // SAFETY: caller guarantees `dst`/`src` pointer validity and word count. NEON availability was confirmed by `#[target_feature]`.
+        unsafe { neon::words(dst, src, bit_len) };
+        return;
+    }
 
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY: caller guarantees `dst`/`src` pointer validity and word count. NEON availability was confirmed by `#[target_feature]`.
-            unsafe { neon::words(dst, src, bit_len) };
-            return;
-        }
-
-        // SAFETY: caller guarantees pointer validity. Scalar backend is always safe.
-        #[allow(unused)]
-        unsafe {
-            scalar::words(dst, src, bit_len);
-        }
+    // SAFETY: caller guarantees pointer validity. Scalar backend is always safe.
+    #[allow(unused)]
+    unsafe {
+        scalar::words(dst, src, bit_len);
     }
 }
 

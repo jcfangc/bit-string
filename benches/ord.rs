@@ -55,6 +55,30 @@ fn cmp_len_64_diff_last_string(b: Bencher) {
 }
 
 // ---------------------------------------------------------------------------
+// len = 65 (one full word plus a partial-word tail)
+// ---------------------------------------------------------------------------
+
+#[divan::bench(name = "cmp/len_65/identical/ours_string")]
+fn cmp_len_65_identical_bit_string(b: Bencher) {
+    bench_bit_string(b, 65, CmpCase::Identical);
+}
+
+#[divan::bench(name = "cmp/len_65/identical/bit_str_unaligned")]
+fn cmp_len_65_identical_bit_str_unaligned(b: Bencher) {
+    bench_bit_str_unaligned(b, 65, CmpCase::Identical);
+}
+
+#[divan::bench(name = "cmp/len_65/diff_last/ours_string")]
+fn cmp_len_65_diff_last_bit_string(b: Bencher) {
+    bench_bit_string(b, 65, CmpCase::DifferAtLast);
+}
+
+#[divan::bench(name = "cmp/len_65/diff_last/bit_str_unaligned")]
+fn cmp_len_65_diff_last_bit_str_unaligned(b: Bencher) {
+    bench_bit_str_unaligned(b, 65, CmpCase::DifferAtLast);
+}
+
+// ---------------------------------------------------------------------------
 // len = 4096
 // ---------------------------------------------------------------------------
 

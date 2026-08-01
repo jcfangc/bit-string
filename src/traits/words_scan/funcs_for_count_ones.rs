@@ -47,78 +47,41 @@ unsafe fn dispatch(src: *const u64, len: usize) -> usize {
     // Small inputs: skip SIMD setup overhead, go straight to scalar popcnt.
     // Threshold equals the backend's LANES count.
 
-    // ── Default: runtime SIMD detection ─────────────────────────
-    #[cfg(not(feature = "compile-time-dispatch"))]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
     {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            let f = crate::cpuid::features();
-            if f.avx2 {
-                if len >= 4 {
-                    // SAFETY: `src` is valid for `len` words. Backend selected via CPUID verification.
-                    return unsafe { avx2::count_words(src, len) };
-                }
-            }
-            if f.ssse3 {
-                if len >= 2 {
-                    // SAFETY: `src` is valid for `len` words. Backend selected via CPUID verification.
-                    return unsafe { ssse3::count_words(src, len) };
-                }
-            }
-        }
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            if len >= 2 {
-                // SAFETY: `src` is valid for `len` words. Backend selected via `#[cfg]` gate on NEON availability.
-                return unsafe { neon::count_words(src, len) };
-            }
-        }
-        #[allow(unused)]
-        // SAFETY: pointer validity guaranteed by caller. Scalar backend is always safe.
-        unsafe {
-            scalar::count_words(src, len)
+        if len >= 4 {
+            // SAFETY: `src` is valid for `len` words. Backend selected via `#[cfg]` feature gate.
+            return unsafe { avx2::count_words(src, len) };
         }
     }
 
-    // ── compile-time-dispatch: pure #[cfg] cascade ──────────────
-    #[cfg(feature = "compile-time-dispatch")]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "ssse3",
+        not(target_feature = "avx2")
+    ))]
     {
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "avx2"
-        ))]
-        {
-            if len >= 4 {
-                // SAFETY: `src` is valid for `len` words. Backend selected via `#[cfg]` feature gate.
-                return unsafe { avx2::count_words(src, len) };
-            }
+        if len >= 2 {
+            // SAFETY: `src` is valid for `len` words. Backend selected via `#[cfg]` feature gate.
+            return unsafe { ssse3::count_words(src, len) };
         }
+    }
 
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "ssse3",
-            not(target_feature = "avx2")
-        ))]
-        {
-            if len >= 2 {
-                // SAFETY: `src` is valid for `len` words. Backend selected via `#[cfg]` feature gate.
-                return unsafe { ssse3::count_words(src, len) };
-            }
+    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+    {
+        if len >= 2 {
+            // SAFETY: `src` is valid for `len` words. Backend selected via `#[cfg]` feature gate.
+            return unsafe { neon::count_words(src, len) };
         }
+    }
 
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            if len >= 2 {
-                // SAFETY: `src` is valid for `len` words. Backend selected via `#[cfg]` feature gate.
-                return unsafe { neon::count_words(src, len) };
-            }
-        }
-
-        #[allow(unused)]
-        // SAFETY: pointer validity guaranteed by caller. Scalar backend is always safe.
-        unsafe {
-            scalar::count_words(src, len)
-        }
+    #[allow(unused)]
+    // SAFETY: pointer validity guaranteed by caller. Scalar backend is always safe.
+    unsafe {
+        scalar::count_words(src, len)
     }
 }
 

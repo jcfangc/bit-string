@@ -45,6 +45,7 @@ impl WordsEdit for [u64] {
     /// is stitched in from the next word.
     #[inline]
     fn read_word_at<const WORD_ALIGNED: bool>(&self, bit_start: usize) -> u64 {
+        debug_assert!(!WORD_ALIGNED || bit_start.is_multiple_of(WORD_BITS));
         let word = bit_start / WORD_BITS;
 
         if WORD_ALIGNED {
@@ -72,6 +73,7 @@ impl WordsEdit for [u64] {
         value: u64,
         len: usize,
     ) {
+        debug_assert!(!WORD_ALIGNED || bit_start.is_multiple_of(WORD_BITS));
         let value = value & low_mask(len);
         let word = bit_start / WORD_BITS;
 

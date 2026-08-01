@@ -50,133 +50,70 @@ where
         );
     }
 
-    // ── Default: runtime SIMD detection ─────────────────────────
-    #[cfg(not(feature = "compile-time-dispatch"))]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
     {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            let f = crate::cpuid::features();
-            if f.avx2 {
-                // SAFETY: pointer validity guaranteed by caller. Backend selected via CPUID verification.
-                return unsafe {
-                    avx2::find_any(
-                        haystack,
-                        needle_first,
-                        needle_mask,
-                        last_start,
-                        word_limit,
-                        verify,
-                    )
-                };
-            }
-            if f.sse41 {
-                // SAFETY: pointer validity guaranteed by caller. Backend selected via CPUID verification.
-                return unsafe {
-                    sse41::find_any(
-                        haystack,
-                        needle_first,
-                        needle_mask,
-                        last_start,
-                        word_limit,
-                        verify,
-                    )
-                };
-            }
-        }
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
-            // enabled by `#[target_feature]` at compile time.
-            return unsafe {
-                neon::find_any(
-                    haystack,
-                    needle_first,
-                    needle_mask,
-                    last_start,
-                    word_limit,
-                    verify,
-                )
-            };
-        }
-        #[allow(unused)]
-        scalar(
-            haystack,
-            needle_first,
-            needle_mask,
-            last_start,
-            word_limit,
-            verify,
-        )
+        // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
+        // enabled by `#[target_feature]` at compile time.
+        return unsafe {
+            avx2::find_any(
+                haystack,
+                needle_first,
+                needle_mask,
+                last_start,
+                word_limit,
+                verify,
+            )
+        };
     }
 
-    // ── compile-time-dispatch: pure #[cfg] cascade ──────────────
-    #[cfg(feature = "compile-time-dispatch")]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "sse4.1",
+        not(target_feature = "avx2")
+    ))]
     {
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "avx2"
-        ))]
-        {
-            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
-            // enabled by `#[target_feature]` at compile time.
-            return unsafe {
-                avx2::find_any(
-                    haystack,
-                    needle_first,
-                    needle_mask,
-                    last_start,
-                    word_limit,
-                    verify,
-                )
-            };
-        }
-
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse4.1",
-            not(target_feature = "avx2")
-        ))]
-        {
-            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
-            // enabled by `#[target_feature]` at compile time.
-            return unsafe {
-                sse41::find_any(
-                    haystack,
-                    needle_first,
-                    needle_mask,
-                    last_start,
-                    word_limit,
-                    verify,
-                )
-            };
-        }
-
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
-            // enabled by `#[target_feature]` at compile time.
-            return unsafe {
-                neon::find_any(
-                    haystack,
-                    needle_first,
-                    needle_mask,
-                    last_start,
-                    word_limit,
-                    verify,
-                )
-            };
-        }
-
-        #[allow(unused)]
-        scalar(
-            haystack,
-            needle_first,
-            needle_mask,
-            last_start,
-            word_limit,
-            verify,
-        )
+        // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
+        // enabled by `#[target_feature]` at compile time.
+        return unsafe {
+            sse41::find_any(
+                haystack,
+                needle_first,
+                needle_mask,
+                last_start,
+                word_limit,
+                verify,
+            )
+        };
     }
+
+    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+    {
+        // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
+        // enabled by `#[target_feature]` at compile time.
+        return unsafe {
+            neon::find_any(
+                haystack,
+                needle_first,
+                needle_mask,
+                last_start,
+                word_limit,
+                verify,
+            )
+        };
+    }
+
+    #[allow(unused)]
+    scalar(
+        haystack,
+        needle_first,
+        needle_mask,
+        last_start,
+        word_limit,
+        verify,
+    )
 }
 
 // ---------------------------------------------------------------------------

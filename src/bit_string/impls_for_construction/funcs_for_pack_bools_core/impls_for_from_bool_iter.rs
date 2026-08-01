@@ -2,6 +2,9 @@ use crate::BitString;
 use alloc::vec::Vec;
 
 impl BitString {
+    // Keep the concrete iterator adapter visible together with the packing
+    // path so LLVM can optimize the temporary byte collection at the call site.
+    #[inline]
     pub(crate) fn from_bool_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = bool>,

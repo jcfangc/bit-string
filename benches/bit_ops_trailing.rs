@@ -14,108 +14,131 @@ enum Pattern {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// BitStr::leading_zeros (optimised trait path) — reference baseline
-// for trailing_zeros.  Both go through WordsScan; trailing adds the
-// reverse-scan overhead.  Goal: make trailing as close as possible.
+// Leading references are named under the same case hierarchy as their
+// trailing counterparts, so Divan prints each comparison together.
 // ═══════════════════════════════════════════════════════════════════════
 
-#[divan::bench(name = "leading_zeros/len_65/all_zeros/ours_str")]
+#[divan::bench(name = "count_zeros/len_65/all_zeros/leading/ours_str")]
 fn lead_65_zeros_str_ref(b: Bencher) {
     bench_lead_str(b, 65, Pattern::Zeros);
 }
-#[divan::bench(name = "leading_zeros/len_65/dense/ours_str")]
+#[divan::bench(name = "count_zeros/len_65/all_zeros/leading/ours_string")]
+fn lead_65_zeros_string_ref(b: Bencher) {
+    bench_lead_string(b, 65, Pattern::Zeros);
+}
+#[divan::bench(name = "count_zeros/len_65/dense/leading/ours_str")]
 fn lead_65_dense_str_ref(b: Bencher) {
     bench_lead_str(b, 65, Pattern::Dense);
 }
-#[divan::bench(name = "leading_zeros/len_4096/all_zeros/ours_str")]
+#[divan::bench(name = "count_zeros/len_65/dense/leading/ours_string")]
+fn lead_65_dense_string_ref(b: Bencher) {
+    bench_lead_string(b, 65, Pattern::Dense);
+}
+#[divan::bench(name = "count_zeros/len_4096/all_zeros/leading/ours_str")]
 fn lead_4096_zeros_str_ref(b: Bencher) {
     bench_lead_str(b, 4096, Pattern::Zeros);
 }
-#[divan::bench(name = "leading_zeros/len_65536/all_zeros/ours_str")]
+#[divan::bench(name = "count_zeros/len_4096/all_zeros/leading/ours_string")]
+fn lead_4096_zeros_string_ref(b: Bencher) {
+    bench_lead_string(b, 4096, Pattern::Zeros);
+}
+#[divan::bench(name = "count_zeros/len_65536/all_zeros/leading/ours_str")]
 fn lead_65536_zeros_str_ref(b: Bencher) {
     bench_lead_str(b, 65536, Pattern::Zeros);
 }
-#[divan::bench(name = "leading_ones/len_65/all_zeros/ours_str")]
+#[divan::bench(name = "count_zeros/len_65536/all_zeros/leading/ours_string")]
+fn lead_65536_zeros_string_ref(b: Bencher) {
+    bench_lead_string(b, 65536, Pattern::Zeros);
+}
+#[divan::bench(name = "count_ones/len_65/all_zeros/leading/ours_str")]
 fn lead_ones_65_zeros_str_ref(b: Bencher) {
     bench_lead_ones_str(b, 65, Pattern::Zeros);
 }
-#[divan::bench(name = "leading_ones/len_4096/all_zeros/ours_str")]
+#[divan::bench(name = "count_ones/len_65/all_zeros/leading/ours_string")]
+fn lead_ones_65_zeros_string_ref(b: Bencher) {
+    bench_lead_ones_string(b, 65, Pattern::Zeros);
+}
+#[divan::bench(name = "count_ones/len_4096/all_zeros/leading/ours_str")]
 fn lead_ones_4096_zeros_str_ref(b: Bencher) {
     bench_lead_ones_str(b, 4096, Pattern::Zeros);
+}
+#[divan::bench(name = "count_ones/len_4096/all_zeros/leading/ours_string")]
+fn lead_ones_4096_zeros_string_ref(b: Bencher) {
+    bench_lead_ones_string(b, 4096, Pattern::Zeros);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
 // trailing_zeros
 // ═══════════════════════════════════════════════════════════════════════
 
-#[divan::bench(name = "trailing_zeros/len_65/all_zeros/ours_str")]
+#[divan::bench(name = "count_zeros/len_65/all_zeros/trailing/ours_str")]
 fn trailing_65_zeros_str(b: Bencher) {
     bench_str(b, 65, Pattern::Zeros);
 }
-#[divan::bench(name = "trailing_zeros/len_65/all_zeros/ours_string")]
+#[divan::bench(name = "count_zeros/len_65/all_zeros/trailing/ours_string")]
 fn trailing_65_zeros_string(b: Bencher) {
     bench_string(b, 65, Pattern::Zeros);
 }
 
-#[divan::bench(name = "trailing_zeros/len_65/alternating/ours_str")]
+#[divan::bench(name = "count_zeros/len_65/alternating/trailing/ours_str")]
 fn trailing_65_alternating_str(b: Bencher) {
     bench_str(b, 65, Pattern::Alternating);
 }
-#[divan::bench(name = "trailing_zeros/len_65/alternating/ours_string")]
+#[divan::bench(name = "count_zeros/len_65/alternating/trailing/ours_string")]
 fn trailing_65_alternating_string(b: Bencher) {
     bench_string(b, 65, Pattern::Alternating);
 }
 
-#[divan::bench(name = "trailing_zeros/len_65/dense/ours_str")]
+#[divan::bench(name = "count_zeros/len_65/dense/trailing/ours_str")]
 fn trailing_65_dense_str(b: Bencher) {
     bench_str(b, 65, Pattern::Dense);
 }
-#[divan::bench(name = "trailing_zeros/len_65/dense/ours_string")]
+#[divan::bench(name = "count_zeros/len_65/dense/trailing/ours_string")]
 fn trailing_65_dense_string(b: Bencher) {
     bench_string(b, 65, Pattern::Dense);
 }
 
-#[divan::bench(name = "trailing_zeros/len_4096/all_zeros/ours_str")]
+#[divan::bench(name = "count_zeros/len_4096/all_zeros/trailing/ours_str")]
 fn trailing_4096_zeros_str(b: Bencher) {
     bench_str(b, 4096, Pattern::Zeros);
 }
-#[divan::bench(name = "trailing_zeros/len_4096/all_zeros/ours_string")]
+#[divan::bench(name = "count_zeros/len_4096/all_zeros/trailing/ours_string")]
 fn trailing_4096_zeros_string(b: Bencher) {
     bench_string(b, 4096, Pattern::Zeros);
 }
 
-#[divan::bench(name = "trailing_zeros/len_4096/dense/ours_str")]
+#[divan::bench(name = "count_zeros/len_4096/dense/trailing/ours_str")]
 fn trailing_4096_dense_str(b: Bencher) {
     bench_str(b, 4096, Pattern::Dense);
 }
-#[divan::bench(name = "trailing_zeros/len_4096/dense/ours_string")]
+#[divan::bench(name = "count_zeros/len_4096/dense/trailing/ours_string")]
 fn trailing_4096_dense_string(b: Bencher) {
     bench_string(b, 4096, Pattern::Dense);
 }
 
-#[divan::bench(name = "trailing_zeros/len_65536/all_zeros/ours_str")]
+#[divan::bench(name = "count_zeros/len_65536/all_zeros/trailing/ours_str")]
 fn trailing_65536_zeros_str(b: Bencher) {
     bench_str(b, 65536, Pattern::Zeros);
 }
-#[divan::bench(name = "trailing_zeros/len_65536/all_zeros/ours_string")]
+#[divan::bench(name = "count_zeros/len_65536/all_zeros/trailing/ours_string")]
 fn trailing_65536_zeros_string(b: Bencher) {
     bench_string(b, 65536, Pattern::Zeros);
 }
 
-#[divan::bench(name = "trailing_zeros/len_65536/dense/ours_str")]
+#[divan::bench(name = "count_zeros/len_65536/dense/trailing/ours_str")]
 fn trailing_65536_dense_str(b: Bencher) {
     bench_str(b, 65536, Pattern::Dense);
 }
-#[divan::bench(name = "trailing_zeros/len_65536/dense/ours_string")]
+#[divan::bench(name = "count_zeros/len_65536/dense/trailing/ours_string")]
 fn trailing_65536_dense_string(b: Bencher) {
     bench_string(b, 65536, Pattern::Dense);
 }
 
-#[divan::bench(name = "trailing_zeros/unaligned_3/len_4096/all_zeros/ours_str")]
+#[divan::bench(name = "count_zeros/len_4096/all_zeros/trailing_unaligned_3/ours_str")]
 fn trailing_unaligned_3_4096_zeros_str(b: Bencher) {
     bench_unaligned_str(b, 4096, 3, Pattern::Zeros);
 }
-#[divan::bench(name = "trailing_zeros/unaligned_63/len_4096/all_zeros/ours_str")]
+#[divan::bench(name = "count_zeros/len_4096/all_zeros/trailing_unaligned_63/ours_str")]
 fn trailing_unaligned_63_4096_zeros_str(b: Bencher) {
     bench_unaligned_str(b, 4096, 63, Pattern::Zeros);
 }
@@ -124,29 +147,29 @@ fn trailing_unaligned_63_4096_zeros_str(b: Bencher) {
 // trailing_ones
 // ═══════════════════════════════════════════════════════════════════════
 
-#[divan::bench(name = "trailing_ones/len_65/all_zeros/ours_str")]
+#[divan::bench(name = "count_ones/len_65/all_zeros/trailing/ours_str")]
 fn trailing_ones_65_zeros_str(b: Bencher) {
     bench_str_trailing_ones(b, 65, Pattern::Zeros);
 }
-#[divan::bench(name = "trailing_ones/len_65/all_zeros/ours_string")]
+#[divan::bench(name = "count_ones/len_65/all_zeros/trailing/ours_string")]
 fn trailing_ones_65_zeros_string(b: Bencher) {
     bench_string_trailing_ones(b, 65, Pattern::Zeros);
 }
 
-#[divan::bench(name = "trailing_ones/len_65/dense/ours_str")]
+#[divan::bench(name = "count_ones/len_65/dense/trailing/ours_str")]
 fn trailing_ones_65_dense_str(b: Bencher) {
     bench_str_trailing_ones(b, 65, Pattern::Dense);
 }
-#[divan::bench(name = "trailing_ones/len_65/dense/ours_string")]
+#[divan::bench(name = "count_ones/len_65/dense/trailing/ours_string")]
 fn trailing_ones_65_dense_string(b: Bencher) {
     bench_string_trailing_ones(b, 65, Pattern::Dense);
 }
 
-#[divan::bench(name = "trailing_ones/len_4096/all_zeros/ours_str")]
+#[divan::bench(name = "count_ones/len_4096/all_zeros/trailing/ours_str")]
 fn trailing_ones_4096_zeros_str(b: Bencher) {
     bench_str_trailing_ones(b, 4096, Pattern::Zeros);
 }
-#[divan::bench(name = "trailing_ones/len_4096/all_zeros/ours_string")]
+#[divan::bench(name = "count_ones/len_4096/all_zeros/trailing/ours_string")]
 fn trailing_ones_4096_zeros_string(b: Bencher) {
     bench_string_trailing_ones(b, 4096, Pattern::Zeros);
 }
@@ -158,10 +181,18 @@ fn bench_lead_str(b: Bencher, len: usize, p: Pattern) {
     let v = bits.as_bit_str();
     b.bench(|| black_box(&v).leading_zeros());
 }
+fn bench_lead_string(b: Bencher, len: usize, p: Pattern) {
+    let bits: BitString = (0..len).map(|i| bit(i, p)).collect();
+    b.bench(|| black_box(&bits).leading_zeros());
+}
 fn bench_lead_ones_str(b: Bencher, len: usize, p: Pattern) {
     let bits: BitString = (0..len).map(|i| bit(i, p)).collect();
     let v = bits.as_bit_str();
     b.bench(|| black_box(&v).leading_ones());
+}
+fn bench_lead_ones_string(b: Bencher, len: usize, p: Pattern) {
+    let bits: BitString = (0..len).map(|i| bit(i, p)).collect();
+    b.bench(|| black_box(&bits).leading_ones());
 }
 
 // ── trailing_zeros helpers ────────────────────────────────────────────

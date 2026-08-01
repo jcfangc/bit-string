@@ -23,22 +23,34 @@ impl BitString {
             return (w0.trailing_zeros() as usize).min(bit_len);
         }
 
-        // ── Tiny inputs — dispatch to BMI1 when available ────────
+        // One- and two-word strings are common enough to avoid the generic scan.
+        if bit_len <= WORD_BITS {
+            return bit_len;
+        }
+        if bit_len <= WORD_BITS * 2 {
+            let used = bit_len - WORD_BITS;
+            // SAFETY: bit_len > WORD_BITS, so the second backing word exists.
+            let w1 = unsafe { *words_ptr.add(1) };
+            let mask = if used == WORD_BITS {
+                u64::MAX
+            } else {
+                (1u64 << used) - 1
+            };
+            let w1 = w1 & mask;
+            if w1 == 0 {
+                return bit_len;
+            }
+            return WORD_BITS + w1.trailing_zeros() as usize;
+        }
+
+        // ── Tiny inputs ───────────────────────────────────
         let last_wi = (bit_len - 1) / WORD_BITS;
         let end_rem = bit_len % WORD_BITS;
         let mid_end = if end_rem == 0 { last_wi + 1 } else { last_wi };
         if mid_end < SMALL_WORDS {
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-            if !cfg!(target_feature = "bmi1") && crate::cpuid::features().bmi1 {
-                // SAFETY: BMI1 confirmed by CPUID.  `words_ptr` is valid
-                // for at least `mid_end + (end_rem != 0) as usize` u64
-                // reads per BitString invariants.
-                return unsafe { leading_zeros_scalar_bmi(bit_len, words_ptr, mid_end, end_rem) };
-            }
             let mut scanned = WORD_BITS; // word 0 already checked above
-            // SAFETY: `i` ranges in `1..mid_end`.  `words` contains at
-            // least `mid_end + (end_rem != 0) as usize` elements by the
-            // BitString invariant (backing storage covers all bits).
+            // SAFETY: i ranges in 1..mid_end. words contains every
+            // backing word covered by bit_len.
             for i in 1..mid_end {
                 let w = unsafe { *words_ptr.add(i) };
                 if w != 0 {
@@ -47,9 +59,7 @@ impl BitString {
                 scanned += WORD_BITS;
             }
             if end_rem != 0 {
-                // SAFETY: `mid_end` is the index of the last partial word;
-                // it is within bounds because `end_rem != 0` implies an
-                // extra word exists beyond `mid_end - 1`.
+                // SAFETY: a partial final word exists at mid_end.
                 let last = unsafe { *words_ptr.add(mid_end) } & ((1u64 << end_rem).wrapping_sub(1));
                 if last == 0 {
                     return bit_len;
@@ -119,6 +129,10 @@ impl BitString {
         }
         let words_ptr = self.words.as_ptr();
 
+        if let Some(count) = unsafe { trailing_small::<FILL_ZEROS>(words_ptr, bit_len) } {
+            return count;
+        }
+
         // ── Last partial word ────────────────────────────────────
         let end_rem = bit_len % WORD_BITS;
         if end_rem != 0 {
@@ -161,6 +175,10 @@ impl BitString {
         }
         let words_ptr = self.words.as_ptr();
 
+        if let Some(count) = unsafe { trailing_small::<FILL_ONES>(words_ptr, bit_len) } {
+            return count;
+        }
+
         let end_rem = bit_len % WORD_BITS;
         if end_rem != 0 {
             let last_wi = (bit_len - 1) / WORD_BITS;
@@ -193,40 +211,40 @@ impl BitString {
     }
 }
 
-// ── BMI1-accelerated scalar path ───────────────────────────────────────
-
-/// BMI1 variant of the tiny-input scalar loop.  Uses `tzcnt` instead of
-/// `bsf` for `trailing_zeros()`, eliminating the false output dependency.
+/// Handles owned strings that fit in at most two words without entering the
+/// generic reverse scanner.
 ///
 /// # Safety
 ///
-/// `words_ptr` must be valid for at least `mid_end + (end_rem != 0) as
-/// usize` u64 reads.  Caller must guarantee BMI1 is available per CPUID.
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-#[target_feature(enable = "bmi1")]
-unsafe fn leading_zeros_scalar_bmi(
-    bit_len: usize,
-    words_ptr: *const u64,
-    mid_end: usize,
-    end_rem: usize,
-) -> usize {
-    let mut scanned = crate::WORD_BITS; // word 0 already checked by caller
-    // SAFETY: caller guarantees `words_ptr` is valid for the indices used.
-    for i in 1..mid_end {
-        let w = unsafe { *words_ptr.add(i) };
-        if w != 0 {
-            return (scanned + w.trailing_zeros() as usize).min(bit_len);
-        }
-        scanned += crate::WORD_BITS;
+/// `words_ptr` must point to the backing storage for `bit_len` bits.
+#[inline]
+unsafe fn trailing_small<const FILL: u64>(words_ptr: *const u64, bit_len: usize) -> Option<usize> {
+    if bit_len > WORD_BITS * 2 {
+        return None;
     }
-    if end_rem != 0 {
-        // SAFETY: `mid_end` is the index of the last partial word;
-        // bounds guaranteed by caller.
-        let last = unsafe { *words_ptr.add(mid_end) } & ((1u64 << end_rem).wrapping_sub(1));
-        if last == 0 {
-            return bit_len;
-        }
-        return (scanned + last.trailing_zeros() as usize).min(bit_len);
+
+    let last_wi = (bit_len - 1) / WORD_BITS;
+    let used = bit_len - last_wi * WORD_BITS;
+    let mask = if used == WORD_BITS {
+        u64::MAX
+    } else {
+        (1u64 << used) - 1
+    };
+    // SAFETY: the caller guarantees backing storage for every covered word.
+    let last = unsafe { *words_ptr.add(last_wi) };
+    let mismatch = (last ^ FILL) & mask;
+    if mismatch != 0 {
+        return Some((mismatch << (WORD_BITS - used)).leading_zeros() as usize);
     }
-    bit_len
+    if last_wi == 0 {
+        return Some(bit_len);
+    }
+
+    // SAFETY: last_wi == 1, so the first backing word also exists.
+    let first_mismatch = unsafe { *words_ptr } ^ FILL;
+    if first_mismatch == 0 {
+        Some(bit_len)
+    } else {
+        Some(used + first_mismatch.leading_zeros() as usize)
+    }
 }

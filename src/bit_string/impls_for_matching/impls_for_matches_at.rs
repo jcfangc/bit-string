@@ -5,34 +5,17 @@ use super::*;
 impl BitString {
     /// Returns `true` if `pattern` matches the bits starting at `index`.
     ///
-    /// `BitString` is always word-aligned, so `HS_WORD_ALIGNED = true`.
+    /// The backing storage is word-aligned, but the comparison window is
+    /// aligned only when `index` is word-aligned.
     #[inline]
     pub fn matches_at_str(&self, index: usize, pattern: crate::BitStr<'_>) -> bool {
-        let view = self.as_bit_str();
-        if index > view.bit_len {
-            return false;
-        }
-        if pattern.bit_len > view.bit_len - index {
-            return false;
-        }
-        if pattern.start % WORD_BITS == 0 {
-            view.matches_at_inner::<true, true>(index, pattern)
-        } else {
-            view.matches_at_inner::<true, false>(index, pattern)
-        }
+        self.as_bit_str().matches_at_str(index, pattern)
     }
 
-    /// `matches_at_str` when `pattern` is a `BitString` (both aligned).
+    /// `matches_at_str` when `pattern` is a `BitString`.
     #[inline]
     pub fn matches_at_string(&self, index: usize, pattern: &BitString) -> bool {
-        let view = self.as_bit_str();
-        if index > view.bit_len {
-            return false;
-        }
-        if pattern.bit_len > view.bit_len - index {
-            return false;
-        }
-        view.matches_at_inner::<true, true>(index, pattern.as_bit_str())
+        self.as_bit_str().matches_at_string(index, pattern)
     }
 
     // -------------------------------------------------------------------

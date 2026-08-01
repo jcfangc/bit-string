@@ -2,18 +2,8 @@
 //!
 //! Parameterised by `const FILL: u64` and `const WORD_ALIGNED: bool`.
 
+use super::count_matching;
 use crate::{SMALL_WORDS, WORD_BITS, low_mask};
-
-// ── Scalar helper ──────────────────────────────────────────────────────
-
-#[inline]
-fn count_trailing<const FILL: u64>(val: u64) -> usize {
-    if FILL == 0 {
-        val.trailing_zeros() as usize
-    } else {
-        (!val).trailing_zeros() as usize
-    }
-}
 
 // ── Dispatch ───────────────────────────────────────────────────────────
 
@@ -23,6 +13,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
     start_offset: u32,
     bit_len: usize,
 ) -> usize {
+    debug_assert!(!WORD_ALIGNED || start_offset == 0);
     if bit_len == 0 {
         return 0;
     }
@@ -38,7 +29,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
     if !WORD_ALIGNED && start_offset != 0 {
         let first_val = bits[0] >> start_offset;
         let first_limit = (WORD_BITS - start_offset as usize).min(bit_len);
-        let first_count = count_trailing::<FILL>(first_val).min(first_limit);
+        let first_count = count_matching::<FILL, false>(first_val).min(first_limit);
         if first_count < first_limit {
             return first_count;
         }
@@ -55,7 +46,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             for i in 0..total {
                 let w = bits[wi + i];
                 if w != FILL {
-                    return (scanned + count_trailing::<FILL>(w)).min(bit_len);
+                    return (scanned + count_matching::<FILL, false>(w)).min(bit_len);
                 }
                 scanned += WORD_BITS;
             }
@@ -73,74 +64,44 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             // branch), so `base` is valid for at least one u64 read.
             let w0 = unsafe { *base };
             if w0 != FILL {
-                return (scanned + count_trailing::<FILL>(w0)).min(bit_len);
+                return (scanned + count_matching::<FILL, false>(w0)).min(bit_len);
             }
             // Start SIMD from `base` (not base+1).  Word 0 is
             // double-checked (fast path + SIMD) but this keeps the
             // iteration count a clean multiple of the SIMD stride.
             let mut p = base;
 
-            // ── Default: runtime SIMD detection ─────────────────────
-            #[cfg(not(feature = "compile-time-dispatch"))]
+            #[cfg(all(
+                any(target_arch = "x86", target_arch = "x86_64"),
+                target_feature = "avx2"
+            ))]
             {
-                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-                if crate::cpuid::features().avx2 {
-                    // SAFETY: CPUID confirmed AVX2 is available.
-                    // `p` through `end` are within the input slice.
-                    p = unsafe { avx2::leading_scan::<FILL>(p, end, base, total) };
-                } else {
-                    // SAFETY: SSE2 is baseline on x86-64.
-                    // `p` through `end` are within the input slice.
-                    p = unsafe { sse2::leading_scan::<FILL>(p, end, total) };
-                }
-                #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-                {
-                    // SAFETY: NEON is available per `#[cfg]` gate.
-                    // `p` through `end` are within the input slice.
-                    p = unsafe { neon::leading_scan::<FILL>(p, end, total) };
-                }
-                #[allow(unused)]
-                {
-                    // Scalar fallback: `p` stays at base; shared tail
-                    // below scans word-by-word.
-                }
+                // SAFETY: AVX2 is guaranteed by compile-time
+                // `#[cfg]` gate.
+                p = unsafe { avx2::leading_scan::<FILL>(p, end, base, total) };
             }
 
-            // ── compile-time-dispatch: pure #[cfg] cascade ──────────
-            #[cfg(feature = "compile-time-dispatch")]
+            #[cfg(all(
+                any(target_arch = "x86", target_arch = "x86_64"),
+                any(target_feature = "sse2", target_feature = "ssse3"),
+                not(target_feature = "avx2")
+            ))]
             {
-                #[cfg(all(
-                    any(target_arch = "x86", target_arch = "x86_64"),
-                    target_feature = "avx2"
-                ))]
-                {
-                    // SAFETY: AVX2 is guaranteed by compile-time
-                    // `#[cfg]` gate.
-                    p = unsafe { avx2::leading_scan::<FILL>(p, end, base, total) };
-                }
+                // SAFETY: SSE2 is guaranteed by compile-time
+                // `#[cfg]` gate.
+                p = unsafe { sse2::leading_scan::<FILL>(p, end, total) };
+            }
 
-                #[cfg(all(
-                    any(target_arch = "x86", target_arch = "x86_64"),
-                    any(target_feature = "sse2", target_feature = "ssse3"),
-                    not(target_feature = "avx2")
-                ))]
-                {
-                    // SAFETY: SSE2 is guaranteed by compile-time
-                    // `#[cfg]` gate.
-                    p = unsafe { sse2::leading_scan::<FILL>(p, end, total) };
-                }
+            #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+            {
+                // SAFETY: NEON is guaranteed by compile-time
+                // `#[cfg]` gate.
+                p = unsafe { neon::leading_scan::<FILL>(p, end, total) };
+            }
 
-                #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-                {
-                    // SAFETY: NEON is guaranteed by compile-time
-                    // `#[cfg]` gate.
-                    p = unsafe { neon::leading_scan::<FILL>(p, end, total) };
-                }
-
-                #[allow(unused)]
-                {
-                    // Scalar fallback: `p` stays at base.
-                }
+            #[allow(unused)]
+            {
+                // Scalar fallback: `p` stays at base.
             }
 
             // ── Post-SIMD: shared scalar remainder ─────────────────
@@ -157,7 +118,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
             for _ in 0..rem {
                 unsafe {
                     if *p != FILL {
-                        scanned += count_trailing::<FILL>(*p);
+                        scanned += count_matching::<FILL, false>(*p);
                         return (scanned).min(bit_len);
                     }
                     scanned += WORD_BITS;
@@ -170,7 +131,7 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
 
     if end_rem != 0 && wi == last_wi {
         let last_val = bits[wi] & low_mask(end_rem);
-        scanned += count_trailing::<FILL>(last_val).min(end_rem);
+        scanned += count_matching::<FILL, false>(last_val).min(end_rem);
     }
 
     scanned.min(bit_len)
@@ -185,17 +146,17 @@ pub(crate) fn leading<const FILL: u64, const WORD_ALIGNED: bool>(
 mod avx2 {
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
-        __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256,
-        _mm256_xor_si256,
+        __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_or_si256, _mm256_set1_epi64x,
+        _mm256_testz_si256, _mm256_xor_si256,
     };
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::{
-        __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256,
-        _mm256_xor_si256,
+        __m256i, _mm256_load_si256, _mm256_loadu_si256, _mm256_or_si256, _mm256_set1_epi64x,
+        _mm256_testz_si256, _mm256_xor_si256,
     };
 
     const LANES: usize = 4;
-    const STRIDE: usize = 8; // 2 × LANES for unrolled iteration
+    const STRIDE: usize = 16; // 4 × LANES for unrolled iteration
     const ALIGN_THRESHOLD: usize = 128;
 
     /// AVX2 forward scan: advances `p` past all-FILL 256-bit chunks.
@@ -207,7 +168,7 @@ mod avx2 {
     ///
     /// # Safety
     ///
-    /// Caller must ensure AVX2 is available (checked via CPUID).
+    /// Caller must ensure AVX2 is enabled for the compilation target.
     /// `p` through `end` must be valid for u64 reads.
     #[target_feature(enable = "avx2")]
     pub(super) unsafe fn leading_scan<const FILL: u64>(
@@ -216,8 +177,8 @@ mod avx2 {
         base: *const u64,
         total: usize,
     ) -> *const u64 {
-        // SAFETY: only callable when AVX2 is available (caller verified
-        // via CPUID).  All pointer arithmetic stays within bounds.
+        // SAFETY: AVX2 is enabled for this compilation target. All pointer
+        // arithmetic stays within bounds.
         unsafe {
             if total >= ALIGN_THRESHOLD {
                 // Distance in words to the next 32-byte boundary.
@@ -237,7 +198,12 @@ mod avx2 {
                     if FILL == 0 {
                         let d0 = _mm256_load_si256(p.cast::<__m256i>());
                         let d1 = _mm256_load_si256(p.add(LANES).cast::<__m256i>());
-                        if _mm256_testz_si256(d0, d0) == 0 || _mm256_testz_si256(d1, d1) == 0 {
+                        let d2 = _mm256_load_si256(p.add(LANES * 2).cast::<__m256i>());
+                        let d3 = _mm256_load_si256(p.add(LANES * 3).cast::<__m256i>());
+                        let any01 = _mm256_or_si256(d0, d1);
+                        let any23 = _mm256_or_si256(d2, d3);
+                        let any = _mm256_or_si256(any01, any23);
+                        if _mm256_testz_si256(any, any) == 0 {
                             break;
                         }
                     } else {
@@ -246,7 +212,14 @@ mod avx2 {
                         let x0 = _mm256_xor_si256(d0, fill_vec);
                         let d1 = _mm256_load_si256(p.add(LANES).cast::<__m256i>());
                         let x1 = _mm256_xor_si256(d1, fill_vec);
-                        if _mm256_testz_si256(x0, x0) == 0 || _mm256_testz_si256(x1, x1) == 0 {
+                        let d2 = _mm256_load_si256(p.add(LANES * 2).cast::<__m256i>());
+                        let x2 = _mm256_xor_si256(d2, fill_vec);
+                        let d3 = _mm256_load_si256(p.add(LANES * 3).cast::<__m256i>());
+                        let x3 = _mm256_xor_si256(d3, fill_vec);
+                        let any01 = _mm256_or_si256(x0, x1);
+                        let any23 = _mm256_or_si256(x2, x3);
+                        let any = _mm256_or_si256(any01, any23);
+                        if _mm256_testz_si256(any, any) == 0 {
                             break;
                         }
                     }
@@ -254,13 +227,18 @@ mod avx2 {
                     iters -= 1;
                 }
             } else {
-                // 2×-unrolled unaligned path.
+                // 4×-unrolled unaligned path.
                 let mut iters = total / STRIDE;
                 while iters > 0 {
                     if FILL == 0 {
                         let d0 = _mm256_loadu_si256(p.cast::<__m256i>());
                         let d1 = _mm256_loadu_si256(p.add(LANES).cast::<__m256i>());
-                        if _mm256_testz_si256(d0, d0) == 0 || _mm256_testz_si256(d1, d1) == 0 {
+                        let d2 = _mm256_loadu_si256(p.add(LANES * 2).cast::<__m256i>());
+                        let d3 = _mm256_loadu_si256(p.add(LANES * 3).cast::<__m256i>());
+                        let any01 = _mm256_or_si256(d0, d1);
+                        let any23 = _mm256_or_si256(d2, d3);
+                        let any = _mm256_or_si256(any01, any23);
+                        if _mm256_testz_si256(any, any) == 0 {
                             break;
                         }
                     } else {
@@ -269,7 +247,14 @@ mod avx2 {
                         let x0 = _mm256_xor_si256(d0, fill_vec);
                         let d1 = _mm256_loadu_si256(p.add(LANES).cast::<__m256i>());
                         let x1 = _mm256_xor_si256(d1, fill_vec);
-                        if _mm256_testz_si256(x0, x0) == 0 || _mm256_testz_si256(x1, x1) == 0 {
+                        let d2 = _mm256_loadu_si256(p.add(LANES * 2).cast::<__m256i>());
+                        let x2 = _mm256_xor_si256(d2, fill_vec);
+                        let d3 = _mm256_loadu_si256(p.add(LANES * 3).cast::<__m256i>());
+                        let x3 = _mm256_xor_si256(d3, fill_vec);
+                        let any01 = _mm256_or_si256(x0, x1);
+                        let any23 = _mm256_or_si256(x2, x3);
+                        let any = _mm256_or_si256(any01, any23);
+                        if _mm256_testz_si256(any, any) == 0 {
                             break;
                         }
                     }
@@ -351,8 +336,7 @@ mod sse2 {
         end: *const u64,
         total: usize,
     ) -> *const u64 {
-        // SAFETY: only callable when SSE2 is available (caller verified
-        // via CPUID, or SSE2 is baseline).
+        // SAFETY: SSE2 is enabled for this compilation target.
         unsafe {
             let mut iters = total / LANES_2X;
             while iters > 0 {

@@ -2,6 +2,80 @@ use super::*;
 use core::cmp::Ordering;
 use int_interval::UsizeCO;
 
+fn alignment_pattern(len: usize) -> String {
+    (0..len)
+        .map(|i| if (i * 17 + i / 3) % 11 < 5 { '0' } else { '1' })
+        .collect()
+}
+
+fn padded_bits(text: &str, offset: usize) -> BitString {
+    bs(&cat(&[
+        "1".repeat(offset).as_str(),
+        text,
+        "0".repeat(7).as_str(),
+    ]))
+}
+
+#[test]
+fn attack_eq_ord_hash_alignment_matrix_at_word_boundaries() {
+    for len in [0, 1, 63, 64, 65, 127, 128, 129] {
+        let text = alignment_pattern(len);
+
+        for lhs_offset in [0, 3] {
+            let lhs_source = padded_bits(&text, lhs_offset);
+            let lhs = lhs_source
+                .as_bit_str()
+                .slice_from(lhs_offset)
+                .slice_until(len);
+
+            for rhs_offset in [0, 5] {
+                let rhs_source = padded_bits(&text, rhs_offset);
+                let rhs = rhs_source
+                    .as_bit_str()
+                    .slice_from(rhs_offset)
+                    .slice_until(len);
+
+                assert_eq!(lhs, rhs, "eq len={len} lhs={lhs_offset} rhs={rhs_offset}");
+                assert_eq!(
+                    lhs.cmp_str(&rhs),
+                    Ordering::Equal,
+                    "cmp len={len} lhs={lhs_offset} rhs={rhs_offset}"
+                );
+                assert_eq!(
+                    hash(&lhs),
+                    hash(&rhs),
+                    "hash len={len} lhs={lhs_offset} rhs={rhs_offset}"
+                );
+
+                if len > 0 {
+                    for differing_index in [0, len - 1] {
+                        let mut different = text.clone().into_bytes();
+                        different[differing_index] = if different[differing_index] == b'0' {
+                            b'1'
+                        } else {
+                            b'0'
+                        };
+                        let different = String::from_utf8(different).unwrap();
+                        let different_source = padded_bits(&different, rhs_offset);
+                        let different_view = different_source
+                            .as_bit_str()
+                            .slice_from(rhs_offset)
+                            .slice_until(len);
+                        let expected = text.cmp(&different);
+
+                        assert_ne!(lhs, different_view);
+                        assert_eq!(
+                            lhs.cmp_str(&different_view),
+                            expected,
+                            "different bit {differing_index}, len={len}, lhs={lhs_offset}, rhs={rhs_offset}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[test]
 fn attack_ord_different_lengths() {
     // Shorter is less than longer when common prefix equal

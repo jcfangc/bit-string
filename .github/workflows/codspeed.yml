@@ -15,5 +15,5 @@ jobs:
     uses: jcfangc/ci/.github/workflows/rust-codspeed.yml@v0
     with:
       rust_toolchain: stable
-      build_command: cargo codspeed build -m simulation
+      build_command: RUSTFLAGS="-C target-feature=+avx2" cargo codspeed build -m simulation
       run_command: cargo codspeed run -m simulation ours_

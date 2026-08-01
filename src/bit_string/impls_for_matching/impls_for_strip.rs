@@ -27,22 +27,14 @@ impl BitString {
     /// Strips `suffix` from the end, returning the remaining `BitString`.
     #[inline]
     pub fn strip_suffix_str(&self, suffix: crate::BitStr<'_>) -> Option<Self> {
-        let view = self.as_bit_str();
-        let offset = view.bit_len - suffix.bit_len;
-        let ok = if suffix.start % WORD_BITS == 0 {
-            view.ends_with_inner::<true, true>(suffix, offset)
-        } else {
-            view.ends_with_inner::<true, false>(suffix, offset)
-        };
-        ok.then(|| self.slice_until(self.bit_len - suffix.bit_len))
+        self.ends_with_str(suffix)
+            .then(|| self.slice_until(self.bit_len - suffix.bit_len))
     }
 
     /// `strip_suffix_str` when both sides are `BitString`.
     #[inline]
     pub fn strip_suffix_string(&self, suffix: &BitString) -> Option<Self> {
-        let view = self.as_bit_str();
-        let offset = view.bit_len - suffix.as_bit_str().bit_len;
-        let ok = view.ends_with_inner::<true, true>(suffix.as_bit_str(), offset);
-        ok.then(|| self.slice_until(self.bit_len - suffix.as_bit_str().bit_len))
+        self.ends_with_string(suffix)
+            .then(|| self.slice_until(self.bit_len - suffix.bit_len))
     }
 }

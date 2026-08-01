@@ -4,19 +4,8 @@
 //! When `WORD_ALIGNED` is `true` the caller guarantees `start_offset == 0`,
 //! allowing the compiler to eliminate the first-word LZCNT phase.
 
+use super::count_matching;
 use crate::{SMALL_WORDS, WORD_BITS};
-
-// ── Scalar helper ──────────────────────────────────────────────────────
-
-/// Counts leading bits within a single u64 word that match `FILL`.
-#[inline]
-fn count_leading<const FILL: u64>(val: u64) -> usize {
-    if FILL == 0 {
-        val.leading_zeros() as usize
-    } else {
-        (!val).leading_zeros() as usize
-    }
-}
 
 // ── Dispatch ───────────────────────────────────────────────────────────
 
@@ -26,6 +15,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
     start_offset: u32,
     bit_len: usize,
 ) -> usize {
+    debug_assert!(!WORD_ALIGNED || start_offset == 0);
     if bit_len == 0 {
         return 0;
     }
@@ -44,7 +34,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
             end_rem
         };
         let shifted = bits[last_wi] << (WORD_BITS - end_rem);
-        let last_count = count_leading::<FILL>(shifted).min(last_limit);
+        let last_count = count_matching::<FILL, true>(shifted).min(last_limit);
         if last_count < last_limit {
             return last_count;
         }
@@ -74,7 +64,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
         {
             let w = bits[wi_end];
             if w != FILL {
-                scanned += count_leading::<FILL>(w);
+                scanned += count_matching::<FILL, true>(w);
                 return scanned.min(bit_len);
             }
         }
@@ -84,7 +74,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
             while done < total_words {
                 let wi = wi_end - done;
                 if bits[wi] != FILL {
-                    scanned += count_leading::<FILL>(bits[wi]);
+                    scanned += count_matching::<FILL, true>(bits[wi]);
                     return scanned.min(bit_len);
                 }
                 scanned += WORD_BITS;
@@ -92,75 +82,40 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
             }
             // All full words match FILL — skip SIMD.
         } else {
-            // ── Default: runtime SIMD detection ───────────────────
-            #[cfg(not(feature = "compile-time-dispatch"))]
+            #[cfg(all(
+                any(target_arch = "x86", target_arch = "x86_64"),
+                target_feature = "avx2"
+            ))]
             {
-                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-                {
-                    let done_before = done;
-                    if crate::cpuid::features().avx2 {
-                        // SAFETY: CPUID confirmed AVX2 is available.
-                        done =
-                            unsafe { avx2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    } else {
-                        // SAFETY: SSE2 is baseline on x86-64.
-                        done =
-                            unsafe { sse2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    }
-                    scanned += (done - done_before) * WORD_BITS;
-                }
-                #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-                {
-                    let done_before = done;
-                    // SAFETY: NEON is available per `#[cfg]` gate.
-                    done = unsafe { neon::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    scanned += (done - done_before) * WORD_BITS;
-                }
-                #[allow(unused)]
-                {
-                    // Scalar fallback: `done` stays unchanged; shared
-                    // tail below scans word-by-word.
-                }
+                let done_before = done;
+                // SAFETY: AVX2 is guaranteed by compile-time gate.
+                done = unsafe { avx2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
+                scanned += (done - done_before) * WORD_BITS;
             }
 
-            // ── compile-time-dispatch: pure #[cfg] cascade ────────
-            #[cfg(feature = "compile-time-dispatch")]
+            #[cfg(all(
+                any(target_arch = "x86", target_arch = "x86_64"),
+                any(target_feature = "sse2", target_feature = "ssse3"),
+                not(target_feature = "avx2")
+            ))]
             {
-                #[cfg(all(
-                    any(target_arch = "x86", target_arch = "x86_64"),
-                    target_feature = "avx2"
-                ))]
-                {
-                    let done_before = done;
-                    // SAFETY: AVX2 is guaranteed by compile-time gate.
-                    done = unsafe { avx2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    scanned += (done - done_before) * WORD_BITS;
-                }
+                let done_before = done;
+                // SAFETY: SSE2 is guaranteed by compile-time gate.
+                done = unsafe { sse2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
+                scanned += (done - done_before) * WORD_BITS;
+            }
 
-                #[cfg(all(
-                    any(target_arch = "x86", target_arch = "x86_64"),
-                    any(target_feature = "sse2", target_feature = "ssse3"),
-                    not(target_feature = "avx2")
-                ))]
-                {
-                    let done_before = done;
-                    // SAFETY: SSE2 is guaranteed by compile-time gate.
-                    done = unsafe { sse2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    scanned += (done - done_before) * WORD_BITS;
-                }
+            #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+            {
+                let done_before = done;
+                // SAFETY: NEON is guaranteed by compile-time gate.
+                done = unsafe { neon::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
+                scanned += (done - done_before) * WORD_BITS;
+            }
 
-                #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-                {
-                    let done_before = done;
-                    // SAFETY: NEON is guaranteed by compile-time gate.
-                    done = unsafe { neon::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    scanned += (done - done_before) * WORD_BITS;
-                }
-
-                #[allow(unused)]
-                {
-                    // Scalar fallback.
-                }
+            #[allow(unused)]
+            {
+                // Scalar fallback.
             }
         } // else (SIMD path)
 
@@ -168,7 +123,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
         while done < total_words {
             let wi = wi_end - done;
             if bits[wi] != FILL {
-                scanned += count_leading::<FILL>(bits[wi]);
+                scanned += count_matching::<FILL, true>(bits[wi]);
                 return scanned.min(bit_len);
             }
             scanned += WORD_BITS;
@@ -179,7 +134,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
     // ── First-word partial (trailing side) ───────────────────────
     if !WORD_ALIGNED && start_offset > 0 {
         let first_limit = WORD_BITS - start_offset as usize;
-        let first_count = count_leading::<FILL>(bits[0]).min(first_limit);
+        let first_count = count_matching::<FILL, true>(bits[0]).min(first_limit);
         scanned += first_count;
     }
 
@@ -187,7 +142,7 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// AVX2 backend — 256-bit / 4-lane, unaligned loads only.
+// AVX2 backend — 256-bit / 4-lane reverse scan.
 // ═══════════════════════════════════════════════════════════════════════
 
 #[allow(unused)]
@@ -195,15 +150,17 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
 mod avx2 {
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
-        __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256, _mm256_xor_si256,
+        __m256i, _mm256_loadu_si256, _mm256_or_si256, _mm256_set1_epi64x, _mm256_testz_si256,
+        _mm256_xor_si256,
     };
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::{
-        __m256i, _mm256_loadu_si256, _mm256_set1_epi64x, _mm256_testz_si256, _mm256_xor_si256,
+        __m256i, _mm256_loadu_si256, _mm256_or_si256, _mm256_set1_epi64x, _mm256_testz_si256,
+        _mm256_xor_si256,
     };
 
     const LANES: usize = 4;
-    const STRIDE: usize = 8;
+    const STRIDE: usize = 16;
 
     /// AVX2 reverse scan: scans backwards from `wi_end` and advances `done`
     /// past all-FILL 256-bit chunks.
@@ -212,7 +169,7 @@ mod avx2 {
     ///
     /// # Safety
     ///
-    /// Caller must ensure AVX2 is available (checked via CPUID).
+    /// Caller must ensure AVX2 is enabled for the compilation target.
     /// `ptr` through `ptr.add(wi_end + 1)` must be valid for u64 reads.
     #[target_feature(enable = "avx2")]
     pub(super) unsafe fn trailing_scan<const FILL: u64>(
@@ -221,32 +178,41 @@ mod avx2 {
         mut done: usize,
         total_words: usize,
     ) -> usize {
-        // SAFETY: only callable when AVX2 is available (caller verified
-        // via CPUID).  All pointer arithmetic stays within bounds.
+        // SAFETY: AVX2 is enabled for this compilation target. All pointer
+        // arithmetic stays within bounds.
         unsafe {
-            // 2×‑unrolled
+            // Four vectors are combined before testing. This keeps the
+            // all-matching hot path to one branch per 16 words, matching
+            // the forward scanner's throughput-oriented layout.
             while done + STRIDE <= total_words {
                 let chunk_start = wi_end + 1 - (done + STRIDE);
-                let d0_ok = if FILL == 0 {
-                    let d = _mm256_loadu_si256(ptr.add(chunk_start).cast::<__m256i>());
-                    _mm256_testz_si256(d, d) != 0
+                if FILL == 0 {
+                    let d0 = _mm256_loadu_si256(ptr.add(chunk_start).cast::<__m256i>());
+                    let d1 = _mm256_loadu_si256(ptr.add(chunk_start + LANES).cast::<__m256i>());
+                    let d2 = _mm256_loadu_si256(ptr.add(chunk_start + LANES * 2).cast::<__m256i>());
+                    let d3 = _mm256_loadu_si256(ptr.add(chunk_start + LANES * 3).cast::<__m256i>());
+                    let any01 = _mm256_or_si256(d0, d1);
+                    let any23 = _mm256_or_si256(d2, d3);
+                    let any = _mm256_or_si256(any01, any23);
+                    if _mm256_testz_si256(any, any) == 0 {
+                        break;
+                    }
                 } else {
                     let fill_vec = _mm256_set1_epi64x(FILL as i64);
-                    let d = _mm256_loadu_si256(ptr.add(chunk_start).cast::<__m256i>());
-                    let x = _mm256_xor_si256(d, fill_vec);
-                    _mm256_testz_si256(x, x) != 0
-                };
-                let d1_ok = if FILL == 0 {
-                    let d = _mm256_loadu_si256(ptr.add(chunk_start + LANES).cast::<__m256i>());
-                    _mm256_testz_si256(d, d) != 0
-                } else {
-                    let fill_vec = _mm256_set1_epi64x(FILL as i64);
-                    let d = _mm256_loadu_si256(ptr.add(chunk_start + LANES).cast::<__m256i>());
-                    let x = _mm256_xor_si256(d, fill_vec);
-                    _mm256_testz_si256(x, x) != 0
-                };
-                if !d0_ok || !d1_ok {
-                    break;
+                    let d0 = _mm256_loadu_si256(ptr.add(chunk_start).cast::<__m256i>());
+                    let x0 = _mm256_xor_si256(d0, fill_vec);
+                    let d1 = _mm256_loadu_si256(ptr.add(chunk_start + LANES).cast::<__m256i>());
+                    let x1 = _mm256_xor_si256(d1, fill_vec);
+                    let d2 = _mm256_loadu_si256(ptr.add(chunk_start + LANES * 2).cast::<__m256i>());
+                    let x2 = _mm256_xor_si256(d2, fill_vec);
+                    let d3 = _mm256_loadu_si256(ptr.add(chunk_start + LANES * 3).cast::<__m256i>());
+                    let x3 = _mm256_xor_si256(d3, fill_vec);
+                    let any01 = _mm256_or_si256(x0, x1);
+                    let any23 = _mm256_or_si256(x2, x3);
+                    let any = _mm256_or_si256(any01, any23);
+                    if _mm256_testz_si256(any, any) == 0 {
+                        break;
+                    }
                 }
                 done += STRIDE;
             }
@@ -326,8 +292,7 @@ mod sse2 {
         mut done: usize,
         total_words: usize,
     ) -> usize {
-        // SAFETY: only callable when SSE2 is available (caller verified
-        // via CPUID, or SSE2 is baseline).
+        // SAFETY: SSE2 is enabled for this compilation target.
         unsafe {
             while done + LANES_2X <= total_words {
                 let chunk_start = wi_end + 1 - (done + LANES_2X);

@@ -19,6 +19,7 @@ pub(crate) trait WordsEq {
     /// `haystack_shift` is `original_offset % WORD_BITS`.
     /// When `HS_WORD_ALIGNED` is `true`, `haystack_shift == 0` is
     /// guaranteed and the aligned backend is used unconditionally.
+    /// When it is `false`, no alignment guarantee is made.
     fn eq_words<const HS_WORD_ALIGNED: bool>(
         &self,
         needle: &[u64],
