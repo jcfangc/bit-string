@@ -129,6 +129,10 @@ impl BitString {
         }
         let words_ptr = self.words.as_ptr();
 
+        if let Some(count) = unsafe { trailing_small::<FILL_ZEROS>(words_ptr, bit_len) } {
+            return count;
+        }
+
         // ── Last partial word ────────────────────────────────────
         let end_rem = bit_len % WORD_BITS;
         if end_rem != 0 {
@@ -171,6 +175,10 @@ impl BitString {
         }
         let words_ptr = self.words.as_ptr();
 
+        if let Some(count) = unsafe { trailing_small::<FILL_ONES>(words_ptr, bit_len) } {
+            return count;
+        }
+
         let end_rem = bit_len % WORD_BITS;
         if end_rem != 0 {
             let last_wi = (bit_len - 1) / WORD_BITS;
@@ -200,5 +208,43 @@ impl BitString {
 
         self.words()
             .trailing_value_bits::<FILL_ONES, true>(0, bit_len)
+    }
+}
+
+/// Handles owned strings that fit in at most two words without entering the
+/// generic reverse scanner.
+///
+/// # Safety
+///
+/// `words_ptr` must point to the backing storage for `bit_len` bits.
+#[inline]
+unsafe fn trailing_small<const FILL: u64>(words_ptr: *const u64, bit_len: usize) -> Option<usize> {
+    if bit_len > WORD_BITS * 2 {
+        return None;
+    }
+
+    let last_wi = (bit_len - 1) / WORD_BITS;
+    let used = bit_len - last_wi * WORD_BITS;
+    let mask = if used == WORD_BITS {
+        u64::MAX
+    } else {
+        (1u64 << used) - 1
+    };
+    // SAFETY: the caller guarantees backing storage for every covered word.
+    let last = unsafe { *words_ptr.add(last_wi) };
+    let mismatch = (last ^ FILL) & mask;
+    if mismatch != 0 {
+        return Some((mismatch << (WORD_BITS - used)).leading_zeros() as usize);
+    }
+    if last_wi == 0 {
+        return Some(bit_len);
+    }
+
+    // SAFETY: last_wi == 1, so the first backing word also exists.
+    let first_mismatch = unsafe { *words_ptr } ^ FILL;
+    if first_mismatch == 0 {
+        Some(bit_len)
+    } else {
+        Some(used + first_mismatch.leading_zeros() as usize)
     }
 }

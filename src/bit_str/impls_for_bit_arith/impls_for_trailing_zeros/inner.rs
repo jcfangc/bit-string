@@ -17,6 +17,33 @@ impl<'bs> BitStr<'bs> {
         let words_ptr = unsafe { all_words.as_ptr().add(word_start) };
         let start_offset = (self.start % WORD_BITS) as u32;
 
+        // Aligned one- and two-word views avoid rebuilding a slice and
+        // entering the generic reverse scanner.
+        if WORD_ALIGNED && self.bit_len <= WORD_BITS * 2 {
+            let last_wi = (self.bit_len - 1) / WORD_BITS;
+            let used = self.bit_len - last_wi * WORD_BITS;
+            let mask = if used == WORD_BITS {
+                u64::MAX
+            } else {
+                (1u64 << used) - 1
+            };
+            // SAFETY: BitStr invariants guarantee storage for last_wi.
+            let last = unsafe { *words_ptr.add(last_wi) };
+            let mismatch = (last ^ FILL) & mask;
+            if mismatch != 0 {
+                return (mismatch << (WORD_BITS - used)).leading_zeros() as usize;
+            }
+            if last_wi == 0 {
+                return self.bit_len;
+            }
+            // SAFETY: last_wi == 1, so the first word exists as well.
+            let first_mismatch = unsafe { *words_ptr } ^ FILL;
+            if first_mismatch == 0 {
+                return self.bit_len;
+            }
+            return used + first_mismatch.leading_zeros() as usize;
+        }
+
         // Fast-path: check the rightmost word(s) before the trait call.
         // Mirrors the shortcuts in BitString's trailing section.
 
