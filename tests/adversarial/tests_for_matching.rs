@@ -23,6 +23,29 @@ fn attack_matches_at_oob() {
 }
 
 #[test]
+fn attack_bitstring_matches_at_long_pattern_unaligned_offsets() {
+    let pattern_text = "10110010".repeat(17); // 136 bits: forces the multi-word path.
+    let pattern = bs(&pattern_text);
+
+    for index in [1, 3, 63, 65] {
+        let haystack = bs(&cat(&[
+            "0".repeat(index).as_str(),
+            pattern_text.as_str(),
+            "111",
+        ]));
+
+        assert!(
+            haystack.matches_at_string(index, &pattern),
+            "matches_at_string failed at unaligned index {index}"
+        );
+        assert!(
+            haystack.matches_at_str(index, pattern.as_bit_str()),
+            "matches_at_str failed at unaligned index {index}"
+        );
+    }
+}
+
+#[test]
 fn attack_starts_with_ends_with_edge() {
     let bits = bs("10101");
 
@@ -134,6 +157,34 @@ fn attack_strip_prefix_suffix() {
 
     let stripped = bits.strip_suffix_str(bs("01").as_bit_str()).unwrap();
     assert_eq!(stripped.to_string(), "101");
+}
+
+#[test]
+fn attack_bitstring_strip_suffix_long_pattern_at_unaligned_offset() {
+    let prefix = "011";
+    let suffix_text = "10110010".repeat(17); // 136 bits: forces the multi-word path.
+    let suffix = bs(&suffix_text);
+    let bits = bs(&cat(&[prefix, suffix_text.as_str()]));
+
+    assert_eq!(
+        bits.strip_suffix_string(&suffix).unwrap().to_string(),
+        prefix
+    );
+    assert_eq!(
+        bits.strip_suffix_str(suffix.as_bit_str())
+            .unwrap()
+            .to_string(),
+        prefix
+    );
+}
+
+#[test]
+fn attack_bitstring_strip_suffix_longer_returns_none() {
+    let bits = bs("10101");
+    let longer = bs("101010");
+
+    assert!(bits.strip_suffix_string(&longer).is_none());
+    assert!(bits.strip_suffix_str(longer.as_bit_str()).is_none());
 }
 
 // ===========================================================================
