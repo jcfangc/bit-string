@@ -30,73 +30,38 @@ pub(super) fn copy_words_shifted(dst: &mut [u64], src: &[u64], count: usize, shi
         return;
     }
 
-    // ── Default: runtime SIMD detection ─────────────────────────
-    #[cfg(not(feature = "compile-time-dispatch"))]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
     {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            let f = crate::cpuid::features();
-            if f.avx2 {
-                // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). AVX2 availability was confirmed by CPUID.
-                unsafe { avx2::copy_words_shifted(dst, src, count, shift) };
-                return;
-            }
-            if f.sse2 {
-                // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). SSE2 availability was confirmed by CPUID.
-                unsafe { sse2::copy_words_shifted(dst, src, count, shift) };
-                return;
-            }
-        }
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). NEON availability is confirmed at compile time by `target_feature = "neon"`.
-            unsafe { neon::copy_words_shifted(dst, src, count, shift) };
-            return;
-        }
-        #[allow(unused)]
-        {
-            for i in 0..count {
-                dst[i] = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
-            }
-        }
+        // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). AVX2 availability is confirmed at compile time.
+        unsafe { avx2::copy_words_shifted(dst, src, count, shift) };
+        return;
     }
 
-    // ── compile-time-dispatch: pure #[cfg] cascade ──────────────
-    #[cfg(feature = "compile-time-dispatch")]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "sse2",
+        not(target_feature = "avx2")
+    ))]
     {
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "avx2"
-        ))]
-        {
-            // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). AVX2 availability is confirmed at compile time.
-            unsafe { avx2::copy_words_shifted(dst, src, count, shift) };
-            return;
-        }
+        // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). SSE2 availability is confirmed at compile time.
+        unsafe { sse2::copy_words_shifted(dst, src, count, shift) };
+        return;
+    }
 
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse2",
-            not(target_feature = "avx2")
-        ))]
-        {
-            // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). SSE2 availability is confirmed at compile time.
-            unsafe { sse2::copy_words_shifted(dst, src, count, shift) };
-            return;
-        }
+    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+    {
+        // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). NEON availability is confirmed at compile time.
+        unsafe { neon::copy_words_shifted(dst, src, count, shift) };
+        return;
+    }
 
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY: `dst`/`src` are valid for `count` words (caller guarantee). NEON availability is confirmed at compile time.
-            unsafe { neon::copy_words_shifted(dst, src, count, shift) };
-            return;
-        }
-
-        #[allow(unused)]
-        {
-            for i in 0..count {
-                dst[i] = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
-            }
+    #[allow(unused)]
+    {
+        for i in 0..count {
+            dst[i] = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
         }
     }
 }

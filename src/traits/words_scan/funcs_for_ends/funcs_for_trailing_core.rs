@@ -92,75 +92,40 @@ pub(crate) fn trailing<const FILL: u64, const WORD_ALIGNED: bool>(
             }
             // All full words match FILL — skip SIMD.
         } else {
-            // ── Default: runtime SIMD detection ───────────────────
-            #[cfg(not(feature = "compile-time-dispatch"))]
+            #[cfg(all(
+                any(target_arch = "x86", target_arch = "x86_64"),
+                target_feature = "avx2"
+            ))]
             {
-                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-                {
-                    let done_before = done;
-                    if crate::cpuid::features().avx2 {
-                        // SAFETY: CPUID confirmed AVX2 is available.
-                        done =
-                            unsafe { avx2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    } else {
-                        // SAFETY: SSE2 is baseline on x86-64.
-                        done =
-                            unsafe { sse2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    }
-                    scanned += (done - done_before) * WORD_BITS;
-                }
-                #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-                {
-                    let done_before = done;
-                    // SAFETY: NEON is available per `#[cfg]` gate.
-                    done = unsafe { neon::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    scanned += (done - done_before) * WORD_BITS;
-                }
-                #[allow(unused)]
-                {
-                    // Scalar fallback: `done` stays unchanged; shared
-                    // tail below scans word-by-word.
-                }
+                let done_before = done;
+                // SAFETY: AVX2 is guaranteed by compile-time gate.
+                done = unsafe { avx2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
+                scanned += (done - done_before) * WORD_BITS;
             }
 
-            // ── compile-time-dispatch: pure #[cfg] cascade ────────
-            #[cfg(feature = "compile-time-dispatch")]
+            #[cfg(all(
+                any(target_arch = "x86", target_arch = "x86_64"),
+                any(target_feature = "sse2", target_feature = "ssse3"),
+                not(target_feature = "avx2")
+            ))]
             {
-                #[cfg(all(
-                    any(target_arch = "x86", target_arch = "x86_64"),
-                    target_feature = "avx2"
-                ))]
-                {
-                    let done_before = done;
-                    // SAFETY: AVX2 is guaranteed by compile-time gate.
-                    done = unsafe { avx2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    scanned += (done - done_before) * WORD_BITS;
-                }
+                let done_before = done;
+                // SAFETY: SSE2 is guaranteed by compile-time gate.
+                done = unsafe { sse2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
+                scanned += (done - done_before) * WORD_BITS;
+            }
 
-                #[cfg(all(
-                    any(target_arch = "x86", target_arch = "x86_64"),
-                    any(target_feature = "sse2", target_feature = "ssse3"),
-                    not(target_feature = "avx2")
-                ))]
-                {
-                    let done_before = done;
-                    // SAFETY: SSE2 is guaranteed by compile-time gate.
-                    done = unsafe { sse2::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    scanned += (done - done_before) * WORD_BITS;
-                }
+            #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+            {
+                let done_before = done;
+                // SAFETY: NEON is guaranteed by compile-time gate.
+                done = unsafe { neon::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
+                scanned += (done - done_before) * WORD_BITS;
+            }
 
-                #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-                {
-                    let done_before = done;
-                    // SAFETY: NEON is guaranteed by compile-time gate.
-                    done = unsafe { neon::trailing_scan::<FILL>(ptr, wi_end, done, total_words) };
-                    scanned += (done - done_before) * WORD_BITS;
-                }
-
-                #[allow(unused)]
-                {
-                    // Scalar fallback.
-                }
+            #[allow(unused)]
+            {
+                // Scalar fallback.
             }
         } // else (SIMD path)
 
@@ -212,7 +177,7 @@ mod avx2 {
     ///
     /// # Safety
     ///
-    /// Caller must ensure AVX2 is available (checked via CPUID).
+    /// Caller must ensure AVX2 is enabled for the compilation target.
     /// `ptr` through `ptr.add(wi_end + 1)` must be valid for u64 reads.
     #[target_feature(enable = "avx2")]
     pub(super) unsafe fn trailing_scan<const FILL: u64>(
@@ -221,8 +186,8 @@ mod avx2 {
         mut done: usize,
         total_words: usize,
     ) -> usize {
-        // SAFETY: only callable when AVX2 is available (caller verified
-        // via CPUID).  All pointer arithmetic stays within bounds.
+        // SAFETY: AVX2 is enabled for this compilation target. All pointer
+        // arithmetic stays within bounds.
         unsafe {
             // 2×‑unrolled
             while done + STRIDE <= total_words {
@@ -326,8 +291,7 @@ mod sse2 {
         mut done: usize,
         total_words: usize,
     ) -> usize {
-        // SAFETY: only callable when SSE2 is available (caller verified
-        // via CPUID, or SSE2 is baseline).
+        // SAFETY: SSE2 is enabled for this compilation target.
         unsafe {
             while done + LANES_2X <= total_words {
                 let chunk_start = wi_end + 1 - (done + LANES_2X);

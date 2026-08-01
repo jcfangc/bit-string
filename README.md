@@ -6,7 +6,7 @@
 [![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/gh/jcfangc/bit-string)
 [![Coverage](https://codecov.io/gh/jcfangc/bit-string/branch/main/graph/badge.svg)](https://codecov.io/gh/jcfangc/bit-string)
 
-A `no_std` + `alloc` Rust crate providing a compact owned bit string and a zero-copy view, with construction, editing, matching, comparison, and bitwise operations — all accelerated by runtime SIMD dispatch (AVX2, SSSE3, NEON).
+A `no_std` + `alloc` Rust crate providing a compact owned bit string and a zero-copy view, with construction, editing, matching, comparison, and bitwise operations — accelerated by compile-time-selected SIMD backends (AVX2, SSSE3, NEON).
 
 ## Quick start
 
@@ -200,7 +200,7 @@ assert_eq!(bits, vec![true, false, false]);
 
 ## SIMD backends
 
-At runtime (or compile time with the `compile-time-dispatch` feature) the crate selects the best available SIMD backend:
+The crate selects the fastest SIMD backend enabled for the compilation target:
 
 | Backend | Target | Width |
 |---------|--------|-------|
@@ -209,7 +209,7 @@ At runtime (or compile time with the `compile-time-dispatch` feature) the crate 
 | NEON | aarch64 | 128-bit (2×u64) |
 | Scalar | all targets | fallback |
 
-For maximum local performance, copy the example config:
+There is no runtime CPU detection. For maximum local performance, compile for the host CPU by copying the example config:
 
 ```bash
 cp .cargo/config.toml.example .cargo/config.toml

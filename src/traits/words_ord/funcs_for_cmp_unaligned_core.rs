@@ -24,65 +24,36 @@ pub(super) fn cmp_unaligned_words(
         return scalar_cmp_unaligned(src, other, count, shift);
     }
 
-    // ── Default: runtime SIMD detection ─────────────────────────
-    #[cfg(not(feature = "compile-time-dispatch"))]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
     {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            let f = crate::cpuid::features();
-            if f.avx2 {
-                // SAFETY: pointer validity guaranteed by caller. Backend selected via CPUID verification.
-                return unsafe { avx2::cmp_unaligned(src, other, count, shift) };
-            }
-            if f.sse41 {
-                // SAFETY: pointer validity guaranteed by caller. Backend selected via CPUID verification.
-                return unsafe { sse41::cmp_unaligned(src, other, count, shift) };
-            }
-        }
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
-            // enabled by `#[target_feature]` at compile time.
-            return unsafe { neon::cmp_unaligned(src, other, count, shift) };
-        }
-        #[allow(unreachable_code)]
-        scalar_cmp_unaligned(src, other, count, shift)
+        // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
+        // enabled by `#[target_feature]` at compile time.
+        return unsafe { avx2::cmp_unaligned(src, other, count, shift) };
     }
 
-    // ── compile-time-dispatch: pure #[cfg] cascade ──────────────
-    #[cfg(feature = "compile-time-dispatch")]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "sse4.1",
+        not(target_feature = "avx2")
+    ))]
     {
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "avx2"
-        ))]
-        {
-            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
-            // enabled by `#[target_feature]` at compile time.
-            return unsafe { avx2::cmp_unaligned(src, other, count, shift) };
-        }
-
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse4.1",
-            not(target_feature = "avx2")
-        ))]
-        {
-            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
-            // enabled by `#[target_feature]` at compile time.
-            return unsafe { sse41::cmp_unaligned(src, other, count, shift) };
-        }
-
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
-            // enabled by `#[target_feature]` at compile time.
-            return unsafe { neon::cmp_unaligned(src, other, count, shift) };
-        }
-
-        #[allow(unreachable_code)]
-        scalar_cmp_unaligned(src, other, count, shift)
+        // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
+        // enabled by `#[target_feature]` at compile time.
+        return unsafe { sse41::cmp_unaligned(src, other, count, shift) };
     }
+
+    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+    {
+        // SAFETY: pointer validity guaranteed by caller. Backend is always safe /
+        // enabled by `#[target_feature]` at compile time.
+        return unsafe { neon::cmp_unaligned(src, other, count, shift) };
+    }
+
+    #[allow(unreachable_code)]
+    scalar_cmp_unaligned(src, other, count, shift)
 }
 
 #[inline]

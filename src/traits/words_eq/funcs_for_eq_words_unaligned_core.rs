@@ -26,78 +26,41 @@ pub(super) fn eq_words_unaligned(src: &[u64], other: &[u64], count: usize, shift
         return true;
     }
 
-    // ── Default: runtime SIMD detection ─────────────────────────
-    #[cfg(not(feature = "compile-time-dispatch"))]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
     {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            let f = crate::cpuid::features();
-            if f.avx2 {
-                // SAFETY: `src`/`other` are valid for `count` words. Backend was selected via CPUID verification.
-                return unsafe { avx2::eq_words_unaligned(src, other, count, shift) };
-            }
-            if f.sse41 {
-                // SAFETY: `src`/`other` are valid for `count` words. Backend was selected via CPUID verification.
-                return unsafe { sse41::eq_words_unaligned(src, other, count, shift) };
-            }
-        }
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY: `src`/`other` are valid for `count+1` words (caller ensures extra word for shifting). Backend feature is enabled by the `#[cfg]` gate on this block.
-            return unsafe { neon::eq_words_unaligned(src, other, count, shift) };
-        }
-        #[allow(unused)]
-        {
-            for i in 0..count {
-                let w0 = src[i];
-                let w1 = src[i + 1];
-                if ((w0 >> shift) | (w1 << (WORD_BITS - shift))) != other[i] {
-                    return false;
-                }
-            }
-            true
-        }
+        // SAFETY: `src`/`other` are valid for `count+1` words (caller ensures extra word for shifting). Backend feature is guaranteed by compile-time `#[cfg]` gate.
+        return unsafe { avx2::eq_words_unaligned(src, other, count, shift) };
     }
 
-    // ── compile-time-dispatch: pure #[cfg] cascade ──────────────
-    #[cfg(feature = "compile-time-dispatch")]
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "sse4.1",
+        not(target_feature = "avx2")
+    ))]
     {
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "avx2"
-        ))]
-        {
-            // SAFETY: `src`/`other` are valid for `count+1` words (caller ensures extra word for shifting). Backend feature is guaranteed by compile-time `#[cfg]` gate.
-            return unsafe { avx2::eq_words_unaligned(src, other, count, shift) };
-        }
+        // SAFETY: `src`/`other` are valid for `count+1` words (caller ensures extra word for shifting). Backend feature is guaranteed by compile-time `#[cfg]` gate.
+        return unsafe { sse41::eq_words_unaligned(src, other, count, shift) };
+    }
 
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse4.1",
-            not(target_feature = "avx2")
-        ))]
-        {
-            // SAFETY: `src`/`other` are valid for `count+1` words (caller ensures extra word for shifting). Backend feature is guaranteed by compile-time `#[cfg]` gate.
-            return unsafe { sse41::eq_words_unaligned(src, other, count, shift) };
-        }
+    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+    {
+        // SAFETY: `src`/`other` are valid for `count+1` words (caller ensures extra word for shifting). Backend feature is enabled by the `#[cfg]` gate on this block.
+        return unsafe { neon::eq_words_unaligned(src, other, count, shift) };
+    }
 
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-        {
-            // SAFETY: `src`/`other` are valid for `count+1` words (caller ensures extra word for shifting). Backend feature is enabled by the `#[cfg]` gate on this block.
-            return unsafe { neon::eq_words_unaligned(src, other, count, shift) };
-        }
-
-        #[allow(unused)]
-        {
-            for i in 0..count {
-                let w0 = src[i];
-                let w1 = src[i + 1];
-                if ((w0 >> shift) | (w1 << (WORD_BITS - shift))) != other[i] {
-                    return false;
-                }
+    #[allow(unused)]
+    {
+        for i in 0..count {
+            let w0 = src[i];
+            let w1 = src[i + 1];
+            if ((w0 >> shift) | (w1 << (WORD_BITS - shift))) != other[i] {
+                return false;
             }
-            true
         }
+        true
     }
 }
 

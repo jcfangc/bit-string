@@ -54,7 +54,6 @@ dependencies = [
  "bitvec_simd",
  "codspeed-divan-compat",
  "int-interval",
- "once_cell",
  "proptest",
  "witnessed",
 ]
