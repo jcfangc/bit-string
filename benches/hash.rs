@@ -80,6 +80,25 @@ fn hash_len_64_alternating_str(b: Bencher) {
 }
 
 // ---------------------------------------------------------------------------
+// len = 65 (one full word plus a partial-word tail)
+// ---------------------------------------------------------------------------
+
+#[divan::bench(name = "hash/len_65/dense/ours_string")]
+fn hash_len_65_dense_bit_string(b: Bencher) {
+    bench_bit_string(b, 65, Pattern::Dense);
+}
+
+#[divan::bench(name = "hash/len_65/dense/ours_str")]
+fn hash_len_65_dense_bit_str(b: Bencher) {
+    bench_bit_str(b, 65, Pattern::Dense);
+}
+
+#[divan::bench(name = "hash/len_65/dense/ours_str_unaligned")]
+fn hash_len_65_dense_bit_str_unaligned(b: Bencher) {
+    bench_bit_str_unaligned(b, 65, Pattern::Dense);
+}
+
+// ---------------------------------------------------------------------------
 // len = 4096
 // ---------------------------------------------------------------------------
 
@@ -223,6 +242,16 @@ fn bench_bit_string(bencher: Bencher, len: usize, pattern: Pattern) {
 fn bench_bit_str(bencher: Bencher, len: usize, pattern: Pattern) {
     let bits = make_bit_string(len, pattern);
     let view = bits.as_bit_str();
+    bencher.bench(|| {
+        let mut h = DefaultHasher::new();
+        black_box(&view).hash(&mut h);
+        black_box(h.finish())
+    });
+}
+
+fn bench_bit_str_unaligned(bencher: Bencher, len: usize, pattern: Pattern) {
+    let bits = make_bit_string(len + 3, pattern);
+    let view = bits.as_bit_str().slice_from(3).slice_until(3 + len);
     bencher.bench(|| {
         let mut h = DefaultHasher::new();
         black_box(&view).hash(&mut h);

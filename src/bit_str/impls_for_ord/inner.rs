@@ -56,8 +56,8 @@ impl<'bs> BitStr<'bs> {
         if rem > 0 {
             let pos = full * WORD_BITS;
             let mask = low_mask(rem);
-            let a = hs_words.read_word_at::<false>(hs_base + pos) & mask;
-            let b = nd_words.read_word_at::<false>(nd_base + pos) & mask;
+            let a = hs_words.read_word_at::<HS_WORD_ALIGNED>(hs_base + pos) & mask;
+            let b = nd_words.read_word_at::<ND_WORD_ALIGNED>(nd_base + pos) & mask;
             if a != b {
                 return a.bitwise_cmp(b);
             }

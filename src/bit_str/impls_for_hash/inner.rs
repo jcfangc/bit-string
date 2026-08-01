@@ -32,7 +32,7 @@ impl<'bs> BitStr<'bs> {
         }
         if rem > 0 {
             let tail_start = self.start + full_words * WORD_BITS;
-            (words.read_word_at::<false>(tail_start) & low_mask(rem)).hash(state);
+            (words.read_word_at::<WORD_ALIGNED>(tail_start) & low_mask(rem)).hash(state);
         }
     }
 }
