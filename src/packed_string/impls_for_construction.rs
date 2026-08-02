@@ -36,3 +36,7 @@ impl<C: PackedChar> FromIterator<C> for PackedString<C> {
 
 #[cfg(test)]
 mod tests_for_construction;
+
+mod impls_for_from_bits;
+mod impls_for_from_slice;
+mod impls_for_repeat;

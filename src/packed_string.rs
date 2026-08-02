@@ -21,7 +21,10 @@ mod impls_for_construction;
 mod impls_for_editing;
 mod impls_for_eq;
 mod impls_for_fmt;
+mod impls_for_hash;
 mod impls_for_iter;
+mod impls_for_matching;
+mod impls_for_ord;
 
 use funcs_for_code::{assert_valid_width, checked_code, code_mask, write_code};
 

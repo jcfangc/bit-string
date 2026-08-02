@@ -11,6 +11,11 @@ impl<C: PackedChar> PackedString<C> {
             back: self.char_len,
         }
     }
+
+    /// Collects the decoded characters into a vector.
+    pub fn to_vec(&self) -> alloc::vec::Vec<C> {
+        unimplemented!("PackedString::to_vec")
+    }
 }
 
 #[derive(Clone)]

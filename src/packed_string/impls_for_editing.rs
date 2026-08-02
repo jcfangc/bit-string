@@ -57,3 +57,11 @@ impl<'a, C: PackedChar> Extend<&'a C> for PackedString<C> {
 
 #[cfg(test)]
 mod tests_for_editing;
+
+mod impls_for_concat;
+mod impls_for_drain;
+mod impls_for_insert_remove;
+mod impls_for_replace;
+mod impls_for_retain;
+mod impls_for_reverse;
+mod impls_for_slice;

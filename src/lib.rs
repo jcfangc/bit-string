@@ -11,10 +11,12 @@ pub(crate) use funcs_for_bits::*;
 
 mod bit_str;
 mod bit_string;
+mod packed_str;
 mod packed_string;
 
 pub use bit_str::BitStr;
 pub use bit_string::BitString;
+pub use packed_str::PackedStr;
 pub use packed_string::PackedString;
 
 pub use bit_str::errors::*;
