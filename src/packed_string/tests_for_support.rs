@@ -11,9 +11,7 @@ pub(super) enum Letter {
     D = 0b11,
 }
 
-impl PackedChar for Letter {
-    const BITS: u8 = 2;
-
+impl PackedChar<2> for Letter {
     fn code(self) -> u8 {
         self as u8
     }
@@ -43,9 +41,7 @@ impl fmt::Display for Letter {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct Only;
 
-impl PackedChar for Only {
-    const BITS: u8 = 0;
-
+impl PackedChar<0> for Only {
     fn code(self) -> u8 {
         0
     }
@@ -54,3 +50,6 @@ impl PackedChar for Only {
         (code == 0).then_some(Self)
     }
 }
+
+pub(super) type LetterString = super::PackedString<Letter, 2>;
+pub(super) type OnlyString = super::PackedString<Only, 0>;

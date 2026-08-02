@@ -2,7 +2,10 @@ use int_interval::UsizeCO;
 
 use super::*;
 
-impl<C: PackedChar> PackedString<C> {
+impl<C, const BITS: u8> PackedString<C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     pub fn replace_interval(&self, _interval: UsizeCO, _replacement: &Self) -> Self {
         unimplemented!("PackedString::replace_interval")
     }

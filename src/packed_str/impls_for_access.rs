@@ -1,7 +1,10 @@
 use super::*;
 
-impl<'ps, C: PackedChar> PackedStr<'ps, C> {
-    pub fn source(&self) -> &'ps PackedString<C> {
+impl<'ps, C, const BITS: u8> PackedStr<'ps, C, BITS>
+where
+    C: PackedChar<BITS>,
+{
+    pub fn source(&self) -> &'ps PackedString<C, BITS> {
         unimplemented!("PackedStr::source")
     }
 

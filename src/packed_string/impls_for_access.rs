@@ -1,6 +1,9 @@
 use super::*;
 
-impl<C: PackedChar> PackedString<C> {
+impl<C, const BITS: u8> PackedString<C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     /// Number of packed characters, not number of bits.
     #[inline]
     pub fn char_len(&self) -> usize {
@@ -14,7 +17,7 @@ impl<C: PackedChar> PackedString<C> {
 
     #[inline]
     pub const fn bits_per_char(&self) -> usize {
-        C::BITS as usize
+        BITS as usize
     }
 
     #[inline]
@@ -45,11 +48,11 @@ impl<C: PackedChar> PackedString<C> {
 
     #[inline]
     fn code_at(&self, index: usize) -> u8 {
-        if C::BITS == 0 {
+        if BITS == 0 {
             return 0;
         }
-        let start = index * usize::from(C::BITS);
-        (self.bits.get_chunk(start) & u64::from(code_mask::<C>())) as u8
+        let start = index * usize::from(BITS);
+        (self.bits.get_chunk(start) & u64::from(code_mask::<BITS>())) as u8
     }
 }
 

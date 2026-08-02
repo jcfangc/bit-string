@@ -1,6 +1,9 @@
 use super::*;
 
-impl<C: PackedChar> PackedString<C> {
+impl<C, const BITS: u8> PackedString<C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     pub fn matches_at(&self, _index: usize, _pattern: &Self) -> bool {
         unimplemented!("PackedString::matches_at")
     }

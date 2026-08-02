@@ -1,28 +1,25 @@
 use super::*;
 
 #[inline]
-pub(super) fn assert_valid_width<C: PackedChar>() {
-    assert!(C::BITS <= 8, "PackedChar::BITS must not exceed 8");
-}
-
-#[inline]
-pub(super) fn code_mask<C: PackedChar>() -> u8 {
-    match C::BITS {
+pub(super) const fn code_mask<const BITS: u8>() -> u8 {
+    match BITS {
         0 => 0,
-        1..=7 => (1u8 << C::BITS) - 1,
+        1..=7 => (1u8 << BITS) - 1,
         8 => u8::MAX,
-        _ => unreachable!("PackedChar::BITS must not exceed 8"),
+        _ => panic!("packed character width must not exceed 8"),
     }
 }
 
 #[inline]
-pub(super) fn checked_code<C: PackedChar>(character: C) -> u8 {
-    assert_valid_width::<C>();
+pub(super) fn checked_code<C, const BITS: u8>(character: C) -> u8
+where
+    C: PackedChar<BITS>,
+{
     let code = character.code();
     assert_eq!(
-        code & !code_mask::<C>(),
+        code & !code_mask::<BITS>(),
         0,
-        "PackedChar::code does not fit in PackedChar::BITS"
+        "PackedChar::code does not fit in BITS"
     );
     assert!(
         C::from_code(code) == Some(character),
@@ -32,9 +29,9 @@ pub(super) fn checked_code<C: PackedChar>(character: C) -> u8 {
 }
 
 #[inline]
-pub(super) fn write_code(bits: &mut BitString, position: usize, width: u8, code: u8) {
-    let start = position * usize::from(width);
-    bits.set_chunk(start, u64::from(code), usize::from(width));
+pub(super) fn write_code<const BITS: u8>(bits: &mut BitString, position: usize, code: u8) {
+    let start = position * usize::from(BITS);
+    bits.set_chunk(start, u64::from(code), usize::from(BITS));
 }
 
 #[cfg(test)]

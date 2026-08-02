@@ -1,9 +1,12 @@
 use super::*;
 
-impl<C: PackedChar> PartialEq for PackedStr<'_, C> {
+impl<C, const BITS: u8> PartialEq for PackedStr<'_, C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     fn eq(&self, _other: &Self) -> bool {
         unimplemented!("PackedStr::eq")
     }
 }
 
-impl<C: PackedChar> Eq for PackedStr<'_, C> {}
+impl<C, const BITS: u8> Eq for PackedStr<'_, C, BITS> where C: PackedChar<BITS> {}

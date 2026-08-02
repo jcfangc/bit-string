@@ -2,9 +2,12 @@ use core::iter::FusedIterator;
 
 use super::*;
 
-impl<C: PackedChar> PackedString<C> {
+impl<C, const BITS: u8> PackedString<C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     #[inline]
-    pub fn iter(&self) -> Iter<'_, C> {
+    pub fn iter(&self) -> Iter<'_, C, BITS> {
         Iter {
             string: self,
             front: 0,
@@ -19,13 +22,19 @@ impl<C: PackedChar> PackedString<C> {
 }
 
 #[derive(Clone)]
-pub struct Iter<'a, C: PackedChar> {
-    string: &'a PackedString<C>,
+pub struct Iter<'a, C, const BITS: u8>
+where
+    C: PackedChar<BITS>,
+{
+    string: &'a PackedString<C, BITS>,
     front: usize,
     back: usize,
 }
 
-impl<C: PackedChar> Iterator for Iter<'_, C> {
+impl<C, const BITS: u8> Iterator for Iter<'_, C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     type Item = C;
 
     fn next(&mut self) -> Option<C> {
@@ -43,7 +52,10 @@ impl<C: PackedChar> Iterator for Iter<'_, C> {
     }
 }
 
-impl<C: PackedChar> DoubleEndedIterator for Iter<'_, C> {
+impl<C, const BITS: u8> DoubleEndedIterator for Iter<'_, C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     fn next_back(&mut self) -> Option<C> {
         if self.front == self.back {
             return None;
@@ -53,12 +65,15 @@ impl<C: PackedChar> DoubleEndedIterator for Iter<'_, C> {
     }
 }
 
-impl<C: PackedChar> ExactSizeIterator for Iter<'_, C> {}
-impl<C: PackedChar> FusedIterator for Iter<'_, C> {}
+impl<C, const BITS: u8> ExactSizeIterator for Iter<'_, C, BITS> where C: PackedChar<BITS> {}
+impl<C, const BITS: u8> FusedIterator for Iter<'_, C, BITS> where C: PackedChar<BITS> {}
 
-impl<'a, C: PackedChar> IntoIterator for &'a PackedString<C> {
+impl<'a, C, const BITS: u8> IntoIterator for &'a PackedString<C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     type Item = C;
-    type IntoIter = Iter<'a, C>;
+    type IntoIter = Iter<'a, C, BITS>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

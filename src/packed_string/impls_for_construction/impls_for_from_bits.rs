@@ -1,6 +1,9 @@
 use super::*;
 
-impl<C: PackedChar> PackedString<C> {
+impl<C, const BITS: u8> PackedString<C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     /// Validates and adopts an already packed bit payload.
     pub fn from_bits(_bits: BitString, _char_len: usize) -> Option<Self> {
         unimplemented!("PackedString::from_bits")

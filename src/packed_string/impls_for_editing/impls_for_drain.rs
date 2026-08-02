@@ -2,7 +2,10 @@ use int_interval::UsizeCO;
 
 use super::*;
 
-impl<C: PackedChar> PackedString<C> {
+impl<C, const BITS: u8> PackedString<C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     pub fn drain_interval(&self, _interval: UsizeCO) -> Self {
         unimplemented!("PackedString::drain_interval")
     }

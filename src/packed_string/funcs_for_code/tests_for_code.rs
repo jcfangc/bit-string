@@ -3,9 +3,7 @@ use super::*;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Broken;
 
-impl PackedChar for Broken {
-    const BITS: u8 = 1;
-
+impl PackedChar<1> for Broken {
     fn code(self) -> u8 {
         2
     }
@@ -18,5 +16,5 @@ impl PackedChar for Broken {
 #[test]
 #[should_panic(expected = "does not fit")]
 fn rejects_a_code_that_does_not_fit() {
-    let _ = checked_code(Broken);
+    let _ = checked_code::<Broken, 1>(Broken);
 }

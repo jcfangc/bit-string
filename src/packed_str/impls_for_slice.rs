@@ -2,7 +2,10 @@ use int_interval::UsizeCO;
 
 use super::*;
 
-impl<'ps, C: PackedChar> PackedStr<'ps, C> {
+impl<'ps, C, const BITS: u8> PackedStr<'ps, C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     pub fn slice(&self, _interval: UsizeCO) -> Self {
         unimplemented!("PackedStr::slice")
     }

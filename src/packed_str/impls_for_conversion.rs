@@ -1,13 +1,19 @@
 use super::*;
 
-impl<'ps, C: PackedChar> PackedStr<'ps, C> {
-    pub fn to_packed_string(&self) -> PackedString<C> {
+impl<'ps, C, const BITS: u8> PackedStr<'ps, C, BITS>
+where
+    C: PackedChar<BITS>,
+{
+    pub fn to_packed_string(&self) -> PackedString<C, BITS> {
         unimplemented!("PackedStr::to_packed_string")
     }
 }
 
-impl<C: PackedChar> PackedString<C> {
-    pub fn as_packed_str(&self) -> PackedStr<'_, C> {
+impl<C, const BITS: u8> PackedString<C, BITS>
+where
+    C: PackedChar<BITS>,
+{
+    pub fn as_packed_str(&self) -> PackedStr<'_, C, BITS> {
         unimplemented!("PackedString::as_packed_str")
     }
 }

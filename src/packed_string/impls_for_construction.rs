@@ -1,9 +1,14 @@
 use super::*;
 
-impl<C: PackedChar> PackedString<C> {
+impl<C, const BITS: u8> PackedString<C, BITS>
+where
+    C: PackedChar<BITS>,
+{
+    const VALID_WIDTH: () = assert!(BITS <= 8, "packed character width must not exceed 8");
+
     #[inline]
     pub fn new() -> Self {
-        assert_valid_width::<C>();
+        let () = Self::VALID_WIDTH;
         Self {
             bits: BitString::new(),
             char_len: 0,
@@ -22,13 +27,19 @@ impl<C: PackedChar> PackedString<C> {
     }
 }
 
-impl<C: PackedChar> Default for PackedString<C> {
+impl<C, const BITS: u8> Default for PackedString<C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<C: PackedChar> FromIterator<C> for PackedString<C> {
+impl<C, const BITS: u8> FromIterator<C> for PackedString<C, BITS>
+where
+    C: PackedChar<BITS>,
+{
     fn from_iter<I: IntoIterator<Item = C>>(iter: I) -> Self {
         Self::from_chars(iter)
     }
