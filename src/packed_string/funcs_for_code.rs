@@ -34,9 +34,7 @@ pub(super) fn checked_code<C: PackedChar>(character: C) -> u8 {
 #[inline]
 pub(super) fn write_code(bits: &mut BitString, position: usize, width: u8, code: u8) {
     let start = position * usize::from(width);
-    for shift in 0..width {
-        let _ = bits.set(start + usize::from(shift), (code >> shift) & 1 != 0);
-    }
+    bits.set_chunk(start, u64::from(code), usize::from(width));
 }
 
 #[cfg(test)]

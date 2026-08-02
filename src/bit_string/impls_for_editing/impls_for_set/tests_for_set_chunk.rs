@@ -20,13 +20,25 @@ fn sets_unaligned_chunk() {
 }
 
 #[test]
-fn set_chunk_ors_with_existing() {
-    let mut bits = BitString::zeros(128);
-    bits.set_chunk(0, 0b11, 2);
-    bits.set_chunk(1, 0b10, 2);
+fn set_chunk_overwrites_existing_bits() {
+    let mut bits = BitString::ones(4);
+    bits.set_chunk(1, 0b01, 2);
     assert_eq!(bits.get(0), Some(true));
     assert_eq!(bits.get(1), Some(true));
-    assert_eq!(bits.get(2), Some(true));
+    assert_eq!(bits.get(2), Some(false));
+    assert_eq!(bits.get(3), Some(true));
+}
+
+#[test]
+fn overwrite_crosses_a_word_boundary() {
+    let mut bits = BitString::ones(130);
+    bits.set_chunk(62, 0b001, 3);
+
+    assert_eq!(bits.get(61), Some(true));
+    assert_eq!(bits.get(62), Some(true));
+    assert_eq!(bits.get(63), Some(false));
+    assert_eq!(bits.get(64), Some(false));
+    assert_eq!(bits.get(65), Some(true));
 }
 
 #[test]
