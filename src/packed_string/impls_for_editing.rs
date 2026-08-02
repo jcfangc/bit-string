@@ -6,7 +6,7 @@ where
 {
     /// Appends the character's code directly to the payload.
     pub fn push(&mut self, character: C) {
-        let code = checked_code::<C, BITS>(character);
+        let code = character.code();
         let new_len = self
             .char_len
             .checked_add(1)
@@ -26,7 +26,7 @@ where
 
     pub fn set(&mut self, index: usize, character: C) -> Option<C> {
         let previous = self.get(index)?;
-        write_code::<BITS>(&mut self.bits, index, checked_code::<C, BITS>(character));
+        write_code::<BITS>(&mut self.bits, index, character.code());
         Some(previous)
     }
 

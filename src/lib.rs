@@ -16,6 +16,7 @@ mod packed_string;
 
 pub use bit_str::BitStr;
 pub use bit_string::BitString;
+pub use bit_string_derive::PackedChar;
 pub use packed_str::PackedStr;
 pub use packed_string::PackedString;
 

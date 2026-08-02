@@ -10,8 +10,8 @@ fn get_first_and_last_decode_values() {
 
 #[test]
 fn one_value_type_needs_no_payload_bits() {
-    let value = OnlyString::from_chars([Only; 100]);
+    let value = OnlyString::from_chars([Only::Value; 100]);
     assert_eq!(value.char_len(), 100);
     assert_eq!(value.bits().bit_len(), 0);
-    assert_eq!(value.get(99), Some(Only));
+    assert_eq!(value.get(99), Some(Only::Value));
 }

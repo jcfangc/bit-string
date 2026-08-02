@@ -10,8 +10,11 @@ keywords = ["bitstring", "bits", "bitset", "sequence"]
 categories = ["data-structures", "no-std"]
 exclude = ["/benches", "/src/**/tests_for_*", "/tests", ".github/"]
 
+[workspace]
+members = ["derive"]
 
 [dependencies]
+bit-string-derive = { version = "0.5.0", path = "derive" }
 int-interval = "0.9.6"
 witnessed = "0.8.0"
 

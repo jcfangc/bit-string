@@ -30,7 +30,7 @@ mod impls_for_iter;
 mod impls_for_matching;
 mod impls_for_ord;
 
-use funcs_for_code::{checked_code, code_mask, write_code};
+use funcs_for_code::{code_mask, write_code};
 
 #[cfg(test)]
 mod tests_for_support;

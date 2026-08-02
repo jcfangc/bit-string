@@ -2,29 +2,14 @@ use core::fmt;
 
 use super::PackedChar;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PackedChar)]
 #[repr(u8)]
+#[packed(bits = 2)]
 pub(super) enum Letter {
     A = 0b00,
     B = 0b01,
     C = 0b10,
     D = 0b11,
-}
-
-impl PackedChar<2> for Letter {
-    fn code(self) -> u8 {
-        self as u8
-    }
-
-    fn from_code(code: u8) -> Option<Self> {
-        match code {
-            0 => Some(Self::A),
-            1 => Some(Self::B),
-            2 => Some(Self::C),
-            3 => Some(Self::D),
-            _ => None,
-        }
-    }
 }
 
 impl fmt::Display for Letter {
@@ -38,17 +23,11 @@ impl fmt::Display for Letter {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) struct Only;
-
-impl PackedChar<0> for Only {
-    fn code(self) -> u8 {
-        0
-    }
-
-    fn from_code(code: u8) -> Option<Self> {
-        (code == 0).then_some(Self)
-    }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PackedChar)]
+#[repr(u8)]
+#[packed(bits = 0)]
+pub(super) enum Only {
+    Value = 0,
 }
 
 pub(super) type LetterString = super::PackedString<Letter, 2>;

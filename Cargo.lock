@@ -51,11 +51,22 @@ dependencies = [
 name = "bit-string"
 version = "0.5.0"
 dependencies = [
+ "bit-string-derive",
  "bitvec_simd",
  "codspeed-divan-compat",
  "int-interval",
  "proptest",
  "witnessed",
+]
+
+[[package]]
+name = "bit-string-derive"
+version = "0.5.0"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
