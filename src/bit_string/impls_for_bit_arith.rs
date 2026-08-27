@@ -5,6 +5,7 @@ mod impls_for_not;
 mod impls_for_or;
 mod impls_for_shl;
 mod impls_for_shr;
+mod impls_for_trailing_zeros;
 mod impls_for_xor;
 
 use crate::bit_string::errors::BitStringLenMismatch;

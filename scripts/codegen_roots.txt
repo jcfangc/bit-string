@@ -1,0 +1,18 @@
+# Stable backend roots. Public wrappers may inline these, so backend symbols are
+# used where they are emitted as standalone functions in the release rlib.
+bit_string::traits::words_scan::funcs_for_count_ones::scalar::count_words
+bit_string::traits::words_scan::funcs_for_count_ones::avx2::count_words
+bit_string::traits::words_scan::funcs_for_count_ones::ssse3::count_words
+bit_string::traits::words_scan::funcs_for_count_ones::neon::count_words
+bit_string::traits::words_arith::funcs_for_binary_core::scalar::words
+bit_string::traits::words_arith::funcs_for_binary_core::sse2::words
+bit_string::traits::words_arith::funcs_for_binary_core::avx2::words
+bit_string::traits::words_arith::funcs_for_binary_core::neon::words
+bit_string::traits::words_arith::funcs_for_not_core::scalar::words
+bit_string::traits::words_arith::funcs_for_not_core::sse2::words
+bit_string::traits::words_arith::funcs_for_not_core::avx2::words
+bit_string::traits::words_arith::funcs_for_not_core::neon::words
+bit_string::traits::words_eq::funcs_for_eq_words_aligned_core::scalar::eq_words
+bit_string::traits::words_eq::funcs_for_eq_words_aligned_core::avx2::eq_words
+bit_string::traits::words_eq::funcs_for_eq_words_aligned_core::sse41::eq_words
+bit_string::traits::words_eq::funcs_for_eq_words_aligned_core::neon::eq_words

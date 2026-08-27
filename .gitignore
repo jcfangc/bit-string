@@ -3,3 +3,10 @@
 /.venv
 /proptest-regressions
 .cargo/config.toml
+
+# Python tooling caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
