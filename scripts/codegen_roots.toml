@@ -14,6 +14,16 @@ artifact = "harness"
 targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
 
 [[root]]
+symbol = "codegen_bit_string_and"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_or"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
 symbol = "codegen_bit_string_not"
 artifact = "harness"
 targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]

@@ -24,6 +24,18 @@ pub unsafe fn codegen_bit_string_xor(lhs: *const BitString, rhs: *const BitStrin
 
 #[unsafe(no_mangle)]
 #[inline(never)]
+pub unsafe fn codegen_bit_string_and(lhs: *const BitString, rhs: *const BitString) -> BitString {
+    unsafe { (&*lhs).and(&*rhs).unwrap() }
+}
+
+#[unsafe(no_mangle)]
+#[inline(never)]
+pub unsafe fn codegen_bit_string_or(lhs: *const BitString, rhs: *const BitString) -> BitString {
+    unsafe { (&*lhs).or(&*rhs).unwrap() }
+}
+
+#[unsafe(no_mangle)]
+#[inline(never)]
 pub unsafe fn codegen_bit_string_not(value: *const BitString) -> BitString {
     unsafe { (&*value).not() }
 }

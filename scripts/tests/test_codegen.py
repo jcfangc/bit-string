@@ -102,6 +102,16 @@ class CodegenParserTests(unittest.TestCase):
             self.assertTrue(kernel["roots"])
             self.assertLessEqual(set(kernel["roots"]), roots)
 
+        binary = next(
+            kernel
+            for kernel in inventory
+            if kernel["path"] == "src/traits/words_arith/funcs_for_binary_core.rs"
+        )
+        self.assertEqual(
+            set(binary["roots"]),
+            {"codegen_bit_string_and", "codegen_bit_string_or", "codegen_bit_string_xor"},
+        )
+
     def test_independent_backend_symbols_are_discovered_from_inventory_modules(self) -> None:
         function = parse("0000 <root>:\n 0: c3 ret")
         functions = {

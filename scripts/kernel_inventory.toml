@@ -14,7 +14,7 @@ roots = ["codegen_bit_string_from_str"]
 [[kernel]]
 path = "src/traits/words_arith/funcs_for_binary_core.rs"
 coverage = "caller"
-roots = ["codegen_bit_string_xor"]
+roots = ["codegen_bit_string_and", "codegen_bit_string_or", "codegen_bit_string_xor"]
 
 [[kernel]]
 path = "src/traits/words_arith/funcs_for_not_core.rs"
