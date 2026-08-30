@@ -51,6 +51,7 @@ class Relocation:
     resolved: bool
     instruction_index: int
     addend: str = ""
+    nested_addends: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,7 @@ class ResolvedTarget:
     anonymous: bool
     resolved: bool
     addend: str = ""
+    nested_addends: tuple[str, ...] = ()
 
 
 class ArtifactSections:
@@ -83,13 +85,25 @@ class ArtifactSections:
     FILE_FORMAT = re.compile(r"^(?P<member>.+):\s+file format .+$")
     RELOCATION_HEADER = re.compile(r"^RELOCATION RECORDS FOR \[(.+)\]:$")
     RELOCATION_ENTRY = re.compile(r"^\s*([0-9a-f]+)\s+(R_[A-Z0-9_]+)\s+(.+?)\s*$")
+    SYMBOL_ENTRY = re.compile(r"^\s*([0-9a-f]+)\s+\S+\s+\S+\s+(\S+)\s+([0-9a-f]+)\s+(.+?)\s*$")
 
-    def __init__(self, sections: dict[tuple[str, str], SectionData], arch: str) -> None:
+    def __init__(
+        self,
+        sections: dict[tuple[str, str], SectionData],
+        arch: str,
+        symbols: dict[tuple[str, str], tuple[str, int, int]] | None = None,
+    ) -> None:
         self.sections = sections
         self.arch = arch
+        self.symbols = symbols or {}
 
     @classmethod
-    def from_objdump(cls, output: str, arch: str) -> ArtifactSections:
+    def from_objdump(
+        cls,
+        output: str,
+        arch: str,
+        symbols_output: str = "",
+    ) -> ArtifactSections:
         member = ""
         section_name: str | None = None
         section_bytes: dict[tuple[str, str], bytearray] = {}
@@ -148,7 +162,24 @@ class ArtifactSections:
             key: SectionData(key[0], key[1], bytes(data), tuple(section_relocations.get(key, ())))
             for key, data in section_bytes.items()
         }
-        return cls(sections, arch)
+        symbols: dict[tuple[str, str], tuple[str, int, int]] = {}
+        member = ""
+        for line in symbols_output.splitlines():
+            file_format = cls.FILE_FORMAT.match(line)
+            if file_format:
+                member = file_format.group("member")
+                continue
+            symbol = cls.SYMBOL_ENTRY.match(line)
+            if symbol and symbol.group(2) not in {"*UND*", "*ABS*"}:
+                name = symbol.group(4).strip()
+                if name.startswith(".hidden "):
+                    name = name.removeprefix(".hidden ")
+                symbols[(member, name)] = (
+                    symbol.group(2),
+                    int(symbol.group(1), 16),
+                    int(symbol.group(3), 16),
+                )
+        return cls(sections, arch, symbols)
 
     def _find(self, member: str, name: str) -> SectionData | None:
         exact = self.sections.get((member, name))
@@ -160,7 +191,21 @@ class ArtifactSections:
             if candidate_member == member
             and (candidate_name == name or candidate_name.endswith(f".{name}"))
         ]
-        return candidates[0] if len(candidates) == 1 else None
+        if len(candidates) == 1:
+            return candidates[0]
+        symbol = self.symbols.get((member, name))
+        if symbol is None:
+            return None
+        symbol_section, offset, size = symbol
+        section = self.sections.get((member, symbol_section))
+        if section is None or offset < 0 or offset + size > len(section.data):
+            return None
+        relocations = tuple(
+            SectionRelocation(relocation.offset - offset, relocation.kind, relocation.target)
+            for relocation in section.relocations
+            if offset <= relocation.offset < offset + size
+        )
+        return SectionData(member, symbol_section, section.data[offset : offset + size], relocations)
 
     @staticmethod
     def _split_target(value: str) -> tuple[str, str]:
@@ -184,7 +229,9 @@ class ArtifactSections:
         value = section.data[offset:]
         return value.split(b"\0", 1)[0].hex()
 
-    def _fingerprint(self, section: SectionData, member: str) -> str | None:
+    def _fingerprint_details(
+        self, section: SectionData, member: str, anonymous_depth: int = 0
+    ) -> tuple[str, tuple[str, ...]] | None:
         data = bytearray(section.data)
         descriptors: list[str] = []
         section_identity = _anonymous_instance(section.name)
@@ -200,6 +247,8 @@ class ArtifactSections:
             "R_AARCH64_ADD_ABS_LO12_NC": 4,
             "R_AARCH64_LDST64_ABS_LO12_NC": 4,
         }
+        anonymous_aliases: dict[str, int] = {}
+        nested_addends: list[str] = []
         for relocation in section.relocations:
             width = widths.get(relocation.kind)
             if width is None or relocation.offset < 0 or relocation.offset + width > len(data):
@@ -210,13 +259,39 @@ class ArtifactSections:
                 descriptor_target = target
             else:
                 target_name, addend = self._split_target(target)
-                if _anonymous_instance(target_name) is not None:
-                    return None
-                string = self._string_target(member, target_name, addend)
-                descriptor_target = f"string:{string}" if string is not None else f"symbol:{target_name}{addend}"
+                anonymous = _anonymous_instance(target_name)
+                if anonymous is not None:
+                    # Deliberately support exactly one nested anonymous level.
+                    # A nested anonymous target at this level would require a
+                    # recursive object graph, so remain fail-closed.
+                    if anonymous_depth >= 1:
+                        return None
+                    nested = self._find(member, target_name)
+                    if nested is None:
+                        return None
+                    nested_details = self._fingerprint_details(nested, member, anonymous_depth + 1)
+                    if nested_details is None:
+                        return None
+                    nested_fingerprint, nested_child_addends = nested_details
+                    # Keep the concrete target symbol here so distinct
+                    # anonymous objects with the same stem remain distinct.
+                    # Their absolute ordinals are normalized by encounter
+                    # order, which tolerates compiler renumbering.
+                    alias_key = f"{member}:{target_name}"
+                    alias = anonymous_aliases.setdefault(alias_key, len(anonymous_aliases))
+                    descriptor_target = f"anonymous:{nested_fingerprint}:alias{alias}:{addend}"
+                    nested_addends.append(addend)
+                    nested_addends.extend(nested_child_addends)
+                else:
+                    string = self._string_target(member, target_name, addend)
+                    descriptor_target = f"string:{string}" if string is not None else f"symbol:{target_name}{addend}"
             descriptors.append(f"{relocation.offset}:{relocation.kind}:{descriptor_target}")
         payload = section_class.encode() + b"\0" + bytes(data) + b"\0" + "\n".join(descriptors).encode()
-        return hashlib.sha256(payload).hexdigest()
+        return hashlib.sha256(payload).hexdigest(), tuple(nested_addends)
+
+    def _fingerprint(self, section: SectionData, member: str, anonymous_depth: int = 0) -> str | None:
+        details = self._fingerprint_details(section, member, anonymous_depth)
+        return details[0] if details is not None else None
 
     def resolve(self, member: str, kind: str, value: str) -> ResolvedTarget:
         target = value.strip()
@@ -232,10 +307,11 @@ class ArtifactSections:
         section = self._find(member, name)
         if section is None:
             return ResolvedTarget(f"anonymous-unresolved:{anonymous[0]}", True, False, addend)
-        fingerprint = self._fingerprint(section, member)
-        if fingerprint is None:
+        details = self._fingerprint_details(section, member)
+        if details is None:
             return ResolvedTarget(f"anonymous-unresolved:{anonymous[0]}", True, False, addend)
-        return ResolvedTarget(f"anonymous:{fingerprint}", True, True, addend)
+        fingerprint, nested_addends = details
+        return ResolvedTarget(f"anonymous:{fingerprint}", True, True, addend, nested_addends)
 
 
 @dataclass(frozen=True)
@@ -281,6 +357,7 @@ def _same_relocations(old: tuple[Relocation, ...], new: tuple[Relocation, ...]) 
         and before.anonymous == after.anonymous
         and before.resolved == after.resolved
         and before.addend == after.addend
+        and before.nested_addends == after.nested_addends
         and (not before.anonymous or before.resolved)
         for before, after in zip(old, new)
     ) and len(old) == len(new)
@@ -297,6 +374,7 @@ def _metadata_only_relocations(old: Function, new: Function) -> bool:
             or before.kind != after.kind
             or before.anonymous != after.anonymous
             or before.addend != after.addend
+            or before.nested_addends != after.nested_addends
         ):
             return False
         if before.token != after.token:
@@ -381,15 +459,27 @@ def _normalize(instructions: list[Instruction], arch: str, sections: ArtifactSec
                 anonymous = _anonymous_instance(target) is not None
                 resolved = True
                 addend = _anonymous_instance(target)[2] if anonymous else ""
+                nested_addends = ()
             else:
                 resolved_target = sections.resolve(instruction.member, kind, target)
                 token = resolved_target.token
                 anonymous = resolved_target.anonymous
                 resolved = resolved_target.resolved
                 addend = resolved_target.addend
+                nested_addends = resolved_target.nested_addends
             relocation_text.append(f"[{kind}:{token}]")
             relocations.append(
-                Relocation(relocation_offset, kind, target, token, anonymous, resolved, instruction_index, addend)
+                Relocation(
+                    relocation_offset,
+                    kind,
+                    target,
+                    token,
+                    anonymous,
+                    resolved,
+                    instruction_index,
+                    addend,
+                    nested_addends,
+                )
             )
             if anonymous:
                 alias_target = X86_PC_BIAS.sub("", target) if kind in PC_RELATIVE_X86_RELOCATIONS else target
@@ -459,7 +549,8 @@ def parse_objdump(output: str, arch: str, sections: ArtifactSections | None = No
 def load_functions(artifact: Path, objdump: str, arch: str) -> dict[str, Function]:
     output = subprocess.check_output([objdump, "-drwC", str(artifact)], text=True, errors="replace")
     section_output = subprocess.check_output([objdump, "-sr", str(artifact)], text=True, errors="replace")
-    sections = ArtifactSections.from_objdump(section_output, arch)
+    symbol_output = subprocess.check_output([objdump, "-t", str(artifact)], text=True, errors="replace")
+    sections = ArtifactSections.from_objdump(section_output, arch, symbol_output)
     return parse_objdump(output, arch, sections)
 
 

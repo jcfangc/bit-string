@@ -62,6 +62,99 @@ class CodegenParserTests(unittest.TestCase):
         )
         self.assertEqual(compare_codegen.classify(old, new), "CODEGEN IDENTICAL")
 
+    @staticmethod
+    def nested_sections(
+        outer_ordinal: int,
+        nested_ordinal: int,
+        nested_value: int = 1,
+        nested_addend: str = "+0x0",
+    ) -> str:
+        nested_name = f".data.rel.ro..Lanon.nested.{nested_ordinal}"
+        outer_name = f".data.rel.ro..Lanon.outer.{outer_ordinal}"
+        result = (
+            "fixture.o: file format elf64-x86-64\n"
+            f"Contents of section {nested_name}:\n"
+            f" 0000 {nested_value & 0xffffffff:08x} 00000000  ........\n"
+            f"Contents of section {outer_name}:\n"
+            " 0000 00000000 00000000  ........\n"
+            f"RELOCATION RECORDS FOR [{outer_name}]:\n"
+            "OFFSET           TYPE              VALUE\n"
+            f"0000000000000000 R_X86_64_64     {nested_name}{nested_addend}\n"
+        )
+        return result
+
+    def nested_root(self, outer_ordinal: int, addend: str = "+0x0") -> str:
+        return (
+            "fixture.o: file format elf64-x86-64\n"
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            f" 3: R_X86_64_PC32 .data.rel.ro..Lanon.outer.{outer_ordinal}{addend}\n"
+        )
+
+    def test_one_level_nested_ordinal_change_is_identical(self) -> None:
+        old = parse_with_sections(self.nested_root(1), self.nested_sections(1, 2))
+        new = parse_with_sections(self.nested_root(9), self.nested_sections(9, 8))
+        self.assertEqual(compare_codegen.classify(old, new), "CODEGEN IDENTICAL")
+
+    def test_nested_semantic_content_change_is_metadata_change(self) -> None:
+        old = parse_with_sections(self.nested_root(1), self.nested_sections(1, 2, nested_value=1))
+        new = parse_with_sections(self.nested_root(9), self.nested_sections(9, 8, nested_value=2))
+        self.assertEqual(compare_codegen.classify(old, new), "CODEGEN METADATA CHANGED")
+
+    def test_nested_addend_change_is_not_metadata(self) -> None:
+        old = parse_with_sections(self.nested_root(1), self.nested_sections(1, 2, nested_addend="+0x0"))
+        new = parse_with_sections(self.nested_root(9), self.nested_sections(9, 8, nested_addend="+0x8"))
+        self.assertEqual(compare_codegen.classify(old, new), "CODEGEN CHANGED")
+
+    def test_nested_alias_partition_is_preserved(self) -> None:
+        def sections(outer_ordinal: int, first: int, second: int) -> str:
+            outer = f".data.rel.ro..Lanon.outer.{outer_ordinal}"
+            first_name = f".data.rel.ro..Lanon.nested.{first}"
+            second_name = f".data.rel.ro..Lanon.nested.{second}"
+            return (
+                "fixture.o: file format elf64-x86-64\n"
+                f"Contents of section {first_name}:\n"
+                " 0000 0100000000000000  ........\n"
+                + (
+                    f"Contents of section {second_name}:\n"
+                    " 0000 0100000000000000  ........\n"
+                    if second != first
+                    else ""
+                )
+                + f"Contents of section {outer}:\n"
+                " 0000 0000000000000000 0000000000000000  ................\n"
+                f"RELOCATION RECORDS FOR [{outer}]:\n"
+                "OFFSET           TYPE              VALUE\n"
+                f"0000000000000000 R_X86_64_64     {first_name}+0x0\n"
+                f"0000000000000008 R_X86_64_64     {second_name}+0x0\n"
+            )
+
+        old = parse_with_sections(self.nested_root(1), sections(1, 2, 2))
+        new = parse_with_sections(self.nested_root(9), sections(9, 8, 9))
+        self.assertEqual(compare_codegen.classify(old, new), "CODEGEN CHANGED")
+
+    def test_second_level_nested_anonymous_is_conservative(self) -> None:
+        inner = ".data.rel.ro..Lanon.inner.3"
+        nested = ".data.rel.ro..Lanon.nested.2"
+        outer = ".data.rel.ro..Lanon.outer.1"
+        sections = (
+            "fixture.o: file format elf64-x86-64\n"
+            f"Contents of section {inner}:\n"
+            " 0000 0000000000000000  ........\n"
+            f"Contents of section {nested}:\n"
+            " 0000 0000000000000000  ........\n"
+            f"RELOCATION RECORDS FOR [{nested}]:\n"
+            "OFFSET           TYPE              VALUE\n"
+            f"0000000000000000 R_X86_64_64     {inner}+0x0\n"
+            f"Contents of section {outer}:\n"
+            " 0000 0000000000000000  ........\n"
+            f"RELOCATION RECORDS FOR [{outer}]:\n"
+            "OFFSET           TYPE              VALUE\n"
+            f"0000000000000000 R_X86_64_64     {nested}+0x0\n"
+        )
+        old = parse_with_sections(self.nested_root(1), sections)
+        self.assertEqual(compare_codegen.classify(old, old), "CODEGEN CHANGED")
+
     def test_relocation_site_change_is_not_ignored(self) -> None:
         old = parse(
             "0000 <root>:\n"
