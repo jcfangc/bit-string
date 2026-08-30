@@ -52,6 +52,7 @@ class Relocation:
     instruction_index: int
     addend: str = ""
     nested_addends: tuple[str, ...] = ()
+    nested_alias_partition: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -76,6 +77,7 @@ class ResolvedTarget:
     resolved: bool
     addend: str = ""
     nested_addends: tuple[str, ...] = ()
+    nested_alias_partition: tuple[int, ...] = ()
 
 
 class ArtifactSections:
@@ -231,7 +233,7 @@ class ArtifactSections:
 
     def _fingerprint_details(
         self, section: SectionData, member: str, anonymous_depth: int = 0
-    ) -> tuple[str, tuple[str, ...]] | None:
+    ) -> tuple[str, tuple[str, ...], tuple[int, ...]] | None:
         data = bytearray(section.data)
         descriptors: list[str] = []
         section_identity = _anonymous_instance(section.name)
@@ -249,6 +251,7 @@ class ArtifactSections:
         }
         anonymous_aliases: dict[str, int] = {}
         nested_addends: list[str] = []
+        nested_alias_partition: list[int] = []
         for relocation in section.relocations:
             width = widths.get(relocation.kind)
             if width is None or relocation.offset < 0 or relocation.offset + width > len(data):
@@ -272,7 +275,7 @@ class ArtifactSections:
                     nested_details = self._fingerprint_details(nested, member, anonymous_depth + 1)
                     if nested_details is None:
                         return None
-                    nested_fingerprint, nested_child_addends = nested_details
+                    nested_fingerprint, nested_child_addends, nested_child_aliases = nested_details
                     # Keep the concrete target symbol here so distinct
                     # anonymous objects with the same stem remain distinct.
                     # Their absolute ordinals are normalized by encounter
@@ -282,12 +285,14 @@ class ArtifactSections:
                     descriptor_target = f"anonymous:{nested_fingerprint}:alias{alias}:{addend}"
                     nested_addends.append(addend)
                     nested_addends.extend(nested_child_addends)
+                    nested_alias_partition.append(alias)
+                    nested_alias_partition.extend(nested_child_aliases)
                 else:
                     string = self._string_target(member, target_name, addend)
                     descriptor_target = f"string:{string}" if string is not None else f"symbol:{target_name}{addend}"
             descriptors.append(f"{relocation.offset}:{relocation.kind}:{descriptor_target}")
         payload = section_class.encode() + b"\0" + bytes(data) + b"\0" + "\n".join(descriptors).encode()
-        return hashlib.sha256(payload).hexdigest(), tuple(nested_addends)
+        return hashlib.sha256(payload).hexdigest(), tuple(nested_addends), tuple(nested_alias_partition)
 
     def _fingerprint(self, section: SectionData, member: str, anonymous_depth: int = 0) -> str | None:
         details = self._fingerprint_details(section, member, anonymous_depth)
@@ -310,8 +315,15 @@ class ArtifactSections:
         details = self._fingerprint_details(section, member)
         if details is None:
             return ResolvedTarget(f"anonymous-unresolved:{anonymous[0]}", True, False, addend)
-        fingerprint, nested_addends = details
-        return ResolvedTarget(f"anonymous:{fingerprint}", True, True, addend, nested_addends)
+        fingerprint, nested_addends, nested_alias_partition = details
+        return ResolvedTarget(
+            f"anonymous:{fingerprint}",
+            True,
+            True,
+            addend,
+            nested_addends,
+            nested_alias_partition,
+        )
 
 
 @dataclass(frozen=True)
@@ -358,6 +370,7 @@ def _same_relocations(old: tuple[Relocation, ...], new: tuple[Relocation, ...]) 
         and before.resolved == after.resolved
         and before.addend == after.addend
         and before.nested_addends == after.nested_addends
+        and before.nested_alias_partition == after.nested_alias_partition
         and (not before.anonymous or before.resolved)
         for before, after in zip(old, new)
     ) and len(old) == len(new)
@@ -375,6 +388,7 @@ def _metadata_only_relocations(old: Function, new: Function) -> bool:
             or before.anonymous != after.anonymous
             or before.addend != after.addend
             or before.nested_addends != after.nested_addends
+            or before.nested_alias_partition != after.nested_alias_partition
         ):
             return False
         if before.token != after.token:
@@ -460,6 +474,7 @@ def _normalize(instructions: list[Instruction], arch: str, sections: ArtifactSec
                 resolved = True
                 addend = _anonymous_instance(target)[2] if anonymous else ""
                 nested_addends = ()
+                nested_alias_partition = ()
             else:
                 resolved_target = sections.resolve(instruction.member, kind, target)
                 token = resolved_target.token
@@ -467,6 +482,7 @@ def _normalize(instructions: list[Instruction], arch: str, sections: ArtifactSec
                 resolved = resolved_target.resolved
                 addend = resolved_target.addend
                 nested_addends = resolved_target.nested_addends
+                nested_alias_partition = resolved_target.nested_alias_partition
             relocation_text.append(f"[{kind}:{token}]")
             relocations.append(
                 Relocation(
@@ -479,6 +495,7 @@ def _normalize(instructions: list[Instruction], arch: str, sections: ArtifactSec
                     instruction_index,
                     addend,
                     nested_addends,
+                    nested_alias_partition,
                 )
             )
             if anonymous:

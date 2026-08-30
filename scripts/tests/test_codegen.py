@@ -114,15 +114,15 @@ class CodegenParserTests(unittest.TestCase):
             return (
                 "fixture.o: file format elf64-x86-64\n"
                 f"Contents of section {first_name}:\n"
-                " 0000 0100000000000000  ........\n"
+                " 0000 01000000 00000000  ........\n"
                 + (
                     f"Contents of section {second_name}:\n"
-                    " 0000 0100000000000000  ........\n"
+                    " 0000 01000000 00000000  ........\n"
                     if second != first
                     else ""
                 )
                 + f"Contents of section {outer}:\n"
-                " 0000 0000000000000000 0000000000000000  ................\n"
+                " 0000 00000000 00000000 00000000 00000000  ................\n"
                 f"RELOCATION RECORDS FOR [{outer}]:\n"
                 "OFFSET           TYPE              VALUE\n"
                 f"0000000000000000 R_X86_64_64     {first_name}+0x0\n"
@@ -131,7 +131,16 @@ class CodegenParserTests(unittest.TestCase):
 
         old = parse_with_sections(self.nested_root(1), sections(1, 2, 2))
         new = parse_with_sections(self.nested_root(9), sections(9, 8, 9))
+        self.assertTrue(old.relocations[0].resolved)
+        self.assertTrue(new.relocations[0].resolved)
+        self.assertEqual(old.relocations[0].nested_alias_partition, (0, 0))
+        self.assertEqual(new.relocations[0].nested_alias_partition, (0, 1))
         self.assertEqual(compare_codegen.classify(old, new), "CODEGEN CHANGED")
+
+        same_alias = parse_with_sections(self.nested_root(9), sections(9, 8, 8))
+        self.assertTrue(same_alias.relocations[0].resolved)
+        self.assertEqual(same_alias.relocations[0].nested_alias_partition, (0, 0))
+        self.assertEqual(compare_codegen.classify(old, same_alias), "CODEGEN IDENTICAL")
 
     def test_second_level_nested_anonymous_is_conservative(self) -> None:
         inner = ".data.rel.ro..Lanon.inner.3"
@@ -140,20 +149,39 @@ class CodegenParserTests(unittest.TestCase):
         sections = (
             "fixture.o: file format elf64-x86-64\n"
             f"Contents of section {inner}:\n"
-            " 0000 0000000000000000  ........\n"
+            " 0000 00000000 00000000  ........\n"
             f"Contents of section {nested}:\n"
-            " 0000 0000000000000000  ........\n"
+            " 0000 00000000 00000000  ........\n"
             f"RELOCATION RECORDS FOR [{nested}]:\n"
             "OFFSET           TYPE              VALUE\n"
             f"0000000000000000 R_X86_64_64     {inner}+0x0\n"
             f"Contents of section {outer}:\n"
-            " 0000 0000000000000000  ........\n"
+            " 0000 00000000 00000000  ........\n"
             f"RELOCATION RECORDS FOR [{outer}]:\n"
             "OFFSET           TYPE              VALUE\n"
             f"0000000000000000 R_X86_64_64     {nested}+0x0\n"
         )
         old = parse_with_sections(self.nested_root(1), sections)
+        self.assertFalse(old.relocations[0].resolved)
         self.assertEqual(compare_codegen.classify(old, old), "CODEGEN CHANGED")
+
+    def test_nested_target_does_not_cross_archive_members(self) -> None:
+        outer = ".data.rel.ro..Lanon.outer.1"
+        nested = ".data.rel.ro..Lanon.nested.2"
+        sections = (
+            "member-a.o: file format elf64-x86-64\n"
+            f"Contents of section {outer}:\n"
+            " 0000 00000000 00000000  ........\n"
+            f"RELOCATION RECORDS FOR [{outer}]:\n"
+            "OFFSET           TYPE              VALUE\n"
+            f"0000000000000000 R_X86_64_64     {nested}+0x0\n"
+            "member-b.o: file format elf64-x86-64\n"
+            f"Contents of section {nested}:\n"
+            " 0000 01000000 00000000  ........\n"
+        )
+        index = compare_codegen.ArtifactSections.from_objdump(sections, "x86_64")
+        resolved = index.resolve("member-a.o", "R_X86_64_PC32", outer)
+        self.assertFalse(resolved.resolved)
 
     def test_relocation_site_change_is_not_ignored(self) -> None:
         old = parse(
