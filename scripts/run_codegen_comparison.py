@@ -29,18 +29,15 @@ def build_library(worktree: Path, target_dir: Path, rustflags: str) -> Path:
     return target_dir / "release" / "libbit_string.rlib"
 
 
-def materialize_harness(root: Path, output: Path) -> Path:
-    source = root / "scripts" / "codegen_harness.rs"
-    if source.is_file():
-        return source
+def materialize_harness(root: Path, output: Path, revision: str) -> Path:
     source = output.with_suffix(".rs")
-    source.write_bytes(subprocess.check_output(["git", "show", "HEAD:scripts/codegen_harness.rs"], cwd=root))
+    source.write_bytes(subprocess.check_output(["git", "show", f"{revision}:scripts/codegen_harness.rs"], cwd=root))
     return source
 
 
-def build_harness(root: Path, library: Path, output: Path, rustflags: str) -> None:
+def build_harness(root: Path, library: Path, output: Path, rustflags: str, revision: str) -> None:
     dependency_dir = library.parent / "deps"
-    source = materialize_harness(root, output)
+    source = materialize_harness(root, output, revision)
     command = [
         "rustc",
         str(source),
@@ -87,12 +84,20 @@ def main() -> int:
     parser.add_argument("--config", choices=sorted(CODEGEN_CONFIGS), action="append")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
+    current_revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
     output = root / "target" / "codegen-comparison"
     baseline_worktree = output / "baseline-worktree"
     output.mkdir(parents=True, exist_ok=True)
     if not baseline_worktree.exists():
         run(["git", "worktree", "add", "--detach", str(baseline_worktree), args.baseline], root, os.environ.copy())
     else:
+        worktree_root = subprocess.check_output(
+            ["git", "-C", str(baseline_worktree), "rev-parse", "--show-toplevel"],
+            cwd=root,
+            text=True,
+        ).strip()
+        if Path(worktree_root).resolve() == root.resolve():
+            raise SystemExit("baseline worktree resolves to the current worktree")
         run(["git", "-C", str(baseline_worktree), "checkout", "--detach", args.baseline], root, os.environ.copy())
     host_arch = "aarch64" if platform.machine() in {"aarch64", "arm64"} else "x86_64"
     configs = args.config or [name for name, (arch, _) in CODEGEN_CONFIGS.items() if arch == host_arch]
@@ -107,8 +112,8 @@ def main() -> int:
         current_library = build_library(root, config_dir / "current-target", rustflags)
         baseline_harness = config_dir / "baseline-harness.o"
         current_harness = config_dir / "current-harness.o"
-        build_harness(root, baseline_library, baseline_harness, rustflags)
-        build_harness(root, current_library, current_harness, rustflags)
+        build_harness(root, baseline_library, baseline_harness, rustflags, current_revision)
+        build_harness(root, current_library, current_harness, rustflags, current_revision)
         failed |= compare(root, baseline_harness, current_harness, "harness", config, arch) != 0
         failed |= compare(root, baseline_library, current_library, "library", config, arch) != 0
     return int(failed)
