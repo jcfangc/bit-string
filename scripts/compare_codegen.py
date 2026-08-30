@@ -37,18 +37,20 @@ class Instruction:
     address: int
     encoded: bytes
     assembly: str
-    relocations: list[tuple[str, str]] = field(default_factory=list)
+    relocations: list[tuple[int, str, str]] = field(default_factory=list)
     member: str = ""
 
 
 @dataclass(frozen=True)
 class Relocation:
+    offset: int
     kind: str
     raw_target: str
     token: str
     anonymous: bool
     resolved: bool
     instruction_index: int
+    addend: str = ""
 
 
 @dataclass(frozen=True)
@@ -71,6 +73,7 @@ class ResolvedTarget:
     token: str
     anonymous: bool
     resolved: bool
+    addend: str = ""
 
 
 class ArtifactSections:
@@ -123,9 +126,13 @@ class ArtifactSections:
             if len(fields) < 2 or not re.fullmatch(r"[0-9a-f]+", fields[0]):
                 continue
             chunks: list[str] = []
-            for field in fields[1:]:
-                if len(field) in {2, 4, 6, 8} and len(field) % 2 == 0 and re.fullmatch(r"[0-9a-fA-F]+", field):
-                    chunks.append(field)
+            for chunk_field in fields[1:5]:
+                if (
+                    len(chunk_field) in {2, 4, 6, 8}
+                    and len(chunk_field) % 2 == 0
+                    and re.fullmatch(r"[0-9a-fA-F]+", chunk_field)
+                ):
+                    chunks.append(chunk_field)
                 else:
                     break
             if not chunks:
@@ -153,12 +160,6 @@ class ArtifactSections:
             if candidate_member == member
             and (candidate_name == name or candidate_name.endswith(f".{name}"))
         ]
-        if not candidates:
-            candidates = [
-                section
-                for (candidate_member, candidate_name), section in self.sections.items()
-                if candidate_name == name or candidate_name.endswith(f".{name}")
-            ]
         return candidates[0] if len(candidates) == 1 else None
 
     @staticmethod
@@ -186,6 +187,8 @@ class ArtifactSections:
     def _fingerprint(self, section: SectionData, member: str) -> str | None:
         data = bytearray(section.data)
         descriptors: list[str] = []
+        section_identity = _anonymous_instance(section.name)
+        section_class = section_identity[0] if section_identity is not None else section.name
         widths = {
             "R_X86_64_64": 8,
             "R_X86_64_32": 4,
@@ -212,7 +215,7 @@ class ArtifactSections:
                 string = self._string_target(member, target_name, addend)
                 descriptor_target = f"string:{string}" if string is not None else f"symbol:{target_name}{addend}"
             descriptors.append(f"{relocation.offset}:{relocation.kind}:{descriptor_target}")
-        payload = bytes(data) + b"\0" + "\n".join(descriptors).encode()
+        payload = section_class.encode() + b"\0" + bytes(data) + b"\0" + "\n".join(descriptors).encode()
         return hashlib.sha256(payload).hexdigest()
 
     def resolve(self, member: str, kind: str, value: str) -> ResolvedTarget:
@@ -224,15 +227,15 @@ class ArtifactSections:
             name, addend = self._split_target(target)
             string = self._string_target(member, name, addend)
             token = f"string:{string}" if string is not None else f"symbol:{name}{addend}"
-            return ResolvedTarget(token, False, True)
+            return ResolvedTarget(token, False, True, addend)
         name, addend = self._split_target(target)
         section = self._find(member, name)
         if section is None:
-            return ResolvedTarget(f"anonymous-unresolved:{anonymous[0]}", True, False)
+            return ResolvedTarget(f"anonymous-unresolved:{anonymous[0]}", True, False, addend)
         fingerprint = self._fingerprint(section, member)
         if fingerprint is None:
-            return ResolvedTarget(f"anonymous-unresolved:{anonymous[0]}", True, False)
-        return ResolvedTarget(f"anonymous:{fingerprint}:{addend}", True, True)
+            return ResolvedTarget(f"anonymous-unresolved:{anonymous[0]}", True, False, addend)
+        return ResolvedTarget(f"anonymous:{fingerprint}", True, True, addend)
 
 
 @dataclass(frozen=True)
@@ -271,10 +274,13 @@ def classify(old: Function, new: Function) -> str:
 
 def _same_relocations(old: tuple[Relocation, ...], new: tuple[Relocation, ...]) -> bool:
     return all(
-        before.kind == after.kind
+        before.offset == after.offset
+        and before.instruction_index == after.instruction_index
+        and before.kind == after.kind
         and before.token == after.token
         and before.anonymous == after.anonymous
         and before.resolved == after.resolved
+        and before.addend == after.addend
         and (not before.anonymous or before.resolved)
         for before, after in zip(old, new)
     ) and len(old) == len(new)
@@ -285,7 +291,13 @@ def _metadata_only_relocations(old: Function, new: Function) -> bool:
         return False
     changed = False
     for before, after in zip(old.relocations, new.relocations):
-        if before.kind != after.kind or before.anonymous != after.anonymous:
+        if (
+            before.offset != after.offset
+            or before.instruction_index != after.instruction_index
+            or before.kind != after.kind
+            or before.anonymous != after.anonymous
+            or before.addend != after.addend
+        ):
             return False
         if before.token != after.token:
             if not before.anonymous or not before.resolved or not after.resolved:
@@ -334,7 +346,7 @@ def _normalize(instructions: list[Instruction], arch: str, sections: ArtifactSec
     indexes = {instruction.address: index for index, instruction in enumerate(instructions)}
     anonymous_bases: dict[str, int] = {}
     for instruction in instructions:
-        for _, target in instruction.relocations:
+        for _, _, target in instruction.relocations:
             anonymous = _anonymous_instance(target.strip())
             if anonymous is None:
                 continue
@@ -363,23 +375,28 @@ def _normalize(instructions: list[Instruction], arch: str, sections: ArtifactSec
                 target = f"@instruction_{indexes[address]}" if address in indexes and "+0x" in symbol else f"<{symbol}>"
                 operands = SYMBOL_TARGET.sub(target, operands)
         relocation_text: list[str] = []
-        for kind, target in instruction.relocations:
+        for relocation_offset, kind, target in instruction.relocations:
             if sections is None:
                 token = _relocation_target(kind, target, anonymous_bases)
                 anonymous = _anonymous_instance(target) is not None
                 resolved = True
+                addend = _anonymous_instance(target)[2] if anonymous else ""
             else:
                 resolved_target = sections.resolve(instruction.member, kind, target)
                 token = resolved_target.token
                 anonymous = resolved_target.anonymous
                 resolved = resolved_target.resolved
+                addend = resolved_target.addend
             relocation_text.append(f"[{kind}:{token}]")
-            relocations.append(Relocation(kind, target, token, anonymous, resolved, instruction_index))
+            relocations.append(
+                Relocation(relocation_offset, kind, target, token, anonymous, resolved, instruction_index, addend)
+            )
             if anonymous:
-                alias_key = target
+                alias_target = X86_PC_BIAS.sub("", target) if kind in PC_RELATIVE_X86_RELOCATIONS else target
+                alias_key, _ = ArtifactSections._split_target(alias_target)
                 if kind in PC_RELATIVE_X86_RELOCATIONS:
                     alias_key = X86_PC_BIAS.sub("", alias_key)
-                alias = aliases.setdefault(alias_key, len(aliases))
+                alias = aliases.setdefault(f"{instruction.member}:{alias_key}", len(aliases))
                 alias_partition.append(alias)
         executable.append(" ".join(f"{mnemonic} {operands}".split()))
         normalized.append(" ".join(f"{mnemonic} {operands} {' '.join(relocation_text)}".split()))
@@ -418,18 +435,20 @@ def parse_objdump(output: str, arch: str, sections: ArtifactSections | None = No
         relocation = RELOCATION.match(line)
         if relocation:
             if last_instruction is not None:
-                last_instruction.relocations.append((relocation.group(2), relocation.group(3)))
+                relocation_offset = int(relocation.group(1), 16) - last_instruction.address
+                last_instruction.relocations.append((relocation_offset, relocation.group(2), relocation.group(3)))
             continue
         match = instruction_pattern.match(line)
         if not match:
             continue
         encoded = bytes.fromhex(match.group(2))
         assembly = match.group(3).strip()
-        relocations: list[tuple[str, str]] = []
+        relocations: list[tuple[int, str, str]] = []
         inline_relocation = INLINE_RELOCATION.search(assembly)
         if inline_relocation is not None:
             assembly = assembly[: inline_relocation.start()].rstrip()
-            relocations.append((inline_relocation.group(2), inline_relocation.group(3)))
+            relocation_offset = int(inline_relocation.group(1), 16) - int(match.group(1), 16)
+            relocations.append((relocation_offset, inline_relocation.group(2), inline_relocation.group(3)))
         if not assembly:
             continue
         last_instruction = Instruction(int(match.group(1), 16), encoded, assembly, relocations, current_member)

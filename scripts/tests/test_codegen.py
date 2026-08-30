@@ -62,6 +62,34 @@ class CodegenParserTests(unittest.TestCase):
         )
         self.assertEqual(compare_codegen.classify(old, new), "CODEGEN IDENTICAL")
 
+    def test_relocation_site_change_is_not_ignored(self) -> None:
+        old = parse(
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 foo-0x4\n"
+            " 7: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax"
+        )
+        new = parse(
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 7: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " a: R_X86_64_PC32 foo-0x4"
+        )
+        self.assertEqual(compare_codegen.classify(old, new), "CODEGEN CHANGED")
+
+    def test_relocation_offset_change_is_not_ignored(self) -> None:
+        old = parse(
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 foo-0x4"
+        )
+        new = parse(
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 4: R_X86_64_PC32 foo-0x4"
+        )
+        self.assertEqual(compare_codegen.classify(old, new), "CODEGEN CHANGED")
+
     def test_anonymous_section_content_change_is_metadata_change(self) -> None:
         old_sections = self.SECTION_PREFIX + self.anonymous_section(1, line=1)
         new_sections = self.SECTION_PREFIX + self.anonymous_section(9, line=3)
@@ -177,6 +205,93 @@ class CodegenParserTests(unittest.TestCase):
             "aarch64",
         )
         self.assertEqual(compare_codegen.classify(old, new), "CODEGEN IDENTICAL")
+
+    def test_anonymous_addend_change_is_not_metadata(self) -> None:
+        sections = self.SECTION_PREFIX + self.anonymous_section(1)
+        old = parse_with_sections(
+            "fixture.o: file format elf64-x86-64\n"
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 .data.rel.ro..Lanon.hash.1+0x0",
+            sections,
+        )
+        new = parse_with_sections(
+            "fixture.o: file format elf64-x86-64\n"
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 .data.rel.ro..Lanon.hash.1+0x8",
+            sections,
+        )
+        self.assertEqual(compare_codegen.classify(old, new), "CODEGEN CHANGED")
+
+    def test_alias_identity_excludes_addend(self) -> None:
+        sections = (
+            self.SECTION_PREFIX
+            + self.anonymous_section(1)
+            + self.anonymous_section(2)
+            + self.anonymous_section(3)
+        )
+        old = parse_with_sections(
+            "fixture.o: file format elf64-x86-64\n"
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 .data.rel.ro..Lanon.hash.1+0x0\n"
+            " 7: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " a: R_X86_64_PC32 .data.rel.ro..Lanon.hash.1+0x8",
+            sections,
+        )
+        new = parse_with_sections(
+            "fixture.o: file format elf64-x86-64\n"
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 .data.rel.ro..Lanon.hash.2+0x0\n"
+            " 7: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " a: R_X86_64_PC32 .data.rel.ro..Lanon.hash.3+0x8",
+            sections,
+        )
+        self.assertEqual(compare_codegen.classify(old, new), "CODEGEN CHANGED")
+
+    def test_section_class_is_part_of_anonymous_identity(self) -> None:
+        old_sections = self.SECTION_PREFIX + self.anonymous_section(1)
+        new_sections = self.SECTION_PREFIX + self.anonymous_section(9).replace(
+            ".data.rel.ro..Lanon", ".rodata..Lanon"
+        )
+        old = parse_with_sections(
+            "fixture.o: file format elf64-x86-64\n"
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 .data.rel.ro..Lanon.hash.1-0x4",
+            old_sections,
+        )
+        new = parse_with_sections(
+            "fixture.o: file format elf64-x86-64\n"
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 .rodata..Lanon.hash.9-0x4",
+            new_sections,
+        )
+        self.assertEqual(compare_codegen.classify(old, new), "CODEGEN METADATA CHANGED")
+
+    def test_section_lookup_does_not_cross_archive_members(self) -> None:
+        sections = (
+            "member-a.o: file format elf64-x86-64\n"
+            "member-b.o: file format elf64-x86-64\n"
+            "Contents of section .data.rel.ro..Lanon.hash.1:\n"
+            " 0000 00000000 00000000 01000000 02000000  ........\n"
+        )
+        index = compare_codegen.ArtifactSections.from_objdump(sections, "x86_64")
+        resolved = index.resolve("member-a.o", "R_X86_64_PC32", ".data.rel.ro..Lanon.hash.1-0x4")
+        self.assertFalse(resolved.resolved)
+
+    def test_section_bytes_ignore_ascii_column_after_four_groups(self) -> None:
+        output = (
+            "fixture.o: file format elf64-x86-64\n"
+            "Contents of section .rodata:\n"
+            " 0000 00000000 00000000 00000000 00000000  deadbeef\n"
+        )
+        index = compare_codegen.ArtifactSections.from_objdump(output, "x86_64")
+        section = index.sections[("fixture.o", ".rodata")]
+        self.assertEqual(section.data, b"\0" * 16)
     def test_call_target_identity_is_preserved(self) -> None:
         foo = parse("0000 <root>:\n 0: e8 00 00 00 00 call 5 <foo>\n 1: R_X86_64_PLT32 foo-0x4")
         bar = parse("0000 <root>:\n 0: e8 00 00 00 00 call 5 <bar>\n 1: R_X86_64_PLT32 bar-0x4")
