@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import os
 import platform
 import shlex
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from bench_config import BASELINE_SHA, CODEGEN_CONFIGS
@@ -86,19 +88,21 @@ def main() -> int:
     root = Path(__file__).resolve().parents[1]
     current_revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
     output = root / "target" / "codegen-comparison"
-    baseline_worktree = output / "baseline-worktree"
     output.mkdir(parents=True, exist_ok=True)
-    if not baseline_worktree.exists():
-        run(["git", "worktree", "add", "--detach", str(baseline_worktree), args.baseline], root, os.environ.copy())
-    else:
-        worktree_root = subprocess.check_output(
-            ["git", "-C", str(baseline_worktree), "rev-parse", "--show-toplevel"],
+    baseline_worktree = Path(tempfile.mkdtemp(prefix="bit-string-codegen-baseline-"))
+    baseline_worktree.rmdir()
+    run(["git", "worktree", "add", "--detach", str(baseline_worktree), args.baseline], root, os.environ.copy())
+
+    def cleanup_worktree() -> None:
+        subprocess.run(
+            ["git", "worktree", "remove", "--force", str(baseline_worktree)],
             cwd=root,
-            text=True,
-        ).strip()
-        if Path(worktree_root).resolve() == root.resolve():
-            raise SystemExit("baseline worktree resolves to the current worktree")
-        run(["git", "-C", str(baseline_worktree), "checkout", "--detach", args.baseline], root, os.environ.copy())
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    atexit.register(cleanup_worktree)
     host_arch = "aarch64" if platform.machine() in {"aarch64", "arm64"} else "x86_64"
     configs = args.config or [name for name, (arch, _) in CODEGEN_CONFIGS.items() if arch == host_arch]
     failed = False
