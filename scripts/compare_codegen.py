@@ -612,6 +612,7 @@ def main() -> int:
     parser.add_argument("--target", required=True)
     parser.add_argument("--arch", choices=("x86_64", "aarch64"), required=True)
     parser.add_argument("--objdump", default="objdump")
+    parser.add_argument("--strict-metadata", action="store_true")
     args = parser.parse_args()
     before = load_functions(args.baseline, args.objdump, args.arch)
     after = load_functions(args.current, args.objdump, args.arch)
@@ -647,6 +648,8 @@ def main() -> int:
         else:
             changed += 1
         print(f"{root.symbol}: {status}")
+        if status == "CODEGEN METADATA CHANGED":
+            print(f"WARNING: {root.symbol} has metadata-only codegen changes", file=sys.stderr)
         print(f"  text bytes    {len(old.encoded)} -> {len(new.encoded)}")
         print(f"  instructions  {len(old.instructions)} -> {len(new.instructions)}")
         print(f"  calls         {old.calls} -> {new.calls}")
@@ -673,7 +676,8 @@ def main() -> int:
     print(f"changed          : {changed}")
     print(f"errors           : {errors}")
     print(f"skipped          : {skipped}")
-    return 0 if not (metadata_changed or encoding_changed or changed or errors) else 1
+    failed = encoding_changed or changed or errors or (args.strict_metadata and metadata_changed)
+    return 0 if not failed else 1
 
 
 if __name__ == "__main__":

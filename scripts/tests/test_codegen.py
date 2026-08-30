@@ -12,6 +12,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import compare_codegen
+import run_codegen_comparison
 
 
 def parse(body: str, arch: str = "x86_64") -> compare_codegen.Function:
@@ -586,6 +587,77 @@ class CodegenParserTests(unittest.TestCase):
                 contextlib.redirect_stderr(io.StringIO()),
             ):
                 self.assertNotEqual(compare_codegen.main(), 0)
+
+    def test_metadata_policy_exit_codes(self) -> None:
+        old = parse_with_sections(
+            "fixture.o: file format elf64-x86-64\n"
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 .data.rel.ro..Lanon.hash.1-0x4\n",
+            self.SECTION_PREFIX + self.anonymous_section(1, line=1),
+        )
+        metadata = parse_with_sections(
+            "fixture.o: file format elf64-x86-64\n"
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 .data.rel.ro..Lanon.hash.9-0x4\n",
+            self.SECTION_PREFIX + self.anonymous_section(9, line=2),
+        )
+        changed = parse("0000 <root>:\n 0: 90 nop\n 1: c3 ret")
+        old_encoding = parse("0000 <root>:\n 0: 90 nop\n 1: c3 ret")
+        new_encoding = parse("0000 <root>:\n 0: 66 90 nop\n 2: c3 ret")
+
+        def run_main(before: compare_codegen.Function, after: compare_codegen.Function, strict: bool) -> int:
+            with tempfile.TemporaryDirectory() as directory:
+                roots = Path(directory) / "roots.toml"
+                roots.write_text('[[root]]\nsymbol="root"\nartifact="harness"\ntargets=["x86_64-avx2"]\n')
+                argv = [
+                    "compare_codegen.py",
+                    "baseline.o",
+                    "current.o",
+                    "--roots",
+                    str(roots),
+                    "--artifact",
+                    "harness",
+                    "--target",
+                    "x86_64-avx2",
+                    "--arch",
+                    "x86_64",
+                ]
+                if strict:
+                    argv.append("--strict-metadata")
+                with (
+                    mock.patch.object(sys, "argv", argv),
+                    mock.patch.object(
+                        compare_codegen,
+                        "load_functions",
+                        side_effect=[{"root": before}, {"root": after}],
+                    ),
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(io.StringIO()),
+                ):
+                    return compare_codegen.main()
+
+        self.assertEqual(run_main(old, metadata, False), 0)
+        self.assertNotEqual(run_main(old, metadata, True), 0)
+        self.assertNotEqual(run_main(changed, old, False), 0)
+        self.assertNotEqual(run_main(changed, old, True), 0)
+        self.assertNotEqual(run_main(old_encoding, new_encoding, False), 0)
+        self.assertNotEqual(run_main(old_encoding, new_encoding, True), 0)
+
+    def test_runner_forwards_strict_metadata(self) -> None:
+        with mock.patch.object(run_codegen_comparison.subprocess, "run", return_value=mock.Mock(returncode=0)) as run:
+            result = run_codegen_comparison.compare(
+                Path("."),
+                Path("baseline.o"),
+                Path("current.o"),
+                "harness",
+                "x86_64-avx2",
+                "x86_64",
+                True,
+            )
+        self.assertEqual(result, 0)
+        self.assertIn("--strict-metadata", run.call_args.args[0])
 
     def test_inventory_has_root_for_each_kernel(self) -> None:
         scripts = Path(__file__).resolve().parents[1]

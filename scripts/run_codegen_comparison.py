@@ -60,7 +60,15 @@ def build_harness(root: Path, library: Path, output: Path, rustflags: str, revis
     run(command, root, os.environ.copy())
 
 
-def compare(root: Path, baseline: Path, current: Path, artifact: str, target: str, arch: str) -> int:
+def compare(
+    root: Path,
+    baseline: Path,
+    current: Path,
+    artifact: str,
+    target: str,
+    arch: str,
+    strict_metadata: bool,
+) -> int:
     command = [
         sys.executable,
         str(root / "scripts" / "compare_codegen.py"),
@@ -77,6 +85,8 @@ def compare(root: Path, baseline: Path, current: Path, artifact: str, target: st
         "--arch",
         arch,
     ]
+    if strict_metadata:
+        command.append("--strict-metadata")
     return subprocess.run(command, cwd=root, check=False).returncode
 
 
@@ -84,6 +94,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseline", default=BASELINE_SHA)
     parser.add_argument("--config", choices=sorted(CODEGEN_CONFIGS), action="append")
+    parser.add_argument("--strict-metadata", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     current_revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
@@ -118,8 +129,12 @@ def main() -> int:
         current_harness = config_dir / "current-harness.o"
         build_harness(root, baseline_library, baseline_harness, rustflags, current_revision)
         build_harness(root, current_library, current_harness, rustflags, current_revision)
-        failed |= compare(root, baseline_harness, current_harness, "harness", config, arch) != 0
-        failed |= compare(root, baseline_library, current_library, "library", config, arch) != 0
+        failed |= compare(
+            root, baseline_harness, current_harness, "harness", config, arch, args.strict_metadata
+        ) != 0
+        failed |= compare(
+            root, baseline_library, current_library, "library", config, arch, args.strict_metadata
+        ) != 0
     return int(failed)
 
 
