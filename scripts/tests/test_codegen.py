@@ -694,6 +694,21 @@ class CodegenParserTests(unittest.TestCase):
             },
         )
 
+        trailing = next(
+            kernel
+            for kernel in inventory
+            if kernel["path"] == "src/traits/words_scan/funcs_for_ends/funcs_for_trailing_core.rs"
+        )
+        self.assertEqual(
+            set(trailing["roots"]),
+            {
+                "codegen_bit_string_trailing_zeros",
+                "codegen_bit_string_trailing_ones",
+                "codegen_bit_str_trailing_zeros",
+                "codegen_bit_str_trailing_ones",
+            },
+        )
+
     def test_independent_backend_symbols_are_discovered_from_inventory_modules(self) -> None:
         function = parse("0000 <root>:\n 0: c3 ret")
         functions = {

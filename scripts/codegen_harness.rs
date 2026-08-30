@@ -136,3 +136,21 @@ pub unsafe fn codegen_bit_str_leading_ones(value: *const BitString, start: usize
 pub unsafe fn codegen_bit_string_trailing_zeros(value: *const BitString) -> usize {
     unsafe { (&*value).trailing_zeros() }
 }
+
+#[unsafe(no_mangle)]
+#[inline(never)]
+pub unsafe fn codegen_bit_string_trailing_ones(value: *const BitString) -> usize {
+    unsafe { (&*value).trailing_ones() }
+}
+
+#[unsafe(no_mangle)]
+#[inline(never)]
+pub unsafe fn codegen_bit_str_trailing_zeros(value: *const BitString, start: usize) -> usize {
+    unsafe { (&*value).as_bit_str().slice_from(start).trailing_zeros() }
+}
+
+#[unsafe(no_mangle)]
+#[inline(never)]
+pub unsafe fn codegen_bit_str_trailing_ones(value: *const BitString, start: usize) -> usize {
+    unsafe { (&*value).as_bit_str().slice_from(start).trailing_ones() }
+}

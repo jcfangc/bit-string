@@ -89,4 +89,9 @@ roots = [
 [[kernel]]
 path = "src/traits/words_scan/funcs_for_ends/funcs_for_trailing_core.rs"
 coverage = "caller"
-roots = ["codegen_bit_string_trailing_zeros"]
+roots = [
+    "codegen_bit_string_trailing_zeros",
+    "codegen_bit_string_trailing_ones",
+    "codegen_bit_str_trailing_zeros",
+    "codegen_bit_str_trailing_ones",
+]

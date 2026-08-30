@@ -99,6 +99,21 @@ artifact = "harness"
 targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
 
 [[root]]
+symbol = "codegen_bit_string_trailing_ones"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_str_trailing_zeros"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_str_trailing_ones"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
 symbol = "bit_string::traits::words_scan::funcs_for_count_ones::avx2::count_words"
 artifact = "library"
 targets = ["x86_64-avx2"]
