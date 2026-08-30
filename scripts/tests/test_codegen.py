@@ -70,6 +70,15 @@ class CodegenParserTests(unittest.TestCase):
             "aarch64",
         )
         self.assertEqual(first.instructions, second.instructions)
+        self.assertIn("+0x20", first.instructions[0])
+
+        different_addend = parse(
+            "0000000000000000 <root>:\n"
+            "   0:   90000000    adrp x0, 0 <root>\n"
+            "            0: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash-with-extra.68+0x40",
+            "aarch64",
+        )
+        self.assertNotEqual(first.instructions, different_addend.instructions)
 
     def test_duplicate_disassembly_symbol_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "duplicate disassembly symbol"):
