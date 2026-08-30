@@ -36,6 +36,11 @@ class CodegenParserTests(unittest.TestCase):
         self.assertEqual(len(function.instructions), 2)
         self.assertEqual(function.instructions[0], "call <foo> [R_X86_64_PLT32:foo]")
 
+    def test_semantic_relocation_addend_is_preserved(self) -> None:
+        first = parse("0000 <root>:\n 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n 3: R_X86_64_PC32 .rodata+0x20")
+        second = parse("0000 <root>:\n 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n 3: R_X86_64_PC32 .rodata+0x40")
+        self.assertNotEqual(first.instructions, second.instructions)
+
     def test_duplicate_disassembly_symbol_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "duplicate disassembly symbol"):
             compare_codegen.parse_objdump("0000 <root>:\n 0: c3 ret\n0000 <root>:\n 0: c3 ret", "x86_64")
@@ -48,13 +53,19 @@ class CodegenParserTests(unittest.TestCase):
 
     def test_aarch64_calls_and_branches(self) -> None:
         function = parse(
-            "0000 <root>:\n 0: 00 00 00 94 bl 0 <callee>\n 4: 40 00 00 54 b.eq c <root+0xc>\n 8: 00 04 00 91 add x0, x0, #0x1\n c: c0 03 5f d6 ret",
+            "0000000000000000 <root>:\n"
+            "   0:   94000000    bl 0 <callee>\n"
+            "            0: R_AARCH64_CALL26 callee\n"
+            "   4:   54000040    b.eq c <root+0xc>\n"
+            "   8:   91000400    add x0, x0, #0x1\n"
+            "   c:   d65f03c0    ret",
             "aarch64",
         )
         self.assertEqual(function.calls, 1)
         self.assertEqual(function.branches, 1)
         self.assertIn("@instruction_3", function.instructions[1])
         self.assertIn("#0x1", function.instructions[2])
+        self.assertIn("[R_AARCH64_CALL26:callee]", function.instructions[0])
 
     def test_expected_missing_symbol_fails(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -87,6 +98,7 @@ class CodegenParserTests(unittest.TestCase):
         inventory = tomllib.loads((scripts / "kernel_inventory.toml").read_text())["kernel"]
         self.assertEqual(len(inventory), 17)
         for kernel in inventory:
+            self.assertEqual(kernel["coverage"], "caller")
             self.assertTrue(kernel["roots"])
             self.assertLessEqual(set(kernel["roots"]), roots)
 

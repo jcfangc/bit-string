@@ -25,7 +25,7 @@ def build_library(worktree: Path, target_dir: Path, rustflags: str) -> Path:
     env = os.environ.copy()
     env["RUSTFLAGS"] = rustflags
     env["CARGO_TARGET_DIR"] = str(target_dir)
-    run(["cargo", "rustc", "--release", "--lib", "--", "--emit=obj"], worktree, env)
+    run(["cargo", "build", "--release", "--lib"], worktree, env)
     return target_dir / "release" / "libbit_string.rlib"
 
 

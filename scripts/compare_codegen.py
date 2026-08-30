@@ -16,10 +16,12 @@ from pathlib import Path
 from bench_config import CODEGEN_CONFIGS
 
 FUNCTION = re.compile(r"^\s*[0-9a-f]+ <(.+)>:\s*$")
-INSTRUCTION = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2}(?:\s+|$))+)(.*?)\s*$")
+X86_INSTRUCTION = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2}(?:\s+|$))+)(.*?)\s*$")
+AARCH64_INSTRUCTION = re.compile(r"^\s*([0-9a-f]+):\s+([0-9a-f]{8})\s+(.*?)\s*$")
 RELOCATION = re.compile(r"^\s*([0-9a-f]+):\s+(R_[A-Z0-9_]+)\s+(.+?)\s*$")
 SYMBOL_TARGET = re.compile(r"(?:0x)?([0-9a-f]+)\s+<([^>]+)>")
-RELOCATION_ADDEND = re.compile(r"[+-]0x[0-9a-f]+$")
+PC_RELATIVE_X86_RELOCATIONS = {"R_X86_64_PC32", "R_X86_64_PLT32"}
+X86_PC_BIAS = re.compile(r"-0x4$")
 OBJDUMP_COMMENT = re.compile(r"\s+#\s+(?:0x)?[0-9a-f]+\s+<[^>]+>.*$")
 
 
@@ -58,8 +60,11 @@ def classify(old: Function, new: Function) -> str:
     return "CODEGEN IDENTICAL"
 
 
-def _relocation_target(value: str) -> str:
-    return RELOCATION_ADDEND.sub("", value.strip())
+def _relocation_target(kind: str, value: str) -> str:
+    value = value.strip()
+    if kind in PC_RELATIVE_X86_RELOCATIONS:
+        return X86_PC_BIAS.sub("", value)
+    return value
 
 
 def _is_call(mnemonic: str, arch: str) -> bool:
@@ -98,12 +103,15 @@ def _normalize(instructions: list[Instruction], arch: str) -> Function:
                 symbol = match.group(2)
                 target = f"@instruction_{indexes[address]}" if address in indexes and "+0x" in symbol else f"<{symbol}>"
                 operands = SYMBOL_TARGET.sub(target, operands)
-        relocations = " ".join(f"[{kind}:{_relocation_target(target)}]" for kind, target in instruction.relocations)
+        relocations = " ".join(
+            f"[{kind}:{_relocation_target(kind, target)}]" for kind, target in instruction.relocations
+        )
         normalized.append(" ".join(f"{mnemonic} {operands} {relocations}".split()))
     return Function(tuple(normalized), b"".join(item.encoded for item in instructions), calls, branches)
 
 
 def parse_objdump(output: str, arch: str) -> dict[str, Function]:
+    instruction_pattern = X86_INSTRUCTION if arch == "x86_64" else AARCH64_INSTRUCTION
     raw: dict[str, list[Instruction]] = {}
     current: str | None = None
     last_instruction: Instruction | None = None
@@ -123,7 +131,7 @@ def parse_objdump(output: str, arch: str) -> dict[str, Function]:
             if last_instruction is not None:
                 last_instruction.relocations.append((relocation.group(2), relocation.group(3)))
             continue
-        match = INSTRUCTION.match(line)
+        match = instruction_pattern.match(line)
         if not match:
             continue
         encoded = bytes.fromhex(match.group(2))

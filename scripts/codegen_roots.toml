@@ -87,3 +87,143 @@ targets = ["x86_64-avx2"]
 symbol = "bit_string::traits::words_eq::funcs_for_eq_words_aligned_core::avx2::eq_words"
 artifact = "library"
 targets = ["x86_64-avx2"]
+
+[[root]]
+symbol = "bit_string::bit_string::impls_for_construction::funcs_for_pack_bools_core::avx2::words"
+artifact = "library"
+targets = ["x86_64-avx2"]
+
+[[root]]
+symbol = "bit_string::traits::words_arith::funcs_for_shl_core::avx2::words"
+artifact = "library"
+targets = ["x86_64-avx2"]
+
+[[root]]
+symbol = "bit_string::traits::words_arith::funcs_for_shr_core::avx2::words"
+artifact = "library"
+targets = ["x86_64-avx2"]
+
+[[root]]
+symbol = "bit_string::traits::words_edit::bits_copied::funcs_for_copy_words_shifted_core::avx2::copy_words_shifted"
+artifact = "library"
+targets = ["x86_64-avx2"]
+
+[[root]]
+symbol = "bit_string::traits::words_eq::funcs_for_eq_words_unaligned_core::avx2::eq_words_unaligned"
+artifact = "library"
+targets = ["x86_64-avx2"]
+
+[[root]]
+symbol = "bit_string::traits::words_ord::funcs_for_cmp_aligned_core::avx2::cmp_aligned"
+artifact = "library"
+targets = ["x86_64-avx2"]
+
+[[root]]
+symbol = "bit_string::traits::words_ord::funcs_for_cmp_unaligned_core::avx2::cmp_unaligned"
+artifact = "library"
+targets = ["x86_64-avx2"]
+
+[[root]]
+symbol = "bit_string::bit_string::impls_for_construction::funcs_for_pack_bools_core::sse2::words"
+artifact = "library"
+targets = ["x86_64-sse41"]
+
+[[root]]
+symbol = "bit_string::bit_string::impls_for_construction::impls_for_from_str::funcs_for_pack_str_core::sse2::words"
+artifact = "library"
+targets = ["x86_64-sse41"]
+
+[[root]]
+symbol = "bit_string::traits::words_arith::funcs_for_not_core::sse2::words"
+artifact = "library"
+targets = ["x86_64-sse41"]
+
+[[root]]
+symbol = "bit_string::traits::words_arith::funcs_for_shl_core::sse2::words"
+artifact = "library"
+targets = ["x86_64-sse41"]
+
+[[root]]
+symbol = "bit_string::traits::words_arith::funcs_for_shr_core::sse2::words"
+artifact = "library"
+targets = ["x86_64-sse41"]
+
+[[root]]
+symbol = "bit_string::traits::words_edit::bits_copied::funcs_for_copy_words_shifted_core::sse2::copy_words_shifted"
+artifact = "library"
+targets = ["x86_64-sse41"]
+
+[[root]]
+symbol = "bit_string::traits::words_eq::funcs_for_eq_words_aligned_core::sse41::eq_words"
+artifact = "library"
+targets = ["x86_64-sse41"]
+
+[[root]]
+symbol = "bit_string::traits::words_eq::funcs_for_eq_words_unaligned_core::sse41::eq_words_unaligned"
+artifact = "library"
+targets = ["x86_64-sse41"]
+
+[[root]]
+symbol = "bit_string::traits::words_ord::funcs_for_cmp_aligned_core::sse41::cmp_aligned"
+artifact = "library"
+targets = ["x86_64-sse41"]
+
+[[root]]
+symbol = "bit_string::traits::words_ord::funcs_for_cmp_unaligned_core::sse41::cmp_unaligned"
+artifact = "library"
+targets = ["x86_64-sse41"]
+
+[[root]]
+symbol = "bit_string::traits::words_scan::funcs_for_count_ones::ssse3::count_words"
+artifact = "library"
+targets = ["x86_64-sse41"]
+
+[[root]]
+symbol = "bit_string::bit_string::impls_for_construction::funcs_for_pack_bools_core::neon::words"
+artifact = "library"
+targets = ["aarch64-neon"]
+
+[[root]]
+symbol = "bit_string::traits::words_arith::funcs_for_not_core::neon::words"
+artifact = "library"
+targets = ["aarch64-neon"]
+
+[[root]]
+symbol = "bit_string::traits::words_arith::funcs_for_shl_core::neon::words"
+artifact = "library"
+targets = ["aarch64-neon"]
+
+[[root]]
+symbol = "bit_string::traits::words_arith::funcs_for_shr_core::neon::words"
+artifact = "library"
+targets = ["aarch64-neon"]
+
+[[root]]
+symbol = "bit_string::traits::words_edit::bits_copied::funcs_for_copy_words_shifted_core::neon::copy_words_shifted"
+artifact = "library"
+targets = ["aarch64-neon"]
+
+[[root]]
+symbol = "bit_string::traits::words_eq::funcs_for_eq_words_aligned_core::neon::eq_words"
+artifact = "library"
+targets = ["aarch64-neon"]
+
+[[root]]
+symbol = "bit_string::traits::words_eq::funcs_for_eq_words_unaligned_core::neon::eq_words_unaligned"
+artifact = "library"
+targets = ["aarch64-neon"]
+
+[[root]]
+symbol = "bit_string::traits::words_ord::funcs_for_cmp_aligned_core::neon::cmp_aligned"
+artifact = "library"
+targets = ["aarch64-neon"]
+
+[[root]]
+symbol = "bit_string::traits::words_ord::funcs_for_cmp_unaligned_core::neon::cmp_unaligned"
+artifact = "library"
+targets = ["aarch64-neon"]
+
+[[root]]
+symbol = "bit_string::traits::words_scan::funcs_for_count_ones::neon::count_words"
+artifact = "library"
+targets = ["aarch64-neon"]

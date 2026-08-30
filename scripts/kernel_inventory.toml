@@ -1,67 +1,87 @@
+## Each entry records a stable caller observation root. Backend functions that
+## remain as independent symbols require separate library roots.
+
 [[kernel]]
 path = "src/bit_string/impls_for_construction/funcs_for_pack_bools_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_from_bool_slice"]
 
 [[kernel]]
 path = "src/bit_string/impls_for_construction/impls_for_from_str/funcs_for_pack_str_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_from_str"]
 
 [[kernel]]
 path = "src/traits/words_arith/funcs_for_binary_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_xor"]
 
 [[kernel]]
 path = "src/traits/words_arith/funcs_for_not_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_not"]
 
 [[kernel]]
 path = "src/traits/words_arith/funcs_for_shl_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_shl"]
 
 [[kernel]]
 path = "src/traits/words_arith/funcs_for_shr_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_shr"]
 
 [[kernel]]
 path = "src/traits/words_edit/bits_copied/funcs_for_copy_words_shifted_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_slice_from"]
 
 [[kernel]]
 path = "src/traits/words_eq/funcs_for_eq_words_aligned_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_matches_at"]
 
 [[kernel]]
 path = "src/traits/words_eq/funcs_for_eq_words_unaligned_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_matches_at"]
 
 [[kernel]]
 path = "src/traits/words_find/funcs_for_contains_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_contains"]
 
 [[kernel]]
 path = "src/traits/words_find/funcs_for_find_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_find"]
 
 [[kernel]]
 path = "src/traits/words_find/funcs_for_rfind_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_rfind"]
 
 [[kernel]]
 path = "src/traits/words_ord/funcs_for_cmp_aligned_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_cmp"]
 
 [[kernel]]
 path = "src/traits/words_ord/funcs_for_cmp_unaligned_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_cmp"]
 
 [[kernel]]
 path = "src/traits/words_scan/funcs_for_count_ones.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_count_ones"]
 
 [[kernel]]
 path = "src/traits/words_scan/funcs_for_ends/funcs_for_leading_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_leading_zeros"]
 
 [[kernel]]
 path = "src/traits/words_scan/funcs_for_ends/funcs_for_trailing_core.rs"
+coverage = "caller"
 roots = ["codegen_bit_string_trailing_zeros"]
