@@ -22,7 +22,7 @@ RELOCATION = re.compile(r"^\s*([0-9a-f]+):\s+(R_[A-Z0-9_]+)\s+(.+?)\s*$")
 SYMBOL_TARGET = re.compile(r"(?:0x)?([0-9a-f]+)\s+<([^>]+)>")
 PC_RELATIVE_X86_RELOCATIONS = {"R_X86_64_PC32", "R_X86_64_PLT32"}
 X86_PC_BIAS = re.compile(r"-0x4$")
-ANONYMOUS_SYMBOL_INSTANCE = re.compile(r"(\.Lanon\.[0-9a-f]+)\.\d+$")
+ANONYMOUS_SYMBOL_INSTANCE = re.compile(r"(\.Lanon\.[^\s]+?)\.\d+(?:[+-]0x[0-9a-f]+)?$")
 OBJDUMP_COMMENT = re.compile(r"\s+#\s+(?:0x)?[0-9a-f]+\s+<[^>]+>.*$")
 BACKEND_MODULE = re.compile(r"::(?:scalar|sse2|ssse3|sse41|avx2|neon)::")
 

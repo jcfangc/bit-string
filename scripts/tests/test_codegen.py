@@ -56,6 +56,21 @@ class CodegenParserTests(unittest.TestCase):
         )
         self.assertEqual(first.instructions, second.instructions)
 
+    def test_anonymous_relocation_instance_with_addend_is_ignored(self) -> None:
+        first = parse(
+            "0000000000000000 <root>:\n"
+            "   0:   90000000    adrp x0, 0 <root>\n"
+            "            0: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash-with-extra.67+0x20",
+            "aarch64",
+        )
+        second = parse(
+            "0000000000000000 <root>:\n"
+            "   0:   90000000    adrp x0, 0 <root>\n"
+            "            0: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash-with-extra.68+0x20",
+            "aarch64",
+        )
+        self.assertEqual(first.instructions, second.instructions)
+
     def test_duplicate_disassembly_symbol_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "duplicate disassembly symbol"):
             compare_codegen.parse_objdump("0000 <root>:\n 0: c3 ret\n0000 <root>:\n 0: c3 ret", "x86_64")
