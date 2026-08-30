@@ -23,6 +23,7 @@ SYMBOL_TARGET = re.compile(r"(?:0x)?([0-9a-f]+)\s+<([^>]+)>")
 PC_RELATIVE_X86_RELOCATIONS = {"R_X86_64_PC32", "R_X86_64_PLT32"}
 X86_PC_BIAS = re.compile(r"-0x4$")
 OBJDUMP_COMMENT = re.compile(r"\s+#\s+(?:0x)?[0-9a-f]+\s+<[^>]+>.*$")
+BACKEND_MODULE = re.compile(r"::(?:scalar|sse2|ssse3|sse41|avx2|neon)::")
 
 
 @dataclass
@@ -160,12 +161,32 @@ def load_roots(path: Path) -> list[Root]:
     return roots
 
 
+def load_kernel_modules(path: Path) -> tuple[str, ...]:
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    modules = []
+    for kernel in data.get("kernel", []):
+        source = Path(kernel["path"])
+        if source.parts[0] != "src" or source.suffix != ".rs":
+            raise ValueError(f"{path}: invalid kernel source path: {source}")
+        modules.append("bit_string::" + "::".join(source.with_suffix("").parts[1:]))
+    return tuple(modules)
+
+
+def independent_backend_symbols(functions: dict[str, Function], modules: tuple[str, ...]) -> set[str]:
+    return {
+        symbol
+        for symbol in functions
+        if BACKEND_MODULE.search(symbol) and any(symbol.startswith(f"{module}::") for module in modules)
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("baseline", type=Path)
     parser.add_argument("current", type=Path)
     parser.add_argument("--roots", type=Path, required=True)
     parser.add_argument("--artifact", required=True)
+    parser.add_argument("--inventory", type=Path)
     parser.add_argument("--target", required=True)
     parser.add_argument("--arch", choices=("x86_64", "aarch64"), required=True)
     parser.add_argument("--objdump", default="objdump")
@@ -174,6 +195,15 @@ def main() -> int:
     after = load_functions(args.current, args.objdump, args.arch)
     roots = [root for root in load_roots(args.roots) if root.artifact == args.artifact]
     identical = encoding_changed = changed = errors = skipped = 0
+    if args.artifact == "library":
+        if args.inventory is None:
+            parser.error("--inventory is required for library artifacts")
+        modules = load_kernel_modules(args.inventory)
+        registered = {root.symbol for root in roots if args.target in root.targets}
+        discovered = independent_backend_symbols(before, modules) | independent_backend_symbols(after, modules)
+        for symbol in sorted(discovered - registered):
+            errors += 1
+            print(f"ERROR: independent backend symbol is not a configured root: {symbol}", file=sys.stderr)
     for root in roots:
         if args.target not in root.targets:
             skipped += 1

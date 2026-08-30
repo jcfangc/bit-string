@@ -102,6 +102,22 @@ class CodegenParserTests(unittest.TestCase):
             self.assertTrue(kernel["roots"])
             self.assertLessEqual(set(kernel["roots"]), roots)
 
+    def test_independent_backend_symbols_are_discovered_from_inventory_modules(self) -> None:
+        function = parse("0000 <root>:\n 0: c3 ret")
+        functions = {
+            "bit_string::traits::words_scan::funcs_for_count_ones::avx2::count_words": function,
+            "bit_string::traits::words_scan::unrelated::avx2::count_words": function,
+            "bit_string::traits::words_scan::funcs_for_count_ones::entry": function,
+        }
+        discovered = compare_codegen.independent_backend_symbols(
+            functions,
+            ("bit_string::traits::words_scan::funcs_for_count_ones",),
+        )
+        self.assertEqual(
+            discovered,
+            {"bit_string::traits::words_scan::funcs_for_count_ones::avx2::count_words"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

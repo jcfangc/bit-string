@@ -61,6 +61,8 @@ def compare(root: Path, baseline: Path, current: Path, artifact: str, target: st
         str(root / "scripts" / "codegen_roots.toml"),
         "--artifact",
         artifact,
+        "--inventory",
+        str(root / "scripts" / "kernel_inventory.toml"),
         "--target",
         target,
         "--arch",
