@@ -19,10 +19,14 @@ FUNCTION = re.compile(r"^\s*[0-9a-f]+ <(.+)>:\s*$")
 X86_INSTRUCTION = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2}(?:\s+|$))+)(.*?)\s*$")
 AARCH64_INSTRUCTION = re.compile(r"^\s*([0-9a-f]+):\s+([0-9a-f]{8})\s+(.*?)\s*$")
 RELOCATION = re.compile(r"^\s*([0-9a-f]+):\s+(R_[A-Z0-9_]+)\s+(.+?)\s*$")
+INLINE_RELOCATION = re.compile(r"\s+([0-9a-f]+):\s+(R_[A-Z0-9_]+)\s+(.+?)\s*$")
 SYMBOL_TARGET = re.compile(r"(?:0x)?([0-9a-f]+)\s+<([^>]+)>")
 PC_RELATIVE_X86_RELOCATIONS = {"R_X86_64_PC32", "R_X86_64_PLT32"}
 X86_PC_BIAS = re.compile(r"-0x4$")
-ANONYMOUS_SYMBOL_INSTANCE = re.compile(r"(\.Lanon\.[^\s]+?)\.\d+(?=[+-]0x[0-9a-f]+$|$)")
+ANONYMOUS_SYMBOL_INSTANCE = re.compile(
+    r"(?P<stem>(?:\.Lanon|anon)\.[^.\s]+)\.(?P<instance>\d+)"
+    r"(?:\.llvm\.[^+\-\s]+)?(?P<addend>[+-]0x[0-9a-f]+)?$"
+)
 OBJDUMP_COMMENT = re.compile(r"\s+#\s+(?:0x)?[0-9a-f]+\s+<[^>]+>.*$")
 BACKEND_MODULE = re.compile(r"::(?:scalar|sse2|ssse3|sse41|avx2|neon)::")
 
@@ -62,11 +66,24 @@ def classify(old: Function, new: Function) -> str:
     return "CODEGEN IDENTICAL"
 
 
-def _relocation_target(kind: str, value: str) -> str:
+def _anonymous_instance(value: str) -> tuple[str, int, str] | None:
+    match = ANONYMOUS_SYMBOL_INSTANCE.search(value)
+    if match is None:
+        return None
+    key = value[: match.start("stem")] + match.group("stem")
+    return key, int(match.group("instance")), match.group("addend") or ""
+
+
+def _relocation_target(kind: str, value: str, anonymous_bases: dict[str, int]) -> str:
     value = value.strip()
     if kind in PC_RELATIVE_X86_RELOCATIONS:
         value = X86_PC_BIAS.sub("", value)
-    return ANONYMOUS_SYMBOL_INSTANCE.sub(r"\1", value)
+    anonymous = _anonymous_instance(value)
+    if anonymous is None:
+        return value
+    key, instance, addend = anonymous
+    base = anonymous_bases[key]
+    return f"{key}.@{instance - base}{addend}"
 
 
 def _is_call(mnemonic: str, arch: str) -> bool:
@@ -87,6 +104,14 @@ def _has_control_target(mnemonic: str, arch: str) -> bool:
 
 def _normalize(instructions: list[Instruction], arch: str) -> Function:
     indexes = {instruction.address: index for index, instruction in enumerate(instructions)}
+    anonymous_bases: dict[str, int] = {}
+    for instruction in instructions:
+        for _, target in instruction.relocations:
+            anonymous = _anonymous_instance(target.strip())
+            if anonymous is None:
+                continue
+            key, instance, _ = anonymous
+            anonymous_bases[key] = min(instance, anonymous_bases.get(key, instance))
     normalized: list[str] = []
     calls = branches = 0
     for instruction in instructions:
@@ -106,7 +131,8 @@ def _normalize(instructions: list[Instruction], arch: str) -> Function:
                 target = f"@instruction_{indexes[address]}" if address in indexes and "+0x" in symbol else f"<{symbol}>"
                 operands = SYMBOL_TARGET.sub(target, operands)
         relocations = " ".join(
-            f"[{kind}:{_relocation_target(kind, target)}]" for kind, target in instruction.relocations
+            f"[{kind}:{_relocation_target(kind, target, anonymous_bases)}]"
+            for kind, target in instruction.relocations
         )
         normalized.append(" ".join(f"{mnemonic} {operands} {relocations}".split()))
     return Function(tuple(normalized), b"".join(item.encoded for item in instructions), calls, branches)
@@ -138,9 +164,14 @@ def parse_objdump(output: str, arch: str) -> dict[str, Function]:
             continue
         encoded = bytes.fromhex(match.group(2))
         assembly = match.group(3).strip()
+        relocations: list[tuple[str, str]] = []
+        inline_relocation = INLINE_RELOCATION.search(assembly)
+        if inline_relocation is not None:
+            assembly = assembly[: inline_relocation.start()].rstrip()
+            relocations.append((inline_relocation.group(2), inline_relocation.group(3)))
         if not assembly:
             continue
-        last_instruction = Instruction(int(match.group(1), 16), encoded, assembly)
+        last_instruction = Instruction(int(match.group(1), 16), encoded, assembly, relocations)
         raw[current].append(last_instruction)
     return {name: _normalize(items, arch) for name, items in raw.items() if items}
 

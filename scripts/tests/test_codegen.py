@@ -80,6 +80,68 @@ class CodegenParserTests(unittest.TestCase):
         )
         self.assertNotEqual(first.instructions, different_addend.instructions)
 
+    def test_inline_anonymous_relocations_allow_uniform_ordinal_shift(self) -> None:
+        first = parse(
+            "0000000000000000 <root>:\n"
+            "   0:   90000000    adrp x0, 0 <root> 0: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.67\n"
+            "   4:   90000000    adrp x1, 0 <root> 4: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.69\n"
+            "   8:   90000000    adrp x2, 0 <root> 8: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.68\n",
+            "aarch64",
+        )
+        shifted = parse(
+            "0000000000000000 <root>:\n"
+            "   0:   90000000    adrp x0, 0 <root> 0: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.68\n"
+            "   4:   90000000    adrp x1, 0 <root> 4: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.70\n"
+            "   8:   90000000    adrp x2, 0 <root> 8: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.69\n",
+            "aarch64",
+        )
+        self.assertEqual(first.instructions, shifted.instructions)
+
+    def test_inline_anonymous_relocations_preserve_alias_relationships(self) -> None:
+        aliased = parse(
+            "0000000000000000 <root>:\n"
+            "   0:   90000000    adrp x0, 0 <root> 0: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.67\n"
+            "   4:   90000000    adrp x1, 0 <root> 4: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.67\n"
+            "   8:   90000000    adrp x2, 0 <root> 8: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.69\n",
+            "aarch64",
+        )
+        no_longer_aliased = parse(
+            "0000000000000000 <root>:\n"
+            "   0:   90000000    adrp x0, 0 <root> 0: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.68\n"
+            "   4:   90000000    adrp x1, 0 <root> 4: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.69\n"
+            "   8:   90000000    adrp x2, 0 <root> 8: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.70\n",
+            "aarch64",
+        )
+        self.assertNotEqual(aliased.instructions, no_longer_aliased.instructions)
+
+    def test_inline_anonymous_relocations_preserve_relative_gaps(self) -> None:
+        first = parse(
+            "0000000000000000 <root>:\n"
+            "   0:   90000000    adrp x0, 0 <root> 0: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.67\n"
+            "   4:   90000000    adrp x1, 0 <root> 4: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.69\n",
+            "aarch64",
+        )
+        different_gap = parse(
+            "0000000000000000 <root>:\n"
+            "   0:   90000000    adrp x0, 0 <root> 0: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.68\n"
+            "   4:   90000000    adrp x1, 0 <root> 4: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.hash.71\n",
+            "aarch64",
+        )
+        self.assertNotEqual(first.instructions, different_gap.instructions)
+
+    def test_x86_anonymous_relocations_allow_llvm_suffix_changes(self) -> None:
+        first = parse(
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax 0: R_X86_64_PC32 anon.hash.67.llvm.123\n"
+            " 7: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax 7: R_X86_64_PC32 anon.hash.69.llvm.123\n"
+        )
+        shifted = parse(
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax 0: R_X86_64_PC32 anon.hash.68.llvm.456\n"
+            " 7: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax 7: R_X86_64_PC32 anon.hash.70.llvm.456\n"
+        )
+        self.assertEqual(first.instructions, shifted.instructions)
+
     def test_duplicate_disassembly_symbol_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "duplicate disassembly symbol"):
             compare_codegen.parse_objdump("0000 <root>:\n 0: c3 ret\n0000 <root>:\n 0: c3 ret", "x86_64")
