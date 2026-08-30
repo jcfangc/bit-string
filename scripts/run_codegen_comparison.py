@@ -29,11 +29,21 @@ def build_library(worktree: Path, target_dir: Path, rustflags: str) -> Path:
     return target_dir / "release" / "libbit_string.rlib"
 
 
+def materialize_harness(root: Path, output: Path) -> Path:
+    source = root / "scripts" / "codegen_harness.rs"
+    if source.is_file():
+        return source
+    source = output.with_suffix(".rs")
+    source.write_bytes(subprocess.check_output(["git", "show", "HEAD:scripts/codegen_harness.rs"], cwd=root))
+    return source
+
+
 def build_harness(root: Path, library: Path, output: Path, rustflags: str) -> None:
     dependency_dir = library.parent / "deps"
+    source = materialize_harness(root, output)
     command = [
         "rustc",
-        str(root / "scripts" / "codegen_harness.rs"),
+        str(source),
         "--crate-name",
         "bit_string_codegen_harness",
         "--crate-type=lib",
