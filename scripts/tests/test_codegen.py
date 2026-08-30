@@ -41,6 +41,21 @@ class CodegenParserTests(unittest.TestCase):
         second = parse("0000 <root>:\n 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n 3: R_X86_64_PC32 .rodata+0x40")
         self.assertNotEqual(first.instructions, second.instructions)
 
+    def test_anonymous_relocation_instance_is_ignored(self) -> None:
+        first = parse(
+            "0000000000000000 <root>:\n"
+            "   0:   90000000    adrp x0, 0 <root>\n"
+            "            0: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.abcdef0123456789.67",
+            "aarch64",
+        )
+        second = parse(
+            "0000000000000000 <root>:\n"
+            "   0:   90000000    adrp x0, 0 <root>\n"
+            "            0: R_AARCH64_ADR_PREL_PG_HI21 .data.rel.ro..Lanon.abcdef0123456789.68",
+            "aarch64",
+        )
+        self.assertEqual(first.instructions, second.instructions)
+
     def test_duplicate_disassembly_symbol_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "duplicate disassembly symbol"):
             compare_codegen.parse_objdump("0000 <root>:\n 0: c3 ret\n0000 <root>:\n 0: c3 ret", "x86_64")
