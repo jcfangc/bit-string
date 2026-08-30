@@ -679,6 +679,21 @@ class CodegenParserTests(unittest.TestCase):
             {"codegen_bit_string_and", "codegen_bit_string_or", "codegen_bit_string_xor"},
         )
 
+        leading = next(
+            kernel
+            for kernel in inventory
+            if kernel["path"] == "src/traits/words_scan/funcs_for_ends/funcs_for_leading_core.rs"
+        )
+        self.assertEqual(
+            set(leading["roots"]),
+            {
+                "codegen_bit_string_leading_zeros",
+                "codegen_bit_string_leading_ones",
+                "codegen_bit_str_leading_zeros",
+                "codegen_bit_str_leading_ones",
+            },
+        )
+
     def test_independent_backend_symbols_are_discovered_from_inventory_modules(self) -> None:
         function = parse("0000 <root>:\n 0: c3 ret")
         functions = {

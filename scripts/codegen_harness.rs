@@ -115,6 +115,24 @@ pub unsafe fn codegen_bit_string_leading_zeros(value: *const BitString) -> usize
 
 #[unsafe(no_mangle)]
 #[inline(never)]
+pub unsafe fn codegen_bit_string_leading_ones(value: *const BitString) -> usize {
+    unsafe { (&*value).leading_ones() }
+}
+
+#[unsafe(no_mangle)]
+#[inline(never)]
+pub unsafe fn codegen_bit_str_leading_zeros(value: *const BitString, start: usize) -> usize {
+    unsafe { (&*value).as_bit_str().slice_from(start).leading_zeros() }
+}
+
+#[unsafe(no_mangle)]
+#[inline(never)]
+pub unsafe fn codegen_bit_str_leading_ones(value: *const BitString, start: usize) -> usize {
+    unsafe { (&*value).as_bit_str().slice_from(start).leading_ones() }
+}
+
+#[unsafe(no_mangle)]
+#[inline(never)]
 pub unsafe fn codegen_bit_string_trailing_zeros(value: *const BitString) -> usize {
     unsafe { (&*value).trailing_zeros() }
 }

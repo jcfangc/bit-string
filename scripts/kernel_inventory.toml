@@ -79,7 +79,12 @@ roots = ["codegen_bit_string_count_ones"]
 [[kernel]]
 path = "src/traits/words_scan/funcs_for_ends/funcs_for_leading_core.rs"
 coverage = "caller"
-roots = ["codegen_bit_string_leading_zeros"]
+roots = [
+    "codegen_bit_string_leading_zeros",
+    "codegen_bit_string_leading_ones",
+    "codegen_bit_str_leading_zeros",
+    "codegen_bit_str_leading_ones",
+]
 
 [[kernel]]
 path = "src/traits/words_scan/funcs_for_ends/funcs_for_trailing_core.rs"

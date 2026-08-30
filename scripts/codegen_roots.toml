@@ -79,6 +79,21 @@ artifact = "harness"
 targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
 
 [[root]]
+symbol = "codegen_bit_string_leading_ones"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_str_leading_zeros"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_str_leading_ones"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
 symbol = "codegen_bit_string_trailing_zeros"
 artifact = "harness"
 targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
