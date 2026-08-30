@@ -1,0 +1,89 @@
+[[root]]
+symbol = "codegen_bit_string_from_bool_slice"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_from_str"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_xor"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_not"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_shl"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_shr"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_slice_from"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_matches_at"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_contains"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_find"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_rfind"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_cmp"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_count_ones"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_leading_zeros"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "codegen_bit_string_trailing_zeros"
+artifact = "harness"
+targets = ["x86_64-baseline", "x86_64-sse41", "x86_64-avx2", "aarch64-neon"]
+
+[[root]]
+symbol = "bit_string::traits::words_scan::funcs_for_count_ones::avx2::count_words"
+artifact = "library"
+targets = ["x86_64-avx2"]
+
+[[root]]
+symbol = "bit_string::traits::words_arith::funcs_for_not_core::avx2::words"
+artifact = "library"
+targets = ["x86_64-avx2"]
+
+[[root]]
+symbol = "bit_string::traits::words_eq::funcs_for_eq_words_aligned_core::avx2::eq_words"
+artifact = "library"
+targets = ["x86_64-avx2"]

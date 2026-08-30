@@ -19,27 +19,33 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: linux-x64-scalar
+          - name: linux-x64-baseline
             os: ubuntu-latest
             rustflags: ""
+            codegen_config: x86_64-baseline
 
           - name: linux-x64-sse4.1
             os: ubuntu-latest
             rustflags: "-C target-feature=+sse4.1"
+            codegen_config: x86_64-sse41
 
           - name: linux-x64-avx2
             os: ubuntu-latest
             rustflags: "-C target-feature=+avx2"
+            codegen_config: x86_64-avx2
 
           - name: linux-arm64-neon
             os: ubuntu-24.04-arm
             rustflags: "-C target-feature=+neon"
+            codegen_config: aarch64-neon
 
     env:
       RUSTFLAGS: ${{ matrix.rustflags }}
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -60,3 +66,10 @@ jobs:
 
       - name: Test
         run: cargo test --locked
+
+      - name: Test comparison tooling
+        if: matrix.name == 'linux-x64-baseline'
+        run: python3 -m unittest discover -s scripts/tests -v
+
+      - name: Compare codegen with fixed baseline
+        run: python3 scripts/run_codegen_comparison.py --config ${{ matrix.codegen_config }}

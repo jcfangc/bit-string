@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from bench_config import BASELINE_SHA, RUSTFLAGS
+from bench_config import BASELINE_SHA, BENCH_RUSTFLAGS
 
 ORDER = ("baseline", "current", "current", "baseline", "baseline", "current", "current", "baseline", "baseline", "current")
 
@@ -42,7 +42,7 @@ def main() -> int:
         run(["git", "-C", str(baseline_dir), "checkout", "--detach", args.baseline], cwd=root)
 
     env = os.environ.copy()
-    env["RUSTFLAGS"] = RUSTFLAGS
+    env["RUSTFLAGS"] = BENCH_RUSTFLAGS
     command = ["cargo", "bench", "--", "--color", "never"]
     counts = {"baseline": 0, "current": 0}
     for revision in ORDER:
@@ -54,6 +54,7 @@ def main() -> int:
     compare = [sys.executable, str(root / "scripts" / "compare_bench.py")]
     compare += [str(output_dir / f"baseline-{i}.txt") for i in range(1, 6)]
     compare += ["--current"] + [str(output_dir / f"current-{i}.txt") for i in range(1, 6)]
+    compare += ["--expected-runs", str(args.runs)]
     compare += ["--warning-threshold", str(args.warning_threshold)]
     return subprocess.run(compare, cwd=root, check=False).returncode
 
