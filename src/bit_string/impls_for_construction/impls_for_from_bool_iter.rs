@@ -13,7 +13,7 @@ impl BitString {
         let bit_len = bytes.len();
         let src = bytes.as_ptr();
         Self {
-            words: super::bools_core(src, bit_len),
+            words: super::funcs_for_pack_bools_core::bools_core(src, bit_len),
             bit_len,
         }
     }
