@@ -26,7 +26,7 @@ where
     let needle_mask = low_mask(needle_bit_len.min(WORD_BITS));
     let last_start = haystack_bit_len - needle_bit_len;
     if haystack.len() < SMALL_WORDS {
-        return scalar_find(haystack, needle_first, needle_mask, last_start, verify);
+        return scalar::scalar_find(haystack, needle_first, needle_mask, last_start, verify);
     }
 
     #[cfg(all(
@@ -58,43 +58,11 @@ where
     }
 
     #[allow(unused)]
-    scalar_find(haystack, needle_first, needle_mask, last_start, verify)
+    scalar::scalar_find(haystack, needle_first, needle_mask, last_start, verify)
 }
 
-// ---------------------------------------------------------------------------
-// Scalar
-// ---------------------------------------------------------------------------
-
-fn scalar_find<F>(
-    haystack: &[u64],
-    needle_first: u64,
-    needle_mask: u64,
-    last_start: usize,
-    verify: &mut F,
-) -> Option<usize>
-where
-    F: FnMut(usize) -> bool,
-{
-    for i in 0..haystack.len() {
-        let w0 = haystack[i];
-        let w1 = haystack.get(i + 1).copied().unwrap_or(0);
-        for shift in 0..WORD_BITS {
-            let pos = i * WORD_BITS + shift;
-            if pos > last_start {
-                break;
-            }
-            let window = if shift == 0 {
-                w0
-            } else {
-                (w0 >> shift) | (w1 << (WORD_BITS - shift))
-            };
-            if (window & needle_mask) == needle_first && verify(pos) {
-                return Some(pos);
-            }
-        }
-    }
-    None
-}
+#[allow(unused)]
+mod scalar;
 
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
