@@ -6,7 +6,6 @@
 
 use core::cmp::Ordering;
 
-use crate::traits::WordOrd;
 use crate::{SMALL_WORDS, WORD_BITS};
 
 /// Returns `Some(Ordering)` at the first differing word, or `None` when all
@@ -21,7 +20,7 @@ pub(super) fn cmp_unaligned_words(
     debug_assert!(shift > 0 && shift < WORD_BITS);
 
     if count < SMALL_WORDS {
-        return scalar_cmp_unaligned(src, other, count, shift);
+        return scalar::cmp_unaligned(src, other, count, shift);
     }
 
     #[cfg(all(
@@ -53,26 +52,11 @@ pub(super) fn cmp_unaligned_words(
     }
 
     #[allow(unreachable_code)]
-    scalar_cmp_unaligned(src, other, count, shift)
+    scalar::cmp_unaligned(src, other, count, shift)
 }
 
-#[inline]
-fn scalar_cmp_unaligned(
-    src: &[u64],
-    other: &[u64],
-    count: usize,
-    shift: usize,
-) -> Option<Ordering> {
-    for i in 0..count {
-        let w0 = src[i];
-        let w1 = src[i + 1];
-        let window = (w0 >> shift) | (w1 << (WORD_BITS - shift));
-        if window != other[i] {
-            return Some(WordOrd::bitwise_cmp(window, other[i]));
-        }
-    }
-    None
-}
+#[allow(unused)]
+mod scalar;
 
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]

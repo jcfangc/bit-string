@@ -1,7 +1,6 @@
 use core::cmp::Ordering;
 
 use crate::SMALL_WORDS;
-use crate::traits::WordOrd;
 
 /// Returns `Some(Ordering)` if the first `count` aligned words of `src`
 /// and `other` differ, otherwise `None` (all equal).
@@ -11,7 +10,7 @@ use crate::traits::WordOrd;
 #[inline]
 pub(super) fn cmp_aligned_words(src: &[u64], other: &[u64], count: usize) -> Option<Ordering> {
     if count < SMALL_WORDS {
-        return scalar_cmp_aligned(src, other, count);
+        return scalar::cmp_aligned(src, other, count);
     }
 
     #[cfg(all(
@@ -43,18 +42,11 @@ pub(super) fn cmp_aligned_words(src: &[u64], other: &[u64], count: usize) -> Opt
     }
 
     #[allow(unreachable_code)]
-    scalar_cmp_aligned(src, other, count)
+    scalar::cmp_aligned(src, other, count)
 }
 
-#[inline]
-fn scalar_cmp_aligned(src: &[u64], other: &[u64], count: usize) -> Option<Ordering> {
-    for i in 0..count {
-        if src[i] != other[i] {
-            return Some(WordOrd::bitwise_cmp(src[i], other[i]));
-        }
-    }
-    None
-}
+#[allow(unused)]
+mod scalar;
 
 // ---------------------------------------------------------------------------
 // AVX2 — 4 × u64 per iteration
