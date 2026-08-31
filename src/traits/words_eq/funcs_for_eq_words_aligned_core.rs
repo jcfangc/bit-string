@@ -14,12 +14,7 @@ use crate::SMALL_WORDS;
 #[inline]
 pub(super) fn eq_words_aligned(src: &[u64], other: &[u64], count: usize) -> bool {
     if count < SMALL_WORDS {
-        for i in 0..count {
-            if src[i] != other[i] {
-                return false;
-            }
-        }
-        return true;
+        return scalar::eq_words(src, other, count);
     }
 
     #[cfg(all(
@@ -48,15 +43,11 @@ pub(super) fn eq_words_aligned(src: &[u64], other: &[u64], count: usize) -> bool
     }
 
     #[allow(unused)]
-    {
-        for i in 0..count {
-            if src[i] != other[i] {
-                return false;
-            }
-        }
-        true
-    }
+    scalar::eq_words(src, other, count)
 }
+
+#[allow(unused)]
+mod scalar;
 
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]

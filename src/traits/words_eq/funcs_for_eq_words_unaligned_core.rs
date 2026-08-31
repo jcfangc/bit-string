@@ -16,14 +16,7 @@ pub(super) fn eq_words_unaligned(src: &[u64], other: &[u64], count: usize, shift
     debug_assert!(shift > 0 && shift < WORD_BITS);
 
     if count < SMALL_WORDS {
-        for i in 0..count {
-            let w0 = src[i];
-            let w1 = src[i + 1];
-            if ((w0 >> shift) | (w1 << (WORD_BITS - shift))) != other[i] {
-                return false;
-            }
-        }
-        return true;
+        return scalar::eq_words(src, other, count, shift);
     }
 
     #[cfg(all(
@@ -52,17 +45,11 @@ pub(super) fn eq_words_unaligned(src: &[u64], other: &[u64], count: usize, shift
     }
 
     #[allow(unused)]
-    {
-        for i in 0..count {
-            let w0 = src[i];
-            let w1 = src[i + 1];
-            if ((w0 >> shift) | (w1 << (WORD_BITS - shift))) != other[i] {
-                return false;
-            }
-        }
-        true
-    }
+    scalar::eq_words(src, other, count, shift)
 }
+
+#[allow(unused)]
+mod scalar;
 
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
