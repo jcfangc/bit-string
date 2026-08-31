@@ -19,8 +19,10 @@ def parse(body: str, arch: str = "x86_64") -> compare_codegen.Function:
     return compare_codegen.parse_objdump(body, arch)["root"]
 
 
-def parse_with_sections(body: str, sections: str, arch: str = "x86_64") -> compare_codegen.Function:
-    index = compare_codegen.ArtifactSections.from_objdump(sections, arch)
+def parse_with_sections(
+    body: str, sections: str, arch: str = "x86_64", symbols: str = ""
+) -> compare_codegen.Function:
+    index = compare_codegen.ArtifactSections.from_objdump(sections, arch, symbols)
     return compare_codegen.parse_objdump(body, arch, index)["root"]
 
 
@@ -414,6 +416,99 @@ class CodegenParserTests(unittest.TestCase):
         index = compare_codegen.ArtifactSections.from_objdump(output, "x86_64")
         section = index.sections[("fixture.o", ".rodata")]
         self.assertEqual(section.data, b"\0" * 16)
+
+    def test_lcpi_symbol_ordinal_change_uses_object_content(self) -> None:
+        def sections(symbol: str, value: str) -> tuple[str, str]:
+            body = (
+                "fixture.o: file format elf64-x86-64\n"
+                "Contents of section .rodata.cst16:\n"
+                f" 0000 {value} 00000000 00000000 00000000  ................\n"
+            )
+            symbols = (
+                "fixture.o:     file format elf64-x86-64\n\n"
+                "SYMBOL TABLE:\n"
+                f"0000000000000000 l       .rodata.cst16\t0000000000000010 {symbol}\n"
+            )
+            return body, symbols
+
+        old_sections, old_symbols = sections(".LCPI13_0", "01020304")
+        new_sections, new_symbols = sections(".LCPI11_0", "01020304")
+        old = parse_with_sections(
+            "fixture.o: file format elf64-x86-64\n"
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 .LCPI13_0-0x4\n",
+            old_sections,
+            symbols=old_symbols,
+        )
+        new = parse_with_sections(
+            "fixture.o: file format elf64-x86-64\n"
+            "0000 <root>:\n"
+            " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+            " 3: R_X86_64_PC32 .LCPI11_0-0x4\n",
+            new_sections,
+            symbols=new_symbols,
+        )
+        self.assertTrue(old.relocations[0].resolved)
+        self.assertTrue(new.relocations[0].resolved)
+        self.assertEqual(compare_codegen.classify(old, new), "CODEGEN IDENTICAL")
+
+    def test_lcpi_content_change_is_not_ignored(self) -> None:
+        def make(value: str) -> compare_codegen.Function:
+            sections = (
+                "fixture.o: file format elf64-x86-64\n"
+                "Contents of section .rodata.cst16:\n"
+                f" 0000 {value} 00000000 00000000 00000000  ................\n"
+            )
+            symbols = (
+                "fixture.o:     file format elf64-x86-64\n\n"
+                "SYMBOL TABLE:\n"
+                "0000000000000000 l       .rodata.cst16\t0000000000000010 .LCPI13_0\n"
+            )
+            return parse_with_sections(
+                "fixture.o: file format elf64-x86-64\n"
+                "0000 <root>:\n"
+                " 0: 48 8d 05 00 00 00 00 lea 0x0(%rip),%rax\n"
+                " 3: R_X86_64_PC32 .LCPI13_0-0x4\n",
+                sections,
+                symbols=symbols,
+            )
+
+        self.assertEqual(compare_codegen.classify(make("01020304"), make("05060708")), "CODEGEN CHANGED")
+
+    def test_rustc_anonymous_representation_change_is_metadata_only(self) -> None:
+        def function(
+            raw_target: str,
+            token: str,
+            nested_addends: tuple[str, ...],
+            aliases: tuple[int, ...],
+        ) -> compare_codegen.Function:
+            relocation = compare_codegen.Relocation(
+                3,
+                "R_X86_64_PC32",
+                raw_target,
+                token,
+                True,
+                True,
+                0,
+                "-0x4",
+                nested_addends,
+                aliases,
+                True,
+            )
+            return compare_codegen.Function(
+                ("lea %rax",),
+                b"\x48\x8d\x05\0\0\0\0",
+                0,
+                0,
+                ("lea %rax",),
+                (relocation,),
+                (0,),
+            )
+
+        old = function("anon.hash.20.llvm.123-0x4", "anonymous:old", ("",), (0,))
+        new = function(".data.rel.ro..Lanon.hash.20-0x4", "anonymous:new", (), ())
+        self.assertEqual(compare_codegen.classify(old, new), "CODEGEN METADATA CHANGED")
     def test_call_target_identity_is_preserved(self) -> None:
         foo = parse("0000 <root>:\n 0: e8 00 00 00 00 call 5 <foo>\n 1: R_X86_64_PLT32 foo-0x4")
         bar = parse("0000 <root>:\n 0: e8 00 00 00 00 call 5 <bar>\n 1: R_X86_64_PLT32 bar-0x4")
@@ -583,6 +678,118 @@ class CodegenParserTests(unittest.TestCase):
             with (
                 mock.patch.object(sys, "argv", argv),
                 mock.patch.object(compare_codegen, "load_functions", return_value={}),
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                self.assertNotEqual(compare_codegen.main(), 0)
+
+    def test_covered_backend_disappearing_is_topology_change(self) -> None:
+        function = parse("0000 <root>:\n 0: c3 ret")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            roots = root / "roots.toml"
+            roots.write_text(
+                '[[root]]\nsymbol="bit_string::foo::avx2::words"\n'
+                'artifact="library"\ntargets=["x86_64-avx2"]\n'
+            )
+            inventory = root / "inventory.toml"
+            inventory.write_text(
+                '[[kernel]]\npath="src/foo.rs"\ncoverage="caller"\nroots=["caller"]\n'
+            )
+            argv = [
+                "compare_codegen.py",
+                "baseline.o",
+                "current.o",
+                "--roots",
+                str(roots),
+                "--artifact",
+                "library",
+                "--inventory",
+                str(inventory),
+                "--target",
+                "x86_64-avx2",
+                "--arch",
+                "x86_64",
+            ]
+            stdout = io.StringIO()
+            with (
+                mock.patch.object(sys, "argv", argv),
+                mock.patch.object(
+                    compare_codegen,
+                    "load_functions",
+                    side_effect=[{"bit_string::foo::avx2::words": function}, {}],
+                ),
+                contextlib.redirect_stdout(stdout),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                self.assertEqual(compare_codegen.main(), 0)
+                self.assertIn("CODEGEN TOPOLOGY CHANGED", stdout.getvalue())
+
+    def test_caller_root_disappearing_still_fails(self) -> None:
+        function = parse("0000 <root>:\n 0: c3 ret")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            roots = root / "roots.toml"
+            roots.write_text(
+                '[[root]]\nsymbol="caller"\nartifact="harness"\ntargets=["x86_64-avx2"]\n'
+            )
+            argv = [
+                "compare_codegen.py",
+                "baseline.o",
+                "current.o",
+                "--roots",
+                str(roots),
+                "--artifact",
+                "harness",
+                "--target",
+                "x86_64-avx2",
+                "--arch",
+                "x86_64",
+            ]
+            with (
+                mock.patch.object(sys, "argv", argv),
+                mock.patch.object(
+                    compare_codegen,
+                    "load_functions",
+                    side_effect=[{"caller": function}, {}],
+                ),
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                self.assertNotEqual(compare_codegen.main(), 0)
+
+    def test_new_unregistered_backend_still_fails(self) -> None:
+        function = parse("0000 <root>:\n 0: c3 ret")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            roots = root / "roots.toml"
+            roots.write_text('[[root]]\nsymbol="caller"\nartifact="library"\ntargets=["x86_64-avx2"]\n')
+            inventory = root / "inventory.toml"
+            inventory.write_text(
+                '[[kernel]]\npath="src/foo.rs"\ncoverage="caller"\nroots=["caller"]\n'
+            )
+            argv = [
+                "compare_codegen.py",
+                "baseline.o",
+                "current.o",
+                "--roots",
+                str(roots),
+                "--artifact",
+                "library",
+                "--inventory",
+                str(inventory),
+                "--target",
+                "x86_64-avx2",
+                "--arch",
+                "x86_64",
+            ]
+            with (
+                mock.patch.object(sys, "argv", argv),
+                mock.patch.object(
+                    compare_codegen,
+                    "load_functions",
+                    side_effect=[{}, {"bit_string::foo::avx2::words": function}],
+                ),
                 contextlib.redirect_stdout(io.StringIO()),
                 contextlib.redirect_stderr(io.StringIO()),
             ):

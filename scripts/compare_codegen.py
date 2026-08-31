@@ -28,6 +28,7 @@ ANONYMOUS_SYMBOL_INSTANCE = re.compile(
     r"(?P<stem>(?:\.Lanon|anon)\.[^.\s]+)\.(?P<instance>\d+)"
     r"(?:\.llvm\.[^+\-\s]+)?(?P<addend>[+-]0x[0-9a-f]+)?$"
 )
+LOCAL_OBJECT_SYMBOL = re.compile(r"(?P<name>\.LCPI\d+_\d+)(?P<addend>[+-]0x[0-9a-f]+)?$")
 OBJDUMP_COMMENT = re.compile(r"\s+#\s+(?:0x)?[0-9a-f]+\s+<[^>]+>.*$")
 BACKEND_MODULE = re.compile(r"::(?:scalar|sse2|ssse3|sse41|avx2|neon)::")
 
@@ -53,6 +54,7 @@ class Relocation:
     addend: str = ""
     nested_addends: tuple[str, ...] = ()
     nested_alias_partition: tuple[int, ...] = ()
+    metadata: bool = False
 
 
 @dataclass(frozen=True)
@@ -78,6 +80,7 @@ class ResolvedTarget:
     addend: str = ""
     nested_addends: tuple[str, ...] = ()
     nested_alias_partition: tuple[int, ...] = ()
+    metadata: bool = False
 
 
 class ArtifactSections:
@@ -88,6 +91,7 @@ class ArtifactSections:
     RELOCATION_HEADER = re.compile(r"^RELOCATION RECORDS FOR \[(.+)\]:$")
     RELOCATION_ENTRY = re.compile(r"^\s*([0-9a-f]+)\s+(R_[A-Z0-9_]+)\s+(.+?)\s*$")
     SYMBOL_ENTRY = re.compile(r"^\s*([0-9a-f]+)\s+\S+\s+\S+\s+(\S+)\s+([0-9a-f]+)\s+(.+?)\s*$")
+    LOCAL_SYMBOL_ENTRY = re.compile(r"^\s*([0-9a-f]+)\s+l\s+(\S+)\s+([0-9a-f]+)\s+(\.LCPI\d+_\d+)\s*$")
 
     def __init__(
         self,
@@ -181,6 +185,14 @@ class ArtifactSections:
                     int(symbol.group(1), 16),
                     int(symbol.group(3), 16),
                 )
+                continue
+            local_symbol = cls.LOCAL_SYMBOL_ENTRY.match(line)
+            if local_symbol:
+                symbols[(member, local_symbol.group(4))] = (
+                    local_symbol.group(2),
+                    int(local_symbol.group(1), 16),
+                    int(local_symbol.group(3), 16),
+                )
         return cls(sections, arch, symbols)
 
     def _find(self, member: str, name: str) -> SectionData | None:
@@ -200,7 +212,20 @@ class ArtifactSections:
             return None
         symbol_section, offset, size = symbol
         section = self.sections.get((member, symbol_section))
-        if section is None or offset < 0 or offset + size > len(section.data):
+        if section is None or offset < 0 or offset > len(section.data):
+            return None
+        if size == 0 and _local_object_instance(name) is not None:
+            next_offsets = [
+                candidate_offset
+                for (candidate_member, candidate_name), (candidate_section, candidate_offset, _) in self.symbols.items()
+                if candidate_member == member
+                and candidate_section == symbol_section
+                and candidate_name != name
+                and _local_object_instance(candidate_name) is not None
+                and candidate_offset > offset
+            ]
+            size = min(next_offsets, default=len(section.data)) - offset
+        if offset + size > len(section.data):
             return None
         relocations = tuple(
             SectionRelocation(relocation.offset - offset, relocation.kind, relocation.target)
@@ -263,7 +288,8 @@ class ArtifactSections:
             else:
                 target_name, addend = self._split_target(target)
                 anonymous = _anonymous_instance(target_name)
-                if anonymous is not None:
+                local_object = _local_object_instance(target_name)
+                if anonymous is not None or local_object is not None:
                     # Deliberately support exactly one nested anonymous level.
                     # A nested anonymous target at this level would require a
                     # recursive object graph, so remain fail-closed.
@@ -303,7 +329,8 @@ class ArtifactSections:
         if kind in PC_RELATIVE_X86_RELOCATIONS:
             target = X86_PC_BIAS.sub("", target)
         anonymous = _anonymous_instance(target)
-        if anonymous is None:
+        local_object = _local_object_instance(target)
+        if anonymous is None and local_object is None:
             name, addend = self._split_target(target)
             string = self._string_target(member, name, addend)
             token = f"string:{string}" if string is not None else f"symbol:{name}{addend}"
@@ -311,10 +338,16 @@ class ArtifactSections:
         name, addend = self._split_target(target)
         section = self._find(member, name)
         if section is None:
-            return ResolvedTarget(f"anonymous-unresolved:{anonymous[0]}", True, False, addend)
+            object_name = anonymous[0] if anonymous is not None else name
+            return ResolvedTarget(
+                f"anonymous-unresolved:{object_name}", True, False, addend, metadata=anonymous is not None
+            )
         details = self._fingerprint_details(section, member)
         if details is None:
-            return ResolvedTarget(f"anonymous-unresolved:{anonymous[0]}", True, False, addend)
+            object_name = anonymous[0] if anonymous is not None else name
+            return ResolvedTarget(
+                f"anonymous-unresolved:{object_name}", True, False, addend, metadata=anonymous is not None
+            )
         fingerprint, nested_addends, nested_alias_partition = details
         return ResolvedTarget(
             f"anonymous:{fingerprint}",
@@ -323,6 +356,7 @@ class ArtifactSections:
             addend,
             nested_addends,
             nested_alias_partition,
+            anonymous is not None,
         )
 
 
@@ -371,6 +405,7 @@ def _same_relocations(old: tuple[Relocation, ...], new: tuple[Relocation, ...]) 
         and before.addend == after.addend
         and before.nested_addends == after.nested_addends
         and before.nested_alias_partition == after.nested_alias_partition
+        and before.metadata == after.metadata
         and (not before.anonymous or before.resolved)
         for before, after in zip(old, new)
     ) and len(old) == len(new)
@@ -387,12 +422,16 @@ def _metadata_only_relocations(old: Function, new: Function) -> bool:
             or before.kind != after.kind
             or before.anonymous != after.anonymous
             or before.addend != after.addend
-            or before.nested_addends != after.nested_addends
-            or before.nested_alias_partition != after.nested_alias_partition
+            or before.metadata != after.metadata
+        ):
+            return False
+        if (
+            (before.nested_addends != after.nested_addends or before.nested_alias_partition != after.nested_alias_partition)
+            and not _anonymous_wrapper_representation_changed(before, after)
         ):
             return False
         if before.token != after.token:
-            if not before.anonymous or not before.resolved or not after.resolved:
+            if not before.anonymous or not before.resolved or not after.resolved or not before.metadata:
                 return False
             changed = True
     return changed
@@ -404,6 +443,31 @@ def _anonymous_instance(value: str) -> tuple[str, int, str] | None:
         return None
     key = value[: match.start("stem")] + match.group("stem")
     return key, int(match.group("instance")), match.group("addend") or ""
+
+
+def _anonymous_wrapper_representation_changed(before: Relocation, after: Relocation) -> bool:
+    """Allow rustc to flatten a single anonymous metadata wrapper."""
+
+    def style(value: str) -> str:
+        value = value.strip()
+        if value.startswith("anon."):
+            return "llvm"
+        if ".Lanon." in value:
+            return "section"
+        return "other"
+
+    return (
+        {style(before.raw_target), style(after.raw_target)} == {"llvm", "section"}
+        and {before.nested_addends, after.nested_addends} == {(), ("",)}
+        and {before.nested_alias_partition, after.nested_alias_partition} == {(), (0,)}
+    )
+
+
+def _local_object_instance(value: str) -> tuple[str, str] | None:
+    match = LOCAL_OBJECT_SYMBOL.fullmatch(value.strip())
+    if match is None:
+        return None
+    return match.group("name"), match.group("addend") or ""
 
 
 def _relocation_target(kind: str, value: str, anonymous_bases: dict[str, int]) -> str:
@@ -475,6 +539,7 @@ def _normalize(instructions: list[Instruction], arch: str, sections: ArtifactSec
                 addend = _anonymous_instance(target)[2] if anonymous else ""
                 nested_addends = ()
                 nested_alias_partition = ()
+                metadata = anonymous
             else:
                 resolved_target = sections.resolve(instruction.member, kind, target)
                 token = resolved_target.token
@@ -483,6 +548,7 @@ def _normalize(instructions: list[Instruction], arch: str, sections: ArtifactSec
                 addend = resolved_target.addend
                 nested_addends = resolved_target.nested_addends
                 nested_alias_partition = resolved_target.nested_alias_partition
+                metadata = resolved_target.metadata
             relocation_text.append(f"[{kind}:{token}]")
             relocations.append(
                 Relocation(
@@ -496,6 +562,7 @@ def _normalize(instructions: list[Instruction], arch: str, sections: ArtifactSec
                     addend,
                     nested_addends,
                     nested_alias_partition,
+                    metadata,
                 )
             )
             if anonymous:
@@ -594,6 +661,17 @@ def load_kernel_modules(path: Path) -> tuple[str, ...]:
     return tuple(modules)
 
 
+def load_kernel_caller_modules(path: Path) -> tuple[str, ...]:
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    modules = []
+    for kernel in data.get("kernel", []):
+        if kernel.get("coverage") != "caller":
+            continue
+        source = Path(kernel["path"])
+        modules.append("bit_string::" + "::".join(source.with_suffix("").parts[1:]))
+    return tuple(modules)
+
+
 def independent_backend_symbols(functions: dict[str, Function], modules: tuple[str, ...]) -> set[str]:
     return {
         symbol
@@ -618,10 +696,13 @@ def main() -> int:
     after = load_functions(args.current, args.objdump, args.arch)
     roots = [root for root in load_roots(args.roots) if root.artifact == args.artifact]
     identical = metadata_changed = encoding_changed = changed = errors = skipped = 0
+    topology_changed = 0
+    caller_covered_modules: tuple[str, ...] = ()
     if args.artifact == "library":
         if args.inventory is None:
             parser.error("--inventory is required for library artifacts")
         modules = load_kernel_modules(args.inventory)
+        caller_covered_modules = load_kernel_caller_modules(args.inventory)
         registered = {root.symbol for root in roots if args.target in root.targets}
         discovered = independent_backend_symbols(before, modules) | independent_backend_symbols(after, modules)
         for symbol in sorted(discovered - registered):
@@ -633,6 +714,17 @@ def main() -> int:
             continue
         old, new = before.get(root.symbol), after.get(root.symbol)
         if old is None or new is None:
+            if (
+                args.artifact == "library"
+                and old is not None
+                and new is None
+                and BACKEND_MODULE.search(root.symbol)
+                and any(root.symbol.startswith(f"{module}::") for module in caller_covered_modules)
+            ):
+                topology_changed += 1
+                print(f"{root.symbol}: CODEGEN TOPOLOGY CHANGED")
+                print("  independent backend symbol disappeared; caller coverage remains required")
+                continue
             errors += 1
             where = "both" if old is None and new is None else "baseline" if old is None else "current"
             print(f"ERROR: expected symbol missing in {where}: {root.symbol}", file=sys.stderr)
@@ -674,6 +766,7 @@ def main() -> int:
     print(f"metadata changed : {metadata_changed}")
     print(f"encoding changed : {encoding_changed}")
     print(f"changed          : {changed}")
+    print(f"topology changed : {topology_changed}")
     print(f"errors           : {errors}")
     print(f"skipped          : {skipped}")
     failed = encoding_changed or changed or errors or (args.strict_metadata and metadata_changed)
