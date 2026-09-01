@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// SSE2 — same loop as scalar but checks 2 consecutive shifts at once
+// SSE4.1 — same loop as scalar but checks 2 consecutive shifts at once
 // ---------------------------------------------------------------------------
 
 use super::*;

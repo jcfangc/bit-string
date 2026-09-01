@@ -13,7 +13,7 @@ use core::arch::x86_64::{
 
 const LANES: usize = 4;
 
-/// AVX2 backend: same as SSE2 but with 4-lane (256-bit) vectors.
+/// AVX2 backend: same as SSE4.1 but with 4-lane (256-bit) vectors.
 #[target_feature(enable = "avx2")]
 pub(super) unsafe fn find_any<F>(
     haystack: &[u64],

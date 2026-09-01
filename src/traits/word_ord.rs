@@ -2,7 +2,7 @@ use core::cmp::Ordering;
 
 /// Lexicographic comparison of two `u64` values (LSB-first bit order).
 ///
-/// This is the word-level primitive used by [`BitsOrd`](super::BitsOrd)
+/// This is the word-level primitive used by [`WordsOrd`](super::WordsOrd)
 /// to resolve ordering once the first differing word has been found.
 pub(crate) trait WordOrd {
     fn bitwise_cmp(self, other: Self) -> Ordering;

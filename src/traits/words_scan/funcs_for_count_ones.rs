@@ -44,8 +44,8 @@ fn count_full_words(words: &[u64]) -> usize {
 /// - `src` must be valid for reads of `len` initialized `u64` values.
 #[inline]
 unsafe fn dispatch(src: *const u64, len: usize) -> usize {
-    // Small inputs: skip SIMD setup overhead, go straight to scalar popcnt.
-    // Threshold equals the backend's LANES count.
+    // Small inputs: skip SIMD setup overhead, go straight to scalar popcount.
+    // The threshold is selected by the active target-feature configuration.
 
     #[cfg(all(
         any(target_arch = "x86", target_arch = "x86_64"),

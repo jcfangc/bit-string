@@ -1,8 +1,9 @@
 /// Number of bits in a `u64` — the word size for `BitString` backing storage.
 pub(crate) const WORD_BITS: usize = u64::BITS as usize;
 
-/// Below this many full words, scalar loops beat SIMD dispatch overhead.
-/// Must match each backend's `LANES`.
+/// Below this many full words, scalar loops beat the selected SIMD dispatch
+/// overhead. The value is selected per target-feature configuration; it is
+/// not a universal requirement for every accelerator in the crate.
 #[cfg(all(
     any(target_arch = "x86", target_arch = "x86_64"),
     target_feature = "avx2"

@@ -1,6 +1,6 @@
 //! Verify that `find_last_word` produces correct rightmost matches
 //! against brute-force, implicitly validating whichever SIMD backend is
-//! active (SSE2, AVX2, or NEON) against the scalar oracle.
+//! active (SSE4.1, AVX2, or NEON) against the scalar oracle.
 
 use proptest::collection::vec;
 use proptest::prelude::*;
