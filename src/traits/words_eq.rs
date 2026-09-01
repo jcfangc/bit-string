@@ -10,17 +10,11 @@
 ///
 /// Short inputs fall back to scalar before SIMD dispatch.
 pub(crate) trait WordsEq {
-    /// Returns `true` if `other` matches the first `full_words` words of `self`.
+    /// Compares `full_words` logical haystack words with `needle`.
     ///
-    /// `count` is the number of full `u64` words to compare (computed from
-    /// the needle bit length). The caller supplies the pre-trimmed slices and
-    /// the haystack's intra-word shift.
-    /// `self` is pre-trimmed haystack `words[base..]`.
-    /// `needle` is always word-aligned (pre-trimmed by the caller).
-    /// `full_words` is `needle_bit_len / WORD_BITS` — how many
-    /// complete u64 words to compare.
-    /// `haystack_shift` is the haystack slice's physical start modulo
-    /// `WORD_BITS`.
+    /// `self` is the pre-trimmed haystack backing slice.
+    /// `needle` is word-aligned and pre-trimmed by the caller.
+    /// `haystack_shift` is the physical start offset within `self[0]`.
     /// When `HS_WORD_ALIGNED` is `true`, `haystack_shift == 0` is
     /// guaranteed and the aligned backend is used unconditionally.
     /// When it is `false`, no alignment guarantee is made.

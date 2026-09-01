@@ -63,7 +63,7 @@ pub(super) fn copy_words_shifted(dst: &mut [u64], src: &[u64], count: usize, shi
 }
 
 // ---------------------------------------------------------------------------
-// AVX2 — 4 words per iteration
+// Backends
 // ---------------------------------------------------------------------------
 
 #[allow(unused)]

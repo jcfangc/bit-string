@@ -135,13 +135,13 @@ let drained = replaced.drain_interval(UsizeCO::try_new(0, 2).unwrap()); // "1"
 let haystack = BitString::try_from("00101100").unwrap();
 let needle = BitString::try_from("01").unwrap();
 // Fixed-end checks
-assert!(haystack.ends_with_string(&needle));
+assert!(!haystack.ends_with_string(&needle));
 assert!(!haystack.starts_with_string(&needle));
 
 // Substring search
 assert!(haystack.contains_string(&needle));
 assert_eq!(haystack.find_string(&needle), Some(1));   // "01" starts at index 1
-assert_eq!(haystack.rfind_string(&needle), Some(5));  // last "01" at index 5
+assert_eq!(haystack.rfind_string(&needle), Some(3));  // last "01" starts at index 3
 
 // Strip
 let s = BitString::try_from("00010100").unwrap();
@@ -166,8 +166,8 @@ w.and_assign(&y).unwrap();           // w = "0010"
 
 // Shift
 let s = BitString::try_from("1001").unwrap();
-assert_eq!(s.shl(2).to_string(), "0100");  // left shift, zero-fill
-assert_eq!(s.shr(1).to_string(), "0100");  // right shift, zero-fill
+assert_eq!(s.shl(2).to_string(), "0010");  // left shift, zero-fill
+assert_eq!(s.shr(1).to_string(), "0010");  // right shift, zero-fill
 
 // Not
 assert_eq!((!s).to_string(), "0110");

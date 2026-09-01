@@ -2,11 +2,11 @@ use core::cmp::Ordering;
 
 /// Word-level lexicographic comparison on `[u64]` backing storage.
 ///
-/// Compares words from index 0 upward (LSB-first bit order within each word).
-/// Returns `Some(Ordering)` at the first differing word, or `None` when all
-/// `count` words are identical.
+/// Compares `full_words` logical haystack words with `needle` from index 0
+/// upward (LSB-first bit order within each word). Returns `Some(Ordering)` at
+/// the first differing word, or `None` when all logical words are identical.
 ///
-/// `other` is word-aligned. `self` may have a non-zero physical start shift,
+/// `needle` is word-aligned. `self` may have a non-zero physical start shift,
 /// in which case each logical word is reconstructed as a shifted window
 /// `(self[i] >> shift) | (self[i+1] << (64-shift))`.
 ///
