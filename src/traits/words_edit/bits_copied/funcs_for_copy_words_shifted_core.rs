@@ -24,9 +24,7 @@ pub(super) fn copy_words_shifted(dst: &mut [u64], src: &[u64], count: usize, shi
     debug_assert!(shift > 0 && shift < WORD_BITS);
 
     if count < SMALL_WORDS {
-        for i in 0..count {
-            dst[i] = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
-        }
+        scalar::copy_words_shifted(dst, src, count, shift);
         return;
     }
 
@@ -60,15 +58,16 @@ pub(super) fn copy_words_shifted(dst: &mut [u64], src: &[u64], count: usize, shi
 
     #[allow(unused)]
     {
-        for i in 0..count {
-            dst[i] = (src[i] >> shift) | (src[i + 1] << (WORD_BITS - shift));
-        }
+        scalar::copy_words_shifted(dst, src, count, shift);
     }
 }
 
 // ---------------------------------------------------------------------------
 // AVX2 — 4 words per iteration
 // ---------------------------------------------------------------------------
+
+#[allow(unused)]
+mod scalar;
 
 #[allow(unused)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
