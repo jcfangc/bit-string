@@ -4,31 +4,32 @@ impl<'ps, C, const BITS: u8> PackedStr<'ps, C, BITS>
 where
     C: PackedChar<BITS>,
 {
-    pub fn source(&self) -> &'ps PackedString<C, BITS> {
-        unimplemented!("PackedStr::source")
-    }
-
-    pub fn char_start(&self) -> usize {
-        unimplemented!("PackedStr::char_start")
-    }
-
     pub fn char_len(&self) -> usize {
-        unimplemented!("PackedStr::char_len")
+        self.bits.bit_len() / usize::from(BITS)
     }
 
     pub fn is_empty(&self) -> bool {
-        unimplemented!("PackedStr::is_empty")
+        self.bits.bit_len() == 0
     }
 
-    pub fn get(&self, _index: usize) -> Option<C> {
-        unimplemented!("PackedStr::get")
+    pub fn get(&self, index: usize) -> Option<C> {
+        if index >= self.char_len() {
+            return None;
+        }
+        C::from_code(
+            (self.bits.get_chunk(index * usize::from(BITS))
+                & u64::from(crate::packed_string::funcs_for_code::code_mask::<BITS>()))
+                as u8,
+        )
     }
 
     pub fn first(&self) -> Option<C> {
-        unimplemented!("PackedStr::first")
+        self.get(0)
     }
 
     pub fn last(&self) -> Option<C> {
-        unimplemented!("PackedStr::last")
+        self.char_len()
+            .checked_sub(1)
+            .and_then(|index| self.get(index))
     }
 }

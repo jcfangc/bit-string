@@ -7,7 +7,11 @@ where
     C: PackedChar<BITS>,
 {
     pub fn iter(&self) -> Iter<'ps, C, BITS> {
-        unimplemented!("PackedStr::iter")
+        Iter {
+            view: *self,
+            front: 0,
+            back: self.char_len(),
+        }
     }
 }
 
@@ -28,11 +32,18 @@ where
     type Item = C;
 
     fn next(&mut self) -> Option<C> {
-        unimplemented!("PackedStr::Iter::next")
+        if self.front == self.back {
+            None
+        } else {
+            let c = self.view.get(self.front);
+            self.front += 1;
+            c
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        unimplemented!("PackedStr::Iter::size_hint")
+        let len = self.back - self.front;
+        (len, Some(len))
     }
 }
 
@@ -41,7 +52,12 @@ where
     C: PackedChar<BITS>,
 {
     fn next_back(&mut self) -> Option<C> {
-        unimplemented!("PackedStr::Iter::next_back")
+        if self.front == self.back {
+            None
+        } else {
+            self.back -= 1;
+            self.view.get(self.back)
+        }
     }
 }
 
@@ -56,6 +72,6 @@ where
     type IntoIter = Iter<'ps, C, BITS>;
 
     fn into_iter(self) -> Self::IntoIter {
-        unimplemented!("PackedStr::into_iter")
+        self.iter()
     }
 }

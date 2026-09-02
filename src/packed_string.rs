@@ -18,7 +18,7 @@ where
     marker: PhantomData<fn() -> C>,
 }
 
-mod funcs_for_code;
+pub(crate) mod funcs_for_code;
 mod impls_for_access;
 mod impls_for_construction;
 mod impls_for_editing;

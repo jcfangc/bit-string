@@ -1,7 +1,7 @@
 use super::*;
 
 #[inline]
-pub(super) const fn code_mask<const BITS: u8>() -> u8 {
+pub(crate) const fn code_mask<const BITS: u8>() -> u8 {
     match BITS {
         0 => 0,
         1..=7 => (1u8 << BITS) - 1,

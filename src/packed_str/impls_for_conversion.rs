@@ -5,7 +5,7 @@ where
     C: PackedChar<BITS>,
 {
     pub fn to_packed_string(&self) -> PackedString<C, BITS> {
-        unimplemented!("PackedStr::to_packed_string")
+        PackedString::from_bits(self.bits.to_bit_string()).expect("PackedStr invariant violated")
     }
 }
 
@@ -14,6 +14,9 @@ where
     C: PackedChar<BITS>,
 {
     pub fn as_packed_str(&self) -> PackedStr<'_, C, BITS> {
-        unimplemented!("PackedString::as_packed_str")
+        PackedStr {
+            bits: self.bits().as_bit_str(),
+            marker: core::marker::PhantomData,
+        }
     }
 }

@@ -2,7 +2,7 @@
 
 use core::marker::PhantomData;
 
-use crate::{PackedString, traits::PackedChar};
+use crate::{BitStr, PackedString, traits::PackedChar};
 
 /// A character-aligned borrowed view into a [`PackedString`].
 #[derive(Clone, Copy)]
@@ -11,9 +11,7 @@ pub struct PackedStr<'ps, C, const BITS: u8>
 where
     C: PackedChar<BITS>,
 {
-    source: &'ps PackedString<C, BITS>,
-    char_start: usize,
-    char_len: usize,
+    bits: BitStr<'ps>,
     marker: PhantomData<fn() -> C>,
 }
 
