@@ -11,7 +11,7 @@ where
         Iter {
             string: self,
             front: 0,
-            back: self.char_len,
+            back: self.char_len(),
         }
     }
 

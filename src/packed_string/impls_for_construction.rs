@@ -4,14 +4,16 @@ impl<C, const BITS: u8> PackedString<C, BITS>
 where
     C: PackedChar<BITS>,
 {
-    const VALID_WIDTH: () = assert!(BITS <= 8, "packed character width must not exceed 8");
+    const VALID_WIDTH: () = assert!(
+        BITS > 0 && BITS <= 8,
+        "packed character width must be between 1 and 8"
+    );
 
     #[inline]
     pub fn new() -> Self {
         let () = Self::VALID_WIDTH;
         Self {
             bits: BitString::new(),
-            char_len: 0,
             marker: PhantomData,
         }
     }

@@ -5,7 +5,7 @@ where
     C: PackedChar<BITS>,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.char_len == other.char_len && self.bits == other.bits
+        self.bits == other.bits
     }
 }
 

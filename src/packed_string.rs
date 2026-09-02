@@ -15,7 +15,6 @@ where
     C: PackedChar<BITS>,
 {
     bits: BitString,
-    char_len: usize,
     marker: PhantomData<fn() -> C>,
 }
 

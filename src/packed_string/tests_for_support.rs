@@ -25,10 +25,10 @@ impl fmt::Display for Letter {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PackedChar)]
 #[repr(u8)]
-#[packed(bits = 0)]
+#[packed(bits = 1)]
 pub(super) enum Only {
     Value = 0,
 }
 
 pub(super) type LetterString = super::PackedString<Letter, 2>;
-pub(super) type OnlyString = super::PackedString<Only, 0>;
+pub(super) type OnlyString = super::PackedString<Only, 1>;

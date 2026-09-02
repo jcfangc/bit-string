@@ -7,12 +7,12 @@ where
     /// Number of packed characters, not number of bits.
     #[inline]
     pub fn char_len(&self) -> usize {
-        self.char_len
+        self.bits.bit_len() / usize::from(BITS)
     }
 
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.char_len == 0
+        self.bits.is_empty()
     }
 
     #[inline]
@@ -27,7 +27,7 @@ where
 
     #[inline]
     pub fn get(&self, index: usize) -> Option<C> {
-        if index >= self.char_len {
+        if index >= self.char_len() {
             return None;
         }
         Some(
@@ -43,14 +43,11 @@ where
 
     #[inline]
     pub fn last(&self) -> Option<C> {
-        self.char_len.checked_sub(1).and_then(|i| self.get(i))
+        self.char_len().checked_sub(1).and_then(|i| self.get(i))
     }
 
     #[inline]
     fn code_at(&self, index: usize) -> u8 {
-        if BITS == 0 {
-            return 0;
-        }
         let start = index * usize::from(BITS);
         (self.bits.get_chunk(start) & u64::from(code_mask::<BITS>())) as u8
     }

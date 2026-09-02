@@ -7,20 +7,18 @@ where
     /// Appends the character's code directly to the payload.
     pub fn push(&mut self, character: C) {
         let code = character.code();
-        let new_len = self
-            .char_len
+        self.char_len()
             .checked_add(1)
             .expect("packed string length overflow");
         for shift in 0..BITS {
             self.bits.push((code >> shift) & 1 != 0);
         }
-        self.char_len = new_len;
     }
 
     pub fn pop(&mut self) -> Option<C> {
         let character = self.last()?;
-        self.char_len -= 1;
-        self.bits.truncate(self.char_len * usize::from(BITS));
+        self.bits
+            .truncate((self.char_len() - 1) * usize::from(BITS));
         Some(character)
     }
 
@@ -31,15 +29,13 @@ where
     }
 
     pub fn truncate(&mut self, new_len: usize) {
-        if new_len >= self.char_len {
+        if new_len >= self.char_len() {
             return;
         }
-        self.char_len = new_len;
         self.bits.truncate(new_len * usize::from(BITS));
     }
 
     pub fn clear(&mut self) {
-        self.char_len = 0;
         self.bits.clear();
     }
 }
