@@ -51,7 +51,19 @@ fn rejects_widths_above_u8_capacity() {
             #[packed(bits = 9)]
             enum Letter { A = 0 }
         })
-        .contains("must not exceed 8")
+        .contains("must be between 1 and 8")
+    );
+}
+
+#[test]
+fn rejects_zero_width() {
+    assert!(
+        error(quote! {
+            #[repr(u8)]
+            #[packed(bits = 0)]
+            enum Letter { A = 0 }
+        })
+        .contains("must be between 1 and 8")
     );
 }
 

@@ -8,8 +8,11 @@ use syn::{Data, DeriveInput, Error, Expr, Fields, Lit, LitInt, Result};
 pub(super) fn expand(input: DeriveInput) -> Result<TokenStream2> {
     require_repr_u8(&input)?;
     let (bits, bits_span) = parse_bits(&input)?;
-    if bits > 8 {
-        return Err(Error::new(bits_span, "packed bit width must not exceed 8"));
+    if !(1..=8).contains(&bits) {
+        return Err(Error::new(
+            bits_span,
+            "packed bit width must be between 1 and 8",
+        ));
     }
 
     let Data::Enum(data) = &input.data else {
