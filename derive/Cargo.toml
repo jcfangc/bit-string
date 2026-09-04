@@ -2,7 +2,7 @@
 name = "bit-string-derive"
 version = "0.5.0"
 edition = "2024"
-description = "Derive macros for bit-string"
+description = "Procedural macros for bit-string"
 repository = "https://github.com/jcfangc/bit-string"
 license = "MIT OR Apache-2.0"
 

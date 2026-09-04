@@ -18,7 +18,7 @@ pub(super) fn expand(input: DeriveInput) -> Result<TokenStream2> {
     let Data::Enum(data) = &input.data else {
         return Err(Error::new_spanned(
             &input.ident,
-            "PackedChar can only be derived for enums",
+            "packed can only be applied to enums",
         ));
     };
 
@@ -30,20 +30,20 @@ pub(super) fn expand(input: DeriveInput) -> Result<TokenStream2> {
         if !matches!(variant.fields, Fields::Unit) {
             return Err(Error::new_spanned(
                 &variant.fields,
-                "PackedChar variants must not contain fields",
+                "packed variants must not contain fields",
             ));
         }
 
         let Some((_, Expr::Lit(expression))) = &variant.discriminant else {
             return Err(Error::new_spanned(
                 &variant.ident,
-                "PackedChar variants require an explicit integer discriminant",
+                "packed variants require an explicit integer discriminant",
             ));
         };
         let Lit::Int(discriminant) = &expression.lit else {
             return Err(Error::new_spanned(
                 &expression.lit,
-                "PackedChar discriminants must be integer literals",
+                "packed discriminants must be integer literals",
             ));
         };
         let code = discriminant.base10_parse::<u16>()?;
@@ -106,7 +106,7 @@ fn require_repr_u8(input: &DeriveInput) -> Result<()> {
     } else {
         Err(Error::new_spanned(
             &input.ident,
-            "PackedChar requires #[repr(u8)]",
+            "packed requires #[repr(u8)]",
         ))
     }
 }
@@ -129,7 +129,7 @@ fn parse_bits(input: &DeriveInput) -> Result<(u8, Span)> {
             Ok(())
         })?;
     }
-    bits.ok_or_else(|| Error::new_spanned(&input.ident, "PackedChar requires #[packed(bits = N)]"))
+    bits.ok_or_else(|| Error::new_spanned(&input.ident, "packed requires #[packed(bits = N)]"))
 }
 
 fn bit_string_path() -> TokenStream2 {

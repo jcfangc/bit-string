@@ -1,9 +1,8 @@
 use core::fmt;
 
-use super::PackedChar;
+use crate::packed;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PackedChar)]
-#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[packed(bits = 2)]
 pub(super) enum Letter {
     A = 0b00,
@@ -23,8 +22,7 @@ impl fmt::Display for Letter {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PackedChar)]
-#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[packed(bits = 1)]
 pub(super) enum Only {
     Value = 0,
