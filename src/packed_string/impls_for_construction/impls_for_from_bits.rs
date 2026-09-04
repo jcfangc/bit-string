@@ -22,6 +22,6 @@ where
     }
 
     pub fn into_bits(self) -> BitString {
-        unimplemented!("PackedString::into_bits")
+        self.bits
     }
 }

@@ -6,8 +6,8 @@ impl<C, const BITS: u8> PartialOrd for PackedStr<'_, C, BITS>
 where
     C: PackedChar<BITS>,
 {
-    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
-        unimplemented!("PackedStr::partial_cmp")
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.bits.cmp_str(&other.bits))
     }
 }
 
@@ -15,7 +15,7 @@ impl<C, const BITS: u8> Ord for PackedStr<'_, C, BITS>
 where
     C: PackedChar<BITS>,
 {
-    fn cmp(&self, _other: &Self) -> Ordering {
-        unimplemented!("PackedStr::cmp")
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.bits.cmp_str(&other.bits)
     }
 }

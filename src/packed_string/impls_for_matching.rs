@@ -4,35 +4,49 @@ impl<C, const BITS: u8> PackedString<C, BITS>
 where
     C: PackedChar<BITS>,
 {
-    pub fn matches_at(&self, _index: usize, _pattern: &Self) -> bool {
-        unimplemented!("PackedString::matches_at")
+    pub fn matches_at(&self, index: usize, pattern: &Self) -> bool {
+        let Some(bit_index) = index.checked_mul(usize::from(BITS)) else {
+            return false;
+        };
+        if index > self.char_len() {
+            return false;
+        }
+        self.bits.matches_at_string(bit_index, &pattern.bits)
     }
 
-    pub fn starts_with(&self, _prefix: &Self) -> bool {
-        unimplemented!("PackedString::starts_with")
+    pub fn starts_with(&self, prefix: &Self) -> bool {
+        self.bits.starts_with_string(&prefix.bits)
     }
 
-    pub fn ends_with(&self, _suffix: &Self) -> bool {
-        unimplemented!("PackedString::ends_with")
+    pub fn ends_with(&self, suffix: &Self) -> bool {
+        self.bits.ends_with_string(&suffix.bits)
     }
 
-    pub fn contains(&self, _needle: &Self) -> bool {
-        unimplemented!("PackedString::contains")
+    pub fn contains(&self, needle: &Self) -> bool {
+        (0..=self.char_len().saturating_sub(needle.char_len()))
+            .any(|index| self.matches_at(index, needle))
     }
 
-    pub fn find(&self, _needle: &Self) -> Option<usize> {
-        unimplemented!("PackedString::find")
+    pub fn find(&self, needle: &Self) -> Option<usize> {
+        (0..=self.char_len().saturating_sub(needle.char_len()))
+            .find(|&index| self.matches_at(index, needle))
     }
 
-    pub fn rfind(&self, _needle: &Self) -> Option<usize> {
-        unimplemented!("PackedString::rfind")
+    pub fn rfind(&self, needle: &Self) -> Option<usize> {
+        (0..=self.char_len().saturating_sub(needle.char_len()))
+            .rev()
+            .find(|&index| self.matches_at(index, needle))
     }
 
-    pub fn strip_prefix(&self, _prefix: &Self) -> Option<Self> {
-        unimplemented!("PackedString::strip_prefix")
+    pub fn strip_prefix(&self, prefix: &Self) -> Option<Self> {
+        self.bits
+            .strip_prefix_string(&prefix.bits)
+            .and_then(Self::from_bits)
     }
 
-    pub fn strip_suffix(&self, _suffix: &Self) -> Option<Self> {
-        unimplemented!("PackedString::strip_suffix")
+    pub fn strip_suffix(&self, suffix: &Self) -> Option<Self> {
+        self.bits
+            .strip_suffix_string(&suffix.bits)
+            .and_then(Self::from_bits)
     }
 }

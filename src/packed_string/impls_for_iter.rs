@@ -17,7 +17,7 @@ where
 
     /// Collects the decoded characters into a vector.
     pub fn to_vec(&self) -> alloc::vec::Vec<C> {
-        unimplemented!("PackedString::to_vec")
+        self.iter().collect()
     }
 }
 

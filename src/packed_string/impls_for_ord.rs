@@ -7,8 +7,8 @@ where
     C: PackedChar<BITS>,
 {
     /// Compares characters lexicographically by their packed code values.
-    pub fn cmp_string(&self, _other: &Self) -> Ordering {
-        unimplemented!("PackedString::cmp_string")
+    pub fn cmp_string(&self, other: &Self) -> Ordering {
+        self.bits.as_bit_str().cmp_str(&other.bits.as_bit_str())
     }
 }
 
@@ -16,8 +16,8 @@ impl<C, const BITS: u8> PartialOrd for PackedString<C, BITS>
 where
     C: PackedChar<BITS>,
 {
-    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
-        unimplemented!("PackedString::partial_cmp")
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp_string(other))
     }
 }
 
@@ -25,7 +25,7 @@ impl<C, const BITS: u8> Ord for PackedString<C, BITS>
 where
     C: PackedChar<BITS>,
 {
-    fn cmp(&self, _other: &Self) -> Ordering {
-        unimplemented!("PackedString::cmp")
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.cmp_string(other)
     }
 }
