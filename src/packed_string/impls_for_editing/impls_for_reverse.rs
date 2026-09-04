@@ -5,10 +5,10 @@ where
     C: PackedChar<BITS>,
 {
     pub fn reverse(&self) -> Self {
-        unimplemented!("PackedString::reverse")
+        Self::from_chars(self.iter().rev())
     }
 
     pub fn reverse_assign(&mut self) {
-        unimplemented!("PackedString::reverse_assign")
+        *self = self.reverse();
     }
 }
