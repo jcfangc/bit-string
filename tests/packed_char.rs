@@ -1,4 +1,5 @@
-use bit_string::{PackedString, packed, traits::PackedChar};
+use bit_string::{BitString, PackedString, packed, traits::PackedChar};
+use int_interval::UsizeCO;
 
 #[packed(bits = 1)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -49,4 +50,52 @@ fn attribute_macro_generates_packed_char_impl() {
     let string =
         PackedString::<PackedSymbol, 1>::from_chars([PackedSymbol::One, PackedSymbol::Zero]);
     assert_eq!(string.get(0), Some(PackedSymbol::One));
+}
+
+#[test]
+fn packed_views_and_editing_remain_character_aligned() {
+    let mut string = PackedString::<Symbol, 2>::from_chars([
+        Symbol::Zero,
+        Symbol::One,
+        Symbol::Two,
+        Symbol::One,
+    ]);
+
+    let view = string.as_packed_str();
+    assert_eq!(view.char_len(), 4);
+    assert_eq!(
+        view.slice(UsizeCO::checked_from_start_len(1, 2).unwrap())
+            .get(0),
+        Some(Symbol::One)
+    );
+    assert_eq!(view.find(view.slice_until(1)), Some(0));
+    assert!(view.contains(view.slice(UsizeCO::checked_from_start_len(1, 1).unwrap())));
+
+    let haystack_string =
+        PackedString::<Symbol, 2>::from_chars([Symbol::Zero, Symbol::Zero, Symbol::One]);
+    let needle_string = PackedString::<Symbol, 2>::from_chars([Symbol::Two]);
+    let haystack = haystack_string.as_packed_str();
+    let needle = needle_string.as_packed_str();
+    assert!(!haystack.contains(needle));
+    assert_eq!(haystack.find(needle), None);
+    assert_eq!(haystack.rfind(needle), None);
+    assert!(!haystack.matches_at(1, needle));
+
+    string.insert(2, Symbol::Zero);
+    assert_eq!(string.remove(2), Symbol::Zero);
+    assert_eq!(
+        string.reverse().to_vec(),
+        vec![Symbol::One, Symbol::Two, Symbol::One, Symbol::Zero]
+    );
+    string.retain(|symbol| symbol != Symbol::Two);
+    assert_eq!(
+        string.to_vec(),
+        vec![Symbol::Zero, Symbol::One, Symbol::One]
+    );
+}
+
+#[test]
+fn from_bits_rejects_misaligned_and_unknown_codes() {
+    assert!(PackedString::<Symbol, 2>::from_bits(BitString::from_iter([true])).is_none());
+    assert!(PackedString::<Symbol, 2>::from_bits(BitString::from_iter([true, true])).is_none());
 }
