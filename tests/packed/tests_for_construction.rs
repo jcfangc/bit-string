@@ -84,6 +84,25 @@ fn packed_from_array_preserves_order_length_and_layout() {
 }
 
 #[test]
+fn packed_from_slice_copies_codes_in_order() {
+    let source = [Oct::V0, Oct::V7, Oct::V3, Oct::V1, Oct::V6];
+    let from_slice = PackedString::<Oct, 3>::from(&source[..]);
+    assert_eq!(from_slice.to_vec(), source);
+    assert_eq!(from_slice.char_len(), source.len());
+    assert_eq!(from_slice.bits().bit_len(), source.len() * 3);
+
+    let empty_source: [Oct; 0] = [];
+    let empty = PackedString::<Oct, 3>::from(&empty_source[..]);
+    assert!(empty.is_empty());
+    assert!(empty.bits().words().is_empty());
+
+    let wide_source = [WideCode(0), WideCode(64), WideCode(127), WideCode(1)];
+    let wide = PackedString::<WideCode, 7>::from(&wide_source[..]);
+    assert_eq!(wide.to_vec(), wide_source);
+    assert_eq!(wide.bits().bit_len(), wide_source.len() * 7);
+}
+
+#[test]
 fn bits_per_char_is_the_type_level_width() {
     let binary_empty = PackedString::<PackedSymbol, 1>::new();
     assert_eq!(binary_empty.bits_per_char(), 1);
