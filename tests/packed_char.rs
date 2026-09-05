@@ -91,6 +91,52 @@ fn generated_sparse_code_round_trip_is_executable() {
     }
 }
 
+#[test]
+fn packed_str_clone_preserves_sliced_cross_word_views() {
+    let oct_codes: Vec<u8> = (0..64).map(|index| index as u8 % 8).collect();
+    let oct_string = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_view = oct_string
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(20, 24).unwrap());
+    let oct_copy = oct_view;
+    let oct_clone = oct_view.clone();
+    assert!(oct_clone == oct_view);
+    assert!(oct_clone == oct_copy);
+    assert_eq!(
+        oct_clone.iter().collect::<Vec<_>>(),
+        oct_codes[20..44]
+            .iter()
+            .copied()
+            .map(oct)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(oct_clone.iter().count(), 24);
+
+    let wide_codes: Vec<u8> = (0..20).map(|index| (index * 7) as u8 % 128).collect();
+    let wide_string = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_view = wide_string
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(8, 5).unwrap());
+    let wide_clone = wide_view.clone();
+    assert!(wide_clone == wide_view);
+    assert_eq!(
+        wide_clone.iter().collect::<Vec<_>>(),
+        wide_codes[8..13]
+            .iter()
+            .copied()
+            .map(wide)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(wide_clone.first(), Some(wide(wide_codes[8])));
+    assert_eq!(wide_clone.last(), Some(wide(wide_codes[12])));
+
+    let empty = wide_string
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(999, 1).unwrap());
+    assert!(empty.clone().is_empty());
+    assert!(empty.clone() == empty);
+}
+
 fn wide(code: u8) -> WideCode {
     WideCode(code)
 }
