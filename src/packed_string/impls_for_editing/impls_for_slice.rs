@@ -13,12 +13,11 @@ where
             return Self::new();
         }
         let bits = usize::from(BITS);
-        Self::from_bits(
+        Self::from_valid_bits(
             self.bits.slice(
                 UsizeCO::checked_from_start_len(start * bits, (end - start) * bits).unwrap(),
             ),
         )
-        .expect("PackedString invariant violated")
     }
 
     pub fn slice_from(&self, start: usize) -> Self {

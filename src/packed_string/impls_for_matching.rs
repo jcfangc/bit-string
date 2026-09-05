@@ -41,12 +41,12 @@ where
     pub fn strip_prefix(&self, prefix: &Self) -> Option<Self> {
         self.bits
             .strip_prefix_string(&prefix.bits)
-            .and_then(Self::from_bits)
+            .map(Self::from_valid_bits)
     }
 
     pub fn strip_suffix(&self, suffix: &Self) -> Option<Self> {
         self.bits
             .strip_suffix_string(&suffix.bits)
-            .and_then(Self::from_bits)
+            .map(Self::from_valid_bits)
     }
 }

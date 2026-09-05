@@ -16,10 +16,13 @@ where
         if index >= self.char_len() {
             return None;
         }
-        C::from_code(
-            (self.bits.get_chunk(index * usize::from(BITS))
-                & u64::from(crate::packed_string::funcs_for_code::code_mask::<BITS>()))
-                as u8,
+        Some(
+            C::from_code(
+                (self.bits.get_chunk(index * usize::from(BITS))
+                    & u64::from(crate::packed_string::funcs_for_code::code_mask::<BITS>()))
+                    as u8,
+            )
+            .expect("PackedChar rejected a code in a PackedStr invariant"),
         )
     }
 

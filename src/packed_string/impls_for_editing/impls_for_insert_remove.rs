@@ -5,9 +5,7 @@ where
     C: PackedChar<BITS>,
 {
     pub fn insert(&mut self, index: usize, character: C) {
-        if index > self.char_len() {
-            return;
-        }
+        let index = index.min(self.char_len());
         self.bits
             .bit_len()
             .checked_add(usize::from(BITS))

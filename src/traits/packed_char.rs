@@ -4,7 +4,7 @@
 /// `#[packed(bits = N)]` attribute for that common case; manual
 /// implementations must satisfy all of the following invariants:
 ///
-/// - `BITS` does not exceed eight;
+/// - `1 <= BITS <= 8`;
 /// - [`code`](Self::code) fits in `BITS` bits;
 /// - `from_code(code(value)) == Some(value)`;
 /// - each valid code identifies at most one value.

@@ -39,16 +39,14 @@ where
     }
 
     pub fn strip_prefix(&self, prefix: Self) -> Option<Self> {
-        self.bits.strip_prefix_str(prefix.bits).map(|bits| Self {
-            bits,
-            marker: core::marker::PhantomData,
-        })
+        self.bits
+            .strip_prefix_str(prefix.bits)
+            .map(Self::from_valid_bit_str)
     }
 
     pub fn strip_suffix(&self, suffix: Self) -> Option<Self> {
-        self.bits.strip_suffix_str(suffix.bits).map(|bits| Self {
-            bits,
-            marker: core::marker::PhantomData,
-        })
+        self.bits
+            .strip_suffix_str(suffix.bits)
+            .map(Self::from_valid_bit_str)
     }
 }

@@ -15,6 +15,6 @@ where
 
     pub fn split_off(&mut self, at: usize) -> Self {
         let at = at.min(self.char_len()) * usize::from(BITS);
-        Self::from_bits(self.bits.split_off(at)).expect("PackedString invariant violated")
+        Self::from_valid_bits(self.bits.split_off(at))
     }
 }

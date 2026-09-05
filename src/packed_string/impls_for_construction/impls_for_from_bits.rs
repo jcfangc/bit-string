@@ -15,10 +15,19 @@ where
         for start in (0..bits.bit_len()).step_by(bits_per_char) {
             C::from_code((bits.get_chunk(start) & code_mask) as u8)?;
         }
-        Some(Self {
+        Some(Self::from_valid_bits(bits))
+    }
+
+    /// Adopts a bit payload whose packed-character invariant is already known.
+    #[inline]
+    pub(crate) fn from_valid_bits(bits: BitString) -> Self {
+        let width = usize::from(BITS);
+        let _ = code_mask::<BITS>();
+        debug_assert_eq!(bits.bit_len() % width, 0);
+        Self {
             bits,
             marker: PhantomData,
-        })
+        }
     }
 
     pub fn into_bits(self) -> BitString {
