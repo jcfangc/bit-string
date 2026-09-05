@@ -230,6 +230,60 @@ fn packed_str_is_empty_depends_only_on_view_length() {
     assert_eq!(cross_word.char_len(), 22);
 }
 
+#[test]
+fn packed_str_get_decodes_bounds_offsets_and_cross_word_codes() {
+    let empty = PackedString::<PackedSymbol, 1>::new();
+    assert_eq!(empty.as_packed_str().get(0), None);
+    assert_eq!(empty.as_packed_str().get(usize::MAX), None);
+
+    let binary = packed_as::<PackedSymbol, 1>(&[0, 1], |code| match code {
+        0 => PackedSymbol::Zero,
+        1 => PackedSymbol::One,
+        _ => unreachable!(),
+    });
+    assert_eq!(binary.as_packed_str().get(0), Some(PackedSymbol::Zero));
+    assert_eq!(binary.as_packed_str().get(1), Some(PackedSymbol::One));
+    assert_eq!(binary.as_packed_str().get(2), None);
+
+    let bytes = packed_as::<SparseByte, 8>(&[0, 3, 255], |code| match code {
+        0 => SparseByte::Zero,
+        3 => SparseByte::Middle,
+        255 => SparseByte::Maximum,
+        _ => unreachable!(),
+    });
+    let byte_view = bytes.as_packed_str();
+    assert_eq!(byte_view.get(0), Some(SparseByte::Zero));
+    assert_eq!(byte_view.get(2), Some(SparseByte::Maximum));
+    assert_eq!(byte_view.get(3), None);
+    assert_eq!(byte_view.get(usize::MAX), None);
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_string = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_view = oct_string.as_packed_str();
+    for (index, &code) in oct_codes.iter().enumerate() {
+        assert_eq!(oct_view.get(index), Some(oct(code)));
+    }
+    assert_eq!(oct_view.get(oct_codes.len()), None);
+    let oct_slice = oct_view.slice(UsizeCO::checked_from_start_len(20, 4).unwrap());
+    for (index, &code) in oct_codes[20..24].iter().enumerate() {
+        assert_eq!(oct_slice.get(index), Some(oct(code)));
+    }
+    assert_eq!(oct_slice.get(4), None);
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_string = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_view = wide_string.as_packed_str();
+    for (index, &code) in wide_codes.iter().enumerate() {
+        assert_eq!(wide_view.get(index), Some(wide(code)));
+    }
+    assert_eq!(wide_view.get(wide_codes.len()), None);
+    let wide_slice = wide_view.slice(UsizeCO::checked_from_start_len(8, 5).unwrap());
+    for (index, &code) in wide_codes[8..13].iter().enumerate() {
+        assert_eq!(wide_slice.get(index), Some(wide(code)));
+    }
+    assert_eq!(wide_slice.get(usize::MAX), None);
+}
+
 fn wide(code: u8) -> WideCode {
     WideCode(code)
 }
