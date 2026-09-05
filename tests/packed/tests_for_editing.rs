@@ -455,6 +455,73 @@ fn packed_replace_assign_matches_replace_in_place() {
 }
 
 #[test]
+fn packed_replace_interval_splices_clamped_character_ranges() {
+    let original_codes: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let original = PackedString::from_chars(original_codes.clone());
+    let replacement = PackedString::from_chars([Oct::V7, Oct::V0, Oct::V3]);
+
+    let interval = UsizeCO::checked_from_start_len(9, 5).unwrap();
+    let mut expected = original_codes.clone();
+    expected.splice(9..14, replacement.to_vec());
+    let result = original.replace_interval(interval, &replacement);
+    assert_eq!(result.to_vec(), expected);
+    assert_eq!(result.bits().bit_len(), expected.len() * 3);
+    assert_eq!(original.to_vec(), original_codes);
+
+    let tail_interval = UsizeCO::checked_from_start_len(21, 2).unwrap();
+    let tail_result = original.replace_interval(tail_interval, &replacement);
+    let mut tail_expected = original_codes.clone();
+    tail_expected.splice(21..22, replacement.to_vec());
+    assert_eq!(tail_result.to_vec(), tail_expected);
+    assert_eq!(tail_result.bits().bit_len(), tail_expected.len() * 3);
+
+    let out_of_bounds = UsizeCO::checked_from_start_len(99, 4).unwrap();
+    let out_result = original.replace_interval(out_of_bounds, &replacement);
+    let mut out_expected = original_codes.clone();
+    out_expected.extend(replacement.to_vec());
+    assert_eq!(out_result.to_vec(), out_expected);
+
+    let empty = PackedString::<Oct, 3>::new();
+    let remove_result =
+        original.replace_interval(UsizeCO::checked_from_start_len(20, 2).unwrap(), &empty);
+    assert_eq!(remove_result.to_vec(), original_codes[..20].to_vec());
+
+    let wide_original = PackedString::from_chars([
+        WideCode(0),
+        WideCode(11),
+        WideCode(22),
+        WideCode(33),
+        WideCode(44),
+        WideCode(55),
+        WideCode(66),
+        WideCode(77),
+        WideCode(88),
+        WideCode(99),
+    ]);
+    let wide_replacement = PackedString::from_chars([WideCode(127), WideCode(1)]);
+    let wide_result = wide_original.replace_interval(
+        UsizeCO::checked_from_start_len(8, 2).unwrap(),
+        &wide_replacement,
+    );
+    assert_eq!(
+        wide_result.to_vec(),
+        vec![
+            WideCode(0),
+            WideCode(11),
+            WideCode(22),
+            WideCode(33),
+            WideCode(44),
+            WideCode(55),
+            WideCode(66),
+            WideCode(77),
+            WideCode(127),
+            WideCode(1),
+        ]
+    );
+    assert_eq!(wide_result.bits().bit_len(), 10 * 7);
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
