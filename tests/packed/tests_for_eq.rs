@@ -1,6 +1,13 @@
 use super::{Oct, PackedSymbol, WideCode, oct, packed_as, wide};
 use bit_string::PackedString;
+use core::hash::{Hash, Hasher};
 use int_intervals::UsizeCO;
+
+fn hash_of<T: Hash>(value: &T) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    value.hash(&mut hasher);
+    hasher.finish()
+}
 
 #[test]
 fn packed_str_equality_compares_viewed_bits_not_source_identity() {
@@ -66,4 +73,15 @@ fn packed_str_equality_compares_viewed_bits_not_source_identity() {
         .as_packed_str()
         .slice(UsizeCO::checked_from_start_len(8, 5).unwrap());
     assert!(wide_view != wide_different_view);
+}
+
+#[test]
+fn packed_string_hash_matches_equal_values_and_owned_bits() {
+    let codes = [0, 7, 3, 1, 6, 2, 5, 4];
+    let left = PackedString::from_chars(codes.iter().copied().map(oct));
+    let right = packed_as::<Oct, 3>(&codes, oct);
+
+    assert_eq!(left, right);
+    assert_eq!(hash_of(&left), hash_of(&right));
+    assert_eq!(hash_of(&left), hash_of(left.bits()));
 }
