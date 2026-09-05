@@ -167,3 +167,29 @@ fn packed_str_iter_next_back_decrements_from_the_exclusive_end() {
     let empty = PackedString::<PackedSymbol, 1>::new();
     assert_eq!(empty.as_packed_str().iter().next_back(), None);
 }
+
+#[test]
+fn packed_str_borrowed_into_iter_uses_the_view_range() {
+    let codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let owner = packed_as::<Oct, 3>(&codes, oct);
+    let view = owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(20, 4).unwrap());
+    let expected: Vec<_> = codes[20..24].iter().copied().map(oct).collect();
+
+    let explicit: Vec<_> = (&view).into_iter().collect();
+    assert_eq!(explicit, expected);
+
+    let mut from_for_loop = Vec::new();
+    for value in &view {
+        from_for_loop.push(value);
+    }
+    assert_eq!(from_for_loop, expected);
+
+    let mut iterator = (&view).into_iter();
+    assert_eq!(iterator.len(), 4);
+    assert_eq!(iterator.next_back(), Some(Oct::V7));
+    assert_eq!(iterator.next(), Some(Oct::V4));
+    assert_eq!(iterator.len(), 2);
+    assert_eq!(iterator.collect::<Vec<_>>(), vec![Oct::V5, Oct::V6]);
+}
