@@ -29,3 +29,6 @@ where
         PackedStr::from_valid_bit_str(self.bits().as_bit_str())
     }
 }
+
+#[cfg(test)]
+mod tests_for_conversion;
