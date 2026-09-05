@@ -157,3 +157,52 @@ fn packed_partial_order_is_total_and_matches_ord() {
     assert_eq!(equal_view.partial_cmp(&other_view), Some(Ordering::Equal));
     assert_eq!(other_view.partial_cmp(&equal_view), Some(Ordering::Equal));
 }
+
+#[test]
+fn packed_ord_cmp_is_total_and_matches_partial_order() {
+    let less = PackedString::<Symbol, 2>::from_chars([Symbol::One]);
+    let greater = PackedString::<Symbol, 2>::from_chars([Symbol::Two]);
+    let equal = PackedString::<Symbol, 2>::from_chars([Symbol::One]);
+    let extension = PackedString::<Symbol, 2>::from_chars([Symbol::One, Symbol::Zero]);
+
+    assert_eq!(
+        less.as_packed_str().cmp(&greater.as_packed_str()),
+        Ordering::Less
+    );
+    assert_eq!(
+        greater.as_packed_str().cmp(&less.as_packed_str()),
+        Ordering::Greater
+    );
+    assert_eq!(
+        less.as_packed_str().cmp(&equal.as_packed_str()),
+        Ordering::Equal
+    );
+    assert_eq!(
+        less.as_packed_str().cmp(&extension.as_packed_str()),
+        Ordering::Less
+    );
+    assert_eq!(
+        less.as_packed_str().partial_cmp(&extension.as_packed_str()),
+        Some(Ordering::Less)
+    );
+
+    let oct_left = vec![0; 22];
+    let mut oct_right = oct_left.clone();
+    oct_right[21] = 7;
+    let oct_left = packed_as::<Oct, 3>(&oct_left, oct);
+    let oct_right = packed_as::<Oct, 3>(&oct_right, oct);
+    assert_eq!(
+        oct_left.as_packed_str().cmp(&oct_right.as_packed_str()),
+        Ordering::Less
+    );
+
+    let wide_left = vec![0; 10];
+    let mut wide_right = wide_left.clone();
+    wide_right[9] = 127;
+    let wide_left = packed_as::<WideCode, 7>(&wide_left, wide);
+    let wide_right = packed_as::<WideCode, 7>(&wide_right, wide);
+    assert_eq!(
+        wide_left.as_packed_str().cmp(&wide_right.as_packed_str()),
+        Ordering::Less
+    );
+}
