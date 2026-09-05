@@ -80,3 +80,47 @@ fn packed_views_match_only_at_character_boundaries() {
     assert_eq!(haystack.rfind(needle), None);
     assert!(!haystack.matches_at(1, needle));
 }
+
+#[test]
+fn packed_str_matches_at_is_character_aligned_and_bounds_checked() {
+    let haystack_owner = packed(&[0, 1, 2, 1, 0]);
+    let haystack = haystack_owner.as_packed_str();
+    let needle_owner = packed(&[1, 2]);
+    let needle = needle_owner.as_packed_str();
+
+    assert!(haystack.matches_at(1, needle));
+    assert!(!haystack.matches_at(0, needle));
+    assert!(!haystack.matches_at(4, needle));
+    assert!(!haystack.matches_at(5, needle));
+    assert!(!haystack.matches_at(usize::MAX, needle));
+
+    let empty = haystack.slice_until(0);
+    assert!(haystack.matches_at(0, empty));
+    assert!(haystack.matches_at(haystack.char_len(), empty));
+    assert!(!haystack.matches_at(haystack.char_len() + 1, empty));
+
+    let offset_haystack = haystack.slice(UsizeCO::checked_from_start_len(1, 3).unwrap());
+    let offset_needle = haystack.slice(UsizeCO::checked_from_start_len(2, 2).unwrap());
+    assert!(offset_haystack.matches_at(1, offset_needle));
+    assert!(!offset_haystack.matches_at(0, offset_needle));
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_owner = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_haystack = oct_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(20, 4).unwrap());
+    let oct_needle = oct_haystack.slice(UsizeCO::checked_from_start_len(1, 2).unwrap());
+    assert!(oct_haystack.matches_at(1, oct_needle));
+    assert!(!oct_haystack.matches_at(2, oct_needle));
+    assert!(!oct_haystack.matches_at(usize::MAX, oct_needle));
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_haystack = wide_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(8, 4).unwrap());
+    let wide_needle = wide_haystack.slice(UsizeCO::checked_from_start_len(1, 2).unwrap());
+    assert!(wide_haystack.matches_at(1, wide_needle));
+    assert!(!wide_haystack.matches_at(3, wide_needle));
+    assert!(!wide_haystack.matches_at(usize::MAX, wide_needle));
+}
