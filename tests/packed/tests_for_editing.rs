@@ -759,6 +759,39 @@ fn packed_insert_packed_string_splices_codes_and_preserves_source() {
 }
 
 #[test]
+fn packed_split_off_returns_a_character_aligned_suffix() {
+    let original: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let mut string = PackedString::from_chars(original.clone());
+    let suffix = string.split_off(21);
+    assert_eq!(string.to_vec(), original[..21].to_vec());
+    assert_eq!(suffix.to_vec(), original[21..].to_vec());
+    assert_eq!(string.bits().bit_len(), 21 * 3);
+    assert_eq!(suffix.bits().bit_len(), 3);
+
+    let mut at_end = PackedString::from_chars(original.clone());
+    let empty = at_end.split_off(usize::MAX);
+    assert_eq!(at_end.to_vec(), original);
+    assert!(empty.is_empty());
+    assert!(empty.bits().words().is_empty());
+
+    let mut at_start = PackedString::from_chars(original.clone());
+    let all = at_start.split_off(0);
+    assert!(at_start.is_empty());
+    assert_eq!(all.to_vec(), original);
+    assert_eq!(all.bits().bit_len(), 22 * 3);
+
+    let wide_values: Vec<_> = (0..10)
+        .map(|index| WideCode((index * 13) as u8 % 128))
+        .collect();
+    let mut wide = PackedString::from_chars(wide_values.clone());
+    let wide_suffix = wide.split_off(8);
+    assert_eq!(wide.to_vec(), wide_values[..8].to_vec());
+    assert_eq!(wide_suffix.to_vec(), wide_values[8..].to_vec());
+    assert_eq!(wide.bits().bit_len(), 8 * 7);
+    assert_eq!(wide_suffix.bits().bit_len(), 2 * 7);
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
