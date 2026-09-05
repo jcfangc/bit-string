@@ -129,6 +129,72 @@ fn packed_views_and_editing_remain_character_aligned() {
     );
 }
 
+#[test]
+fn packed_string_set_replaces_only_one_character_slot() {
+    let mut string = packed(&[0, 1, 2, 1, 0]);
+    let original_bits = string.bits().clone();
+    assert_eq!(string.set(0, super::Symbol::Two), Some(super::Symbol::Zero));
+    assert_eq!(string.get(0), Some(super::Symbol::Two));
+    assert_eq!(string.get(1), Some(super::Symbol::One));
+    assert_eq!(string.get(4), Some(super::Symbol::Zero));
+    assert_eq!(string.char_len(), 5);
+    assert_eq!(string.bits().bit_len(), original_bits.bit_len());
+
+    assert_eq!(
+        string.set(4, super::Symbol::Zero),
+        Some(super::Symbol::Zero)
+    );
+    assert_eq!(string.set(99, super::Symbol::One), None);
+    assert_eq!(string.get(0), Some(super::Symbol::Two));
+    assert_eq!(string.get(4), Some(super::Symbol::Zero));
+
+    let mut binary = packed_as::<super::PackedSymbol, 1>(&[0, 1, 0], |code| match code {
+        0 => super::PackedSymbol::Zero,
+        1 => super::PackedSymbol::One,
+        _ => unreachable!(),
+    });
+    assert_eq!(
+        binary.set(1, super::PackedSymbol::Zero),
+        Some(super::PackedSymbol::One)
+    );
+    assert_eq!(binary.to_vec(), vec![super::PackedSymbol::Zero; 3]);
+    assert_eq!(binary.bits().bit_len(), 3);
+
+    let mut bytes = packed_as::<super::SparseByte, 8>(&[0, 255, 3], |code| match code {
+        0 => super::SparseByte::Zero,
+        255 => super::SparseByte::Maximum,
+        3 => super::SparseByte::Middle,
+        _ => unreachable!(),
+    });
+    assert_eq!(
+        bytes.set(1, super::SparseByte::Zero),
+        Some(super::SparseByte::Maximum)
+    );
+    assert_eq!(
+        bytes.to_vec(),
+        vec![
+            super::SparseByte::Zero,
+            super::SparseByte::Zero,
+            super::SparseByte::Middle,
+        ]
+    );
+    assert_eq!(bytes.bits().bit_len(), 24);
+
+    let oct_codes: Vec<u8> = (0..22).map(|index| index as u8 % 8).collect();
+    let mut oct_string = packed_as::<Oct, 3>(&oct_codes, super::oct);
+    assert_eq!(oct_string.set(21, Oct::V7), Some(Oct::V5));
+    assert_eq!(oct_string.get(20), Some(Oct::V4));
+    assert_eq!(oct_string.get(21), Some(Oct::V7));
+    assert_eq!(oct_string.bits().bit_len(), 66);
+
+    let wide_codes: Vec<u8> = (0..10).map(|index| (index * 11) as u8 % 128).collect();
+    let mut wide_string = packed_as::<WideCode, 7>(&wide_codes, super::wide);
+    assert_eq!(wide_string.set(9, WideCode(127)), Some(WideCode(99)));
+    assert_eq!(wide_string.get(8), Some(WideCode(88)));
+    assert_eq!(wide_string.get(9), Some(WideCode(127)));
+    assert_eq!(wide_string.bits().bit_len(), 70);
+}
+
 proptest! {
     #[test]
     fn packed_edits_match_vec_splice_semantics(
