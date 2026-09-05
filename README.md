@@ -40,8 +40,8 @@ assert_eq!((!a).to_string(),               "0101");
 |------|------|------|--------|
 | `BitString` | Owned, `Vec<u64>` backing | 4×usize | No |
 | `BitStr<'bs>` | Zero-copy borrowed view | 3×usize | **Yes** |
-| `PackedString<C, BITS>` | Owned fixed-width code sequence | 4×usize + marker | No |
-| `PackedStr<'ps, C, BITS>` | Zero-copy borrowed packed view | 3×usize + marker | **Yes** |
+| `PackedString<C, BITS>` | Owned fixed-width code sequence | 4×usize | No |
+| `PackedStr<'ps, C, BITS>` | Zero-copy borrowed packed view | 3×usize | **Yes** |
 
 Bits are packed little-endian into `u64` words. Unused high bits in the last word are always zero.
 
