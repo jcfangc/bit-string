@@ -1,4 +1,4 @@
-use super::{PackedSymbol, SparseByte, Symbol};
+use super::{Oct, PackedSymbol, SparseByte, Symbol, WideCode, oct, packed_as, wide};
 use bit_string::{BitString, PackedString, traits::PackedChar};
 
 #[test]
@@ -58,4 +58,67 @@ fn attribute_macro_generates_packed_char_impl() {
 fn from_bits_rejects_misaligned_and_unknown_codes() {
     assert!(PackedString::<Symbol, 2>::from_bits(BitString::from_iter([true])).is_none());
     assert!(PackedString::<Symbol, 2>::from_bits(BitString::from_iter([true, true])).is_none());
+}
+
+#[test]
+fn packed_string_clone_copies_storage_and_preserves_invariants() {
+    let oct_codes: Vec<u8> = (0..22).map(|index| index as u8 % 8).collect();
+    let original = packed_as::<Oct, 3>(&oct_codes, oct);
+    let original_bits = original.bits().clone();
+    let original_values = original.to_vec();
+    let mut clone = original.clone();
+    assert!(clone.bits() == &original_bits);
+    assert_eq!(clone.to_vec(), original_values);
+    assert!(clone.as_packed_str() == original.as_packed_str());
+    assert_eq!(
+        clone.as_packed_str().iter().collect::<Vec<_>>(),
+        original_values
+    );
+
+    clone.push(Oct::V7);
+    assert_eq!(original.to_vec(), original_values);
+    assert_eq!(clone.to_vec().len(), original_values.len() + 1);
+    clone.pop();
+    assert!(clone == original);
+
+    let mut edited_original = original.clone();
+    edited_original.clear();
+    assert!(original == clone);
+    assert!(edited_original.is_empty());
+
+    let binary = packed_as::<PackedSymbol, 1>(&[0, 1, 1], |code| match code {
+        0 => PackedSymbol::Zero,
+        1 => PackedSymbol::One,
+        _ => unreachable!(),
+    });
+    let mut binary_clone = binary.clone();
+    binary_clone.push(PackedSymbol::Zero);
+    assert_eq!(binary.to_vec().len(), 3);
+    assert_eq!(binary_clone.to_vec().len(), 4);
+    assert_eq!(binary.bits().bit_len(), 3);
+
+    let bytes = packed_as::<SparseByte, 8>(&[0, 255, 3], |code| match code {
+        0 => SparseByte::Zero,
+        255 => SparseByte::Maximum,
+        3 => SparseByte::Middle,
+        _ => unreachable!(),
+    });
+    let mut bytes_clone = bytes.clone();
+    assert_eq!(
+        bytes_clone.set(0, SparseByte::Maximum),
+        Some(SparseByte::Zero)
+    );
+    assert_eq!(bytes.get(0), Some(SparseByte::Zero));
+    assert_eq!(bytes_clone.get(0), Some(SparseByte::Maximum));
+    assert_eq!(bytes.bits().bit_len(), 24);
+
+    let wide_codes: Vec<u8> = (0..10).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_clone = wide_owner.clone();
+    assert!(wide_clone.bits() == wide_owner.bits());
+    assert_eq!(
+        wide_clone.to_vec(),
+        wide_codes.iter().copied().map(wide).collect::<Vec<_>>()
+    );
+    assert_eq!(wide_clone.as_packed_str().char_len(), 10);
 }
