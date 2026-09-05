@@ -296,6 +296,26 @@ fn packed_str_ends_with_compares_character_aligned_suffixes() {
 }
 
 #[test]
+fn packed_string_ends_with_compares_character_suffixes() {
+    let receiver = packed(&[0, 1, 2, 1, 0]);
+    assert!(receiver.ends_with(&packed(&[0, 1, 2, 1, 0])));
+    assert!(receiver.ends_with(&packed(&[2, 1, 0])));
+    assert!(!receiver.ends_with(&packed(&[1, 1, 0])));
+    assert!(!receiver.ends_with(&packed(&[0, 1, 2, 1, 0, 1])));
+    assert!(receiver.ends_with(&PackedString::<super::Symbol, 2>::new()));
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_receiver = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_suffix = packed_as::<Oct, 3>(&oct_codes[2..], oct);
+    assert!(oct_receiver.ends_with(&oct_suffix));
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_receiver = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_suffix = packed_as::<WideCode, 7>(&wide_codes[6..], wide);
+    assert!(wide_receiver.ends_with(&wide_suffix));
+}
+
+#[test]
 fn packed_str_contains_searches_character_aligned_windows() {
     let haystack_owner = packed(&[0, 0, 0]);
     let haystack = haystack_owner.as_packed_str();
