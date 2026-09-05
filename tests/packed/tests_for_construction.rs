@@ -490,6 +490,54 @@ fn packed_from_iter_matches_from_chars_for_single_pass_inputs() {
 }
 
 #[test]
+fn packed_repeat_produces_exactly_the_requested_codes() {
+    let empty = PackedString::<Oct, 3>::repeat(Oct::V0, 0);
+    assert!(empty.is_empty());
+    assert_eq!(empty.char_len(), 0);
+    assert_eq!(empty.bits().bit_len(), 0);
+
+    let zero = PackedString::<Oct, 3>::repeat(Oct::V0, 22);
+    assert!(!zero.is_empty());
+    assert_eq!(zero.to_vec(), vec![Oct::V0; 22]);
+    assert_eq!(zero.bits().bit_len(), 22 * 3);
+
+    let oct = PackedString::<Oct, 3>::repeat(Oct::V7, 22);
+    let oct_expected = PackedString::from_chars(core::iter::repeat_n(Oct::V7, 22));
+    assert!(oct == oct_expected);
+    assert_eq!(oct.get(0), Some(Oct::V7));
+    assert_eq!(oct.get(21), Some(Oct::V7));
+    assert_eq!(oct.bits().words(), oct_expected.bits().words());
+
+    let binary = PackedString::<PackedSymbol, 1>::repeat(PackedSymbol::One, 65);
+    assert_eq!(binary.char_len(), 65);
+    assert_eq!(binary.bits().bit_len(), 65);
+    assert_eq!(binary.first(), Some(PackedSymbol::One));
+    assert_eq!(binary.last(), Some(PackedSymbol::One));
+
+    let wide = PackedString::<WideCode, 7>::repeat(WideCode(127), 10);
+    assert_eq!(wide.to_vec(), vec![WideCode(127); 10]);
+    assert_eq!(wide.bits().bit_len(), 10 * 7);
+    assert_eq!(wide.bits().words().len(), 2);
+
+    let bytes = PackedString::<SparseByte, 8>::repeat(SparseByte::Maximum, 9);
+    assert_eq!(bytes.to_vec(), vec![SparseByte::Maximum; 9]);
+    assert_eq!(bytes.bits().bit_len(), 9 * 8);
+
+    assert!(
+        std::panic::catch_unwind(|| {
+            PackedString::<UnsupportedWidth, 0>::repeat(UnsupportedWidth, 0);
+        })
+        .is_err()
+    );
+    assert!(
+        std::panic::catch_unwind(|| {
+            PackedString::<UnsupportedWidth, 9>::repeat(UnsupportedWidth, 1);
+        })
+        .is_err()
+    );
+}
+
+#[test]
 fn packed_string_clone_copies_storage_and_preserves_invariants() {
     let oct_codes: Vec<u8> = (0..22).map(|index| index as u8 % 8).collect();
     let original = packed_as::<Oct, 3>(&oct_codes, oct);
