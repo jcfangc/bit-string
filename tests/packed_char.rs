@@ -99,3 +99,11 @@ fn from_bits_rejects_misaligned_and_unknown_codes() {
     assert!(PackedString::<Symbol, 2>::from_bits(BitString::from_iter([true])).is_none());
     assert!(PackedString::<Symbol, 2>::from_bits(BitString::from_iter([true, true])).is_none());
 }
+
+#[test]
+fn ordering_uses_packed_code_values() {
+    let one = PackedString::<Symbol, 2>::from_chars([Symbol::One]);
+    let two = PackedString::<Symbol, 2>::from_chars([Symbol::Two]);
+    assert!(one < two);
+    assert!(one.as_packed_str() < two.as_packed_str());
+}

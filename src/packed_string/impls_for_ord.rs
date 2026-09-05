@@ -8,7 +8,7 @@ where
 {
     /// Compares characters lexicographically by their packed code values.
     pub fn cmp_string(&self, other: &Self) -> Ordering {
-        self.bits.as_bit_str().cmp_str(&other.bits.as_bit_str())
+        self.as_packed_str().cmp_codes(&other.as_packed_str())
     }
 }
 
