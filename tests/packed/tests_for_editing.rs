@@ -210,6 +210,55 @@ fn packed_extend_appends_owned_codes_without_changing_the_prefix() {
 }
 
 #[test]
+fn packed_pop_returns_final_codes_and_shrinks_to_empty() {
+    let mut empty = PackedString::<Oct, 3>::new();
+    assert_eq!(empty.pop(), None);
+    assert!(empty.bits().words().is_empty());
+
+    let mut maximum =
+        PackedString::<super::SparseByte, 8>::from_chars([super::SparseByte::Maximum]);
+    assert_eq!(maximum.pop(), Some(super::SparseByte::Maximum));
+    assert!(maximum.is_empty());
+    assert_eq!(maximum.pop(), None);
+
+    let mut oct_codes: Vec<_> = (0..23)
+        .map(|index| if index == 22 { 0 } else { index as u8 % 8 })
+        .map(super::oct)
+        .collect();
+    let mut oct_string = PackedString::from_chars(oct_codes.clone());
+    while let Some(expected) = oct_codes.pop() {
+        assert_eq!(oct_string.pop(), Some(expected));
+        assert_eq!(oct_string.to_vec(), oct_codes);
+        assert_eq!(oct_string.char_len(), oct_codes.len());
+        assert_eq!(oct_string.bits().bit_len(), oct_codes.len() * 3);
+        assert_eq!(
+            oct_string.bits().words().len(),
+            (oct_codes.len() * 3).div_ceil(64)
+        );
+        assert_eq!(oct_string.last(), oct_codes.last().copied());
+    }
+    assert_eq!(oct_string.pop(), None);
+
+    let mut wide_codes: Vec<_> = (0..10)
+        .map(|index| {
+            if index == 9 {
+                127
+            } else {
+                (index * 11) as u8 % 128
+            }
+        })
+        .map(super::wide)
+        .collect();
+    let mut wide_string = PackedString::from_chars(wide_codes.clone());
+    while let Some(expected) = wide_codes.pop() {
+        assert_eq!(wide_string.pop(), Some(expected));
+        assert_eq!(wide_string.last(), wide_codes.last().copied());
+        assert_eq!(wide_string.bits().bit_len(), wide_codes.len() * 7);
+    }
+    assert!(wide_string.is_empty());
+}
+
+#[test]
 fn packed_views_and_editing_remain_character_aligned() {
     let mut string = PackedString::<super::Symbol, 2>::from_chars([
         super::Symbol::Zero,
