@@ -342,6 +342,51 @@ fn packed_string_get_matches_character_oracle_and_bounds() {
 }
 
 #[test]
+fn packed_string_last_matches_the_final_character_and_pop() {
+    let empty = PackedString::<Symbol, 2>::default();
+    assert_eq!(empty.last(), None);
+    assert_eq!(empty.last(), empty.as_packed_str().iter().next_back());
+
+    let mut oct_string = packed_as::<Oct, 3>(&[Oct::V7.code(); 22], oct);
+    assert_eq!(oct_string.last(), Some(Oct::V7));
+    assert_eq!(oct_string.last(), oct_string.get(21));
+    assert_eq!(
+        oct_string.last(),
+        oct_string.as_packed_str().iter().next_back()
+    );
+
+    assert_eq!(oct_string.set(21, Oct::V0), Some(Oct::V7));
+    assert_eq!(oct_string.last(), Some(Oct::V0));
+    assert_eq!(oct_string.pop(), Some(Oct::V0));
+    assert_eq!(oct_string.last(), Some(Oct::V7));
+
+    while oct_string.pop().is_some() {}
+    assert_eq!(oct_string.char_len(), 0);
+    assert_eq!(oct_string.last(), None);
+    assert_eq!(oct_string.pop(), None);
+
+    let wide_codes: Vec<_> = (0..10)
+        .map(|index| {
+            if index == 9 {
+                127
+            } else {
+                (index * 11) as u8 % 128
+            }
+        })
+        .collect();
+    let wide_string = packed_as::<WideCode, 7>(&wide_codes, wide);
+    assert_eq!(wide_string.last(), Some(WideCode(127)));
+    assert_eq!(wide_string.last(), wide_string.get(9));
+
+    let bytes = packed_as::<SparseByte, 8>(&[255, 0], |code| match code {
+        0 => SparseByte::Zero,
+        255 => SparseByte::Maximum,
+        _ => unreachable!(),
+    });
+    assert_eq!(bytes.last(), Some(SparseByte::Zero));
+}
+
+#[test]
 fn packed_str_first_is_view_relative_and_empty_safe() {
     let empty = PackedString::<PackedSymbol, 1>::new();
     assert_eq!(empty.as_packed_str().first(), None);
