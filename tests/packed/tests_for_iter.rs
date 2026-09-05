@@ -67,3 +67,23 @@ fn packed_str_iter_is_exact_double_ended_and_view_relative() {
     };
     assert_eq!(iterator_after_view_drop.collect::<Vec<_>>(), wide_expected);
 }
+
+#[test]
+fn packed_str_iter_cursor_state_meets_at_the_middle() {
+    let owner = packed_as::<Oct, 3>(&[0, 1, 2, 3, 4], oct);
+    let mut iterator = owner.as_packed_str().iter();
+
+    assert_eq!(iterator.len(), 5);
+    assert_eq!(iterator.next(), Some(Oct::V0));
+    assert_eq!(iterator.len(), 4);
+    assert_eq!(iterator.next_back(), Some(Oct::V4));
+    assert_eq!(iterator.len(), 3);
+    assert_eq!(iterator.next(), Some(Oct::V1));
+    assert_eq!(iterator.next_back(), Some(Oct::V3));
+    assert_eq!(iterator.len(), 1);
+    assert_eq!(iterator.next(), Some(Oct::V2));
+    assert_eq!(iterator.len(), 0);
+    assert_eq!(iterator.next(), None);
+    assert_eq!(iterator.next_back(), None);
+    assert_eq!(iterator.len(), 0);
+}
