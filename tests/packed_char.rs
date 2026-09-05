@@ -1,4 +1,4 @@
-use bit_string::{BitString, PackedString, packed, traits::PackedChar};
+use bit_string::{BitStr, BitString, PackedStr, PackedString, packed, traits::PackedChar};
 use int_intervals::UsizeCO;
 use proptest::prelude::*;
 
@@ -135,6 +135,25 @@ fn packed_str_clone_preserves_sliced_cross_word_views() {
         .slice(UsizeCO::checked_from_start_len(999, 1).unwrap());
     assert!(empty.clone().is_empty());
     assert!(empty.clone() == empty);
+}
+
+#[test]
+fn packed_str_is_a_fixed_size_typed_view_with_value_semantics() {
+    assert_eq!(
+        core::mem::size_of::<PackedStr<'static, Oct, 3>>(),
+        core::mem::size_of::<BitStr<'static>>()
+    );
+    assert_eq!(
+        core::mem::size_of::<PackedStr<'static, WideCode, 7>>(),
+        core::mem::size_of::<BitStr<'static>>()
+    );
+
+    let left = packed_as::<Oct, 3>(&[0, 1, 2, 3], oct);
+    let right = packed_as::<Oct, 3>(&[0, 1, 2, 3], oct);
+    assert!(left.as_packed_str() == right.as_packed_str());
+
+    let different = packed_as::<Oct, 3>(&[0, 1, 2, 4], oct);
+    assert!(left.as_packed_str() != different.as_packed_str());
 }
 
 fn wide(code: u8) -> WideCode {
