@@ -522,6 +522,56 @@ fn packed_replace_interval_splices_clamped_character_ranges() {
 }
 
 #[test]
+fn packed_retain_matches_vec_order_and_predicate_calls() {
+    let original: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let mut string = PackedString::from_chars(original.clone());
+    let mut seen = Vec::new();
+    string.retain(|character| {
+        seen.push(character);
+        character.code() % 2 == 0
+    });
+
+    let mut oracle = original.clone();
+    oracle.retain(|character| character.code() % 2 == 0);
+    assert_eq!(string.to_vec(), oracle);
+    assert_eq!(seen, original);
+    assert_eq!(string.char_len(), oracle.len());
+    assert_eq!(string.bits().bit_len(), oracle.len() * 3);
+
+    let mut all = PackedString::from_chars([Oct::V7; 22]);
+    all.retain(|_| true);
+    assert_eq!(all.to_vec(), vec![Oct::V7; 22]);
+
+    let mut none = PackedString::from_chars([Oct::V0; 22]);
+    none.retain(|_| false);
+    assert!(none.is_empty());
+    assert!(none.bits().words().is_empty());
+
+    let wide_values: Vec<_> = (0..10)
+        .map(|index| WideCode((index * 11) as u8 % 128))
+        .collect();
+    let mut wide = PackedString::from_chars(wide_values.clone());
+    wide.retain(|character| character.code() >= 64);
+    let expected_wide: Vec<_> = wide_values
+        .into_iter()
+        .filter(|character| character.code() >= 64)
+        .collect();
+    assert_eq!(wide.to_vec(), expected_wide);
+    assert_eq!(wide.bits().bit_len(), expected_wide.len() * 7);
+
+    let mut bytes = PackedString::from_chars([
+        super::SparseByte::Zero,
+        super::SparseByte::Maximum,
+        super::SparseByte::Middle,
+    ]);
+    bytes.retain(|character| character.code() != 3);
+    assert_eq!(
+        bytes.to_vec(),
+        vec![super::SparseByte::Zero, super::SparseByte::Maximum]
+    );
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
