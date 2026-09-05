@@ -211,6 +211,26 @@ fn packed_str_starts_with_compares_character_aligned_prefixes() {
 }
 
 #[test]
+fn packed_string_starts_with_compares_character_prefixes() {
+    let receiver = packed(&[0, 1, 2, 1, 0]);
+    assert!(receiver.starts_with(&packed(&[0, 1, 2, 1, 0])));
+    assert!(receiver.starts_with(&packed(&[0, 1, 2])));
+    assert!(!receiver.starts_with(&packed(&[0, 2])));
+    assert!(!receiver.starts_with(&packed(&[0, 1, 2, 1, 0, 1])));
+    assert!(receiver.starts_with(&PackedString::<super::Symbol, 2>::new()));
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_receiver = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_prefix = packed_as::<Oct, 3>(&oct_codes[..22], oct);
+    assert!(oct_receiver.starts_with(&oct_prefix));
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_receiver = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_prefix = packed_as::<WideCode, 7>(&wide_codes[..10], wide);
+    assert!(wide_receiver.starts_with(&wide_prefix));
+}
+
+#[test]
 fn packed_str_ends_with_compares_character_aligned_suffixes() {
     let owner = packed(&[0, 1, 2, 1, 0]);
     let receiver = owner.as_packed_str();
