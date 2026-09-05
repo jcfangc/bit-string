@@ -662,6 +662,34 @@ fn packed_truncate_keeps_the_prefix_and_clamps_at_current_length() {
 }
 
 #[test]
+fn packed_slice_returns_a_clamped_character_aligned_owner() {
+    let original: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let string = PackedString::from_chars(original.clone());
+
+    let sliced = string.slice(UsizeCO::checked_from_start_len(9, 5).unwrap());
+    assert_eq!(sliced.to_vec(), original[9..14].to_vec());
+    assert_eq!(sliced.char_len(), 5);
+    assert_eq!(sliced.bits().bit_len(), 5 * 3);
+    assert_eq!(string.to_vec(), original);
+
+    let tail = string.slice(UsizeCO::checked_from_start_len(20, 9).unwrap());
+    assert_eq!(tail.to_vec(), original[20..].to_vec());
+    assert_eq!(tail.bits().bit_len(), 2 * 3);
+
+    let empty = string.slice(UsizeCO::checked_from_start_len(99, 4).unwrap());
+    assert!(empty.is_empty());
+    assert!(empty.bits().words().is_empty());
+
+    let wide_values: Vec<_> = (0..16)
+        .map(|index| WideCode((index * 13) as u8 % 128))
+        .collect();
+    let wide = PackedString::from_chars(wide_values.clone());
+    let wide_sliced = wide.slice(UsizeCO::checked_from_start_len(8, 5).unwrap());
+    assert_eq!(wide_sliced.to_vec(), wide_values[8..13].to_vec());
+    assert_eq!(wide_sliced.bits().bit_len(), 5 * 7);
+}
+
+#[test]
 fn packed_insert_matches_vec_insert_and_clamps_out_of_bounds_indices() {
     let mut string = PackedString::from_chars((0..22).map(|index| super::oct(index as u8 % 8)));
     let mut oracle = string.to_vec();
