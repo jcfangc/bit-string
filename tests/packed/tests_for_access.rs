@@ -581,6 +581,63 @@ fn packed_str_slice_until_clamps_at_the_view_start() {
     assert_eq!(view.get(4), Some(super::Symbol::Zero));
 }
 
+#[test]
+fn packed_string_is_empty_tracks_zero_packed_bits() {
+    let new = PackedString::<super::Symbol, 2>::new();
+    let default = PackedString::<super::Symbol, 2>::default();
+    let from_empty = PackedString::<super::Symbol, 2>::from_chars(core::iter::empty());
+    for value in [&new, &default, &from_empty] {
+        assert!(value.is_empty());
+        assert_eq!(value.char_len(), 0);
+        assert_eq!(value.bits().bit_len(), 0);
+    }
+
+    let one_zero = super::packed(&[0]);
+    assert!(!one_zero.is_empty());
+    assert_eq!(one_zero.char_len(), 1);
+    assert_eq!(one_zero.bits().bit_len(), 2);
+
+    let all_zero = super::packed(&[0; 64]);
+    assert!(!all_zero.is_empty());
+    assert_eq!(all_zero.char_len(), 64);
+    assert_eq!(all_zero.bits().bit_len(), 128);
+
+    let binary = packed_as::<PackedSymbol, 1>(&[0], |code| match code {
+        0 => PackedSymbol::Zero,
+        1 => PackedSymbol::One,
+        _ => unreachable!(),
+    });
+    let oct = packed_as::<Oct, 3>(&[0; 22], super::oct);
+    let wide = packed_as::<WideCode, 7>(&[0; 10], super::wide);
+    let bytes = packed_as::<SparseByte, 8>(&[0], |code| match code {
+        0 => SparseByte::Zero,
+        255 => SparseByte::Maximum,
+        3 => SparseByte::Middle,
+        _ => unreachable!(),
+    });
+    assert!(!binary.is_empty());
+    assert!(!oct.is_empty());
+    assert!(!wide.is_empty());
+    assert!(!bytes.is_empty());
+
+    let mut popped = super::packed(&[0]);
+    assert!(!popped.is_empty());
+    assert_eq!(popped.pop(), Some(super::Symbol::Zero));
+    assert!(popped.is_empty());
+
+    let mut cleared = super::packed(&[0, 1, 2]);
+    cleared.clear();
+    assert!(cleared.is_empty());
+
+    let mut truncated = super::packed(&[0, 1, 2]);
+    truncated.truncate(0);
+    assert!(truncated.is_empty());
+
+    let mut drained = super::packed(&[0, 1, 2]);
+    drained.drain_interval_assign(UsizeCO::checked_from_start_len(0, 3).unwrap());
+    assert!(drained.is_empty());
+}
+
 fn assert_access_slice_order<C, const BITS: u8>(
     left: &[u8],
     right: &[u8],
