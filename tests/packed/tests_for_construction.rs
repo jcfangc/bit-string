@@ -1,6 +1,24 @@
 use super::{Oct, PackedSymbol, SparseByte, Symbol, WideCode, oct, packed_as, wide};
 use bit_string::{BitString, PackedString, traits::PackedChar};
 
+fn assert_packed_owner<C, const BITS: u8>(codes: &[u8], decode: fn(u8) -> C)
+where
+    C: PackedChar<BITS> + core::fmt::Debug,
+{
+    let owner = packed_as(codes, decode);
+    let expected = codes.iter().copied().map(decode).collect::<Vec<_>>();
+    assert_eq!(owner.char_len(), codes.len());
+    assert_eq!(owner.bits_per_char(), usize::from(BITS));
+    assert_eq!(owner.bits().bit_len(), codes.len() * usize::from(BITS));
+    assert_eq!(owner.to_vec(), expected);
+    for (index, character) in expected.iter().copied().enumerate() {
+        assert_eq!(owner.get(index), Some(character));
+    }
+    assert_eq!(owner.get(codes.len()), None);
+    assert!(owner.as_packed_str().iter().collect::<Vec<_>>() == expected);
+    assert!(owner.clone().into_bits() == owner.bits().clone());
+}
+
 #[test]
 fn generated_sparse_code_round_trip_is_executable() {
     assert_eq!(SparseByte::Zero.code(), 0);
@@ -121,4 +139,35 @@ fn packed_string_clone_copies_storage_and_preserves_invariants() {
         wide_codes.iter().copied().map(wide).collect::<Vec<_>>()
     );
     assert_eq!(wide_clone.as_packed_str().char_len(), 10);
+}
+
+#[test]
+fn packed_string_representation_invariant_is_width_derived() {
+    assert_eq!(
+        core::mem::size_of::<PackedString<Symbol, 2>>(),
+        core::mem::size_of::<BitString>()
+    );
+    assert_packed_owner::<PackedSymbol, 1>(&[0, 1, 1], |code| match code {
+        0 => PackedSymbol::Zero,
+        1 => PackedSymbol::One,
+        _ => unreachable!(),
+    });
+    assert_packed_owner::<Symbol, 2>(&[0, 1, 2, 1], super::symbol);
+    assert_packed_owner::<Oct, 3>(&[0, 1, 6, 7, 2, 5, 4, 3], oct);
+    assert_packed_owner::<WideCode, 7>(&[0, 1, 63, 64, 126, 127], wide);
+    assert_packed_owner::<SparseByte, 8>(&[0, 255, 3], |code| match code {
+        0 => SparseByte::Zero,
+        255 => SparseByte::Maximum,
+        3 => SparseByte::Middle,
+        _ => unreachable!(),
+    });
+
+    let empty = PackedString::<Symbol, 2>::new();
+    assert_eq!(empty.char_len(), 0);
+    assert_eq!(empty.bits().bit_len(), 0);
+    assert!(empty.as_packed_str().is_empty());
+
+    let invalid_sparse_code =
+        BitString::from_iter([true, false, false, false, false, false, false, false]);
+    assert!(PackedString::<SparseByte, 8>::from_bits(invalid_sparse_code).is_none());
 }
