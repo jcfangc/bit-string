@@ -324,6 +324,73 @@ fn from_bits_validates_alignment_codes_and_widths() {
 }
 
 #[test]
+fn packed_from_chars_preserves_sequence_and_packed_layout() {
+    let empty = PackedString::<Symbol, 2>::from_chars(core::iter::empty::<Symbol>());
+    assert!(empty.is_empty());
+    assert_eq!(empty.char_len(), 0);
+    assert_eq!(empty.bits().bit_len(), 0);
+
+    let symbols = [Symbol::Zero, Symbol::Two, Symbol::One, Symbol::Zero];
+    let symbol_string = PackedString::<Symbol, 2>::from_chars(symbols);
+    assert_eq!(symbol_string.to_vec(), symbols);
+    assert_eq!(symbol_string.bits().bit_len(), symbols.len() * 2);
+
+    let zero_codes = vec![0; 22];
+    let zero_string = PackedString::<Oct, 3>::from_chars(zero_codes.iter().copied().map(oct));
+    assert!(!zero_string.is_empty());
+    assert_eq!(zero_string.char_len(), zero_codes.len());
+    assert_eq!(zero_string.bits().bit_len(), zero_codes.len() * 3);
+    assert_eq!(zero_string.to_vec(), vec![Oct::V0; 22]);
+
+    let oct_codes: Vec<_> = (0..22).map(|index| index as u8 % 8).collect();
+    let oct_string = PackedString::<Oct, 3>::from_chars(oct_codes.iter().copied().map(oct));
+    assert_eq!(
+        oct_string.to_vec(),
+        oct_codes.iter().copied().map(oct).collect::<Vec<_>>()
+    );
+    let oct_expected = BitString::from_iter(
+        oct_codes
+            .iter()
+            .flat_map(|&code| (0..3).map(move |offset| code & (1 << offset) != 0)),
+    );
+    assert_eq!(oct_string.bits().bit_len(), oct_expected.bit_len());
+    assert_eq!(oct_string.bits().words(), oct_expected.words());
+
+    let wide_codes: Vec<_> = (0..10).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_string = PackedString::<WideCode, 7>::from_chars(wide_codes.iter().copied().map(wide));
+    assert_eq!(
+        wide_string.to_vec(),
+        wide_codes.iter().copied().map(wide).collect::<Vec<_>>()
+    );
+    assert_eq!(wide_string.char_len(), 10);
+    assert_eq!(wide_string.bits().bit_len(), 10 * 7);
+
+    let byte_string = PackedString::<SparseByte, 8>::from_chars([
+        SparseByte::Zero,
+        SparseByte::Maximum,
+        SparseByte::Middle,
+    ]);
+    assert_eq!(
+        byte_string.to_vec(),
+        vec![SparseByte::Zero, SparseByte::Maximum, SparseByte::Middle]
+    );
+    assert_eq!(byte_string.get(1), Some(SparseByte::Maximum));
+
+    assert!(
+        std::panic::catch_unwind(|| {
+            PackedString::<UnsupportedWidth, 0>::from_chars(core::iter::empty());
+        })
+        .is_err()
+    );
+    assert!(
+        std::panic::catch_unwind(|| {
+            PackedString::<UnsupportedWidth, 9>::from_chars(core::iter::empty());
+        })
+        .is_err()
+    );
+}
+
+#[test]
 fn packed_string_clone_copies_storage_and_preserves_invariants() {
     let oct_codes: Vec<u8> = (0..22).map(|index| index as u8 % 8).collect();
     let original = packed_as::<Oct, 3>(&oct_codes, oct);
