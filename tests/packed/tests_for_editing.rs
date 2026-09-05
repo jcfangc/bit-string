@@ -1,5 +1,5 @@
 use super::{Oct, WideCode, packed, packed_as, symbol};
-use bit_string::{PackedString, traits::PackedChar};
+use bit_string::{BitString, PackedString, traits::PackedChar};
 use int_intervals::UsizeCO;
 use proptest::prelude::*;
 
@@ -166,6 +166,47 @@ fn packed_extend_copies_borrowed_codes_in_order() {
     bytes.extend(byte_source.iter());
     assert_eq!(bytes.to_vec(), byte_source);
     assert_eq!(bytes.bits().bit_len(), 24);
+}
+
+#[test]
+fn packed_extend_appends_owned_codes_without_changing_the_prefix() {
+    let mut oct_string = packed_as::<Oct, 3>(&[7; 20], super::oct);
+    let original = oct_string.to_vec();
+    oct_string.extend(core::iter::empty::<Oct>());
+    assert_eq!(oct_string.to_vec(), original);
+
+    let appended = [Oct::V0, Oct::V7, Oct::V3, Oct::V4, Oct::V1, Oct::V6];
+    let mut expected = original.clone();
+    expected.extend(appended);
+    oct_string.extend(appended);
+    assert_eq!(oct_string.to_vec(), expected);
+    assert_eq!(oct_string.char_len(), expected.len());
+    assert_eq!(oct_string.bits().bit_len(), expected.len() * 3);
+
+    let expected_bits = BitString::from_iter(
+        expected
+            .iter()
+            .flat_map(|character| (0..3).map(move |offset| character.code() & (1 << offset) != 0)),
+    );
+    assert_eq!(oct_string.bits().words(), expected_bits.words());
+
+    let mut wide_string = PackedString::<WideCode, 7>::new();
+    let wide_values = [WideCode(0), WideCode(127), WideCode(64), WideCode(1)];
+    wide_string.extend(wide_values);
+    wide_string.extend([WideCode(126), WideCode(2), WideCode(127)]);
+    assert_eq!(
+        wide_string.to_vec(),
+        vec![
+            WideCode(0),
+            WideCode(127),
+            WideCode(64),
+            WideCode(1),
+            WideCode(126),
+            WideCode(2),
+            WideCode(127),
+        ]
+    );
+    assert_eq!(wide_string.bits().bit_len(), 7 * 7);
 }
 
 #[test]
