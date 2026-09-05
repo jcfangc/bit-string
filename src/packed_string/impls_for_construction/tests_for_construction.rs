@@ -1,4 +1,5 @@
 use crate::packed_string::tests_for_support::{Letter, LetterString};
+use crate::{BitString, PackedString};
 
 #[test]
 fn enum_discriminants_are_stored_directly() {
@@ -13,4 +14,21 @@ fn collect_constructs_a_packed_string() {
     let value: LetterString = [Letter::A, Letter::C].into_iter().collect();
     assert_eq!(value.char_len(), 2);
     assert_eq!(value.get(0), Some(Letter::A));
+}
+
+#[test]
+fn trusted_constructor_adopts_aligned_payload_unchanged() {
+    let source = LetterString::from_chars([Letter::A, Letter::D, Letter::B, Letter::C]);
+    let source_bits = source.bits().clone();
+    let adopted = PackedString::<Letter, 2>::from_valid_bits(source_bits.clone());
+
+    assert_eq!(adopted.bits().bit_len(), source_bits.bit_len());
+    assert_eq!(adopted.bits().words(), source_bits.words());
+    assert_eq!(adopted.to_vec(), source.to_vec());
+}
+
+#[test]
+#[should_panic(expected = "assertion `left == right` failed")]
+fn trusted_constructor_rejects_misaligned_payload_in_debug() {
+    PackedString::<Letter, 2>::from_valid_bits(BitString::from_iter([true]));
 }
