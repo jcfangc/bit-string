@@ -199,6 +199,37 @@ fn packed_str_char_len_tracks_widths_boundaries_and_clamped_slices() {
     assert_eq!(empty.char_len(), 0);
 }
 
+#[test]
+fn packed_str_is_empty_depends_only_on_view_length() {
+    let empty_binary_owner = PackedString::<PackedSymbol, 1>::new();
+    let empty_binary = empty_binary_owner.as_packed_str();
+    assert!(empty_binary.is_empty());
+    assert_eq!(empty_binary.char_len(), 0);
+
+    let singleton = packed_as::<SparseByte, 8>(&[0], |code| match code {
+        0 => SparseByte::Zero,
+        _ => unreachable!(),
+    });
+    assert!(!singleton.as_packed_str().is_empty());
+
+    let string = packed_as::<Oct, 3>(&[0, 1, 2, 3, 4, 5, 6, 7], oct);
+    let empty_at_end = string
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(99, 1).unwrap());
+    let empty_from_end = string.as_packed_str().slice_from(99);
+    let empty_until_start = string.as_packed_str().slice_until(0);
+    for view in [empty_at_end, empty_from_end, empty_until_start] {
+        assert!(view.is_empty());
+        assert_eq!(view.char_len(), 0);
+        assert!(view == view.clone());
+    }
+
+    let cross_word_owner = packed_as::<Oct, 3>(&[0; 22], oct);
+    let cross_word = cross_word_owner.as_packed_str();
+    assert!(!cross_word.is_empty());
+    assert_eq!(cross_word.char_len(), 22);
+}
+
 fn wide(code: u8) -> WideCode {
     WideCode(code)
 }
