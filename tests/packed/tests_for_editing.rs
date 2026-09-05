@@ -792,6 +792,39 @@ fn packed_split_off_returns_a_character_aligned_suffix() {
 }
 
 #[test]
+fn packed_drain_interval_removes_clamped_character_ranges_without_mutating_source() {
+    let original: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let string = PackedString::from_chars(original.clone());
+
+    let interval = UsizeCO::checked_from_start_len(9, 5).unwrap();
+    let drained = string.drain_interval(interval);
+    let mut expected = original.clone();
+    expected.drain(9..14);
+    assert_eq!(drained.to_vec(), expected);
+    assert_eq!(drained.char_len(), expected.len());
+    assert_eq!(drained.bits().bit_len(), expected.len() * 3);
+    assert_eq!(string.to_vec(), original);
+
+    let tail = string.drain_interval(UsizeCO::checked_from_start_len(20, 9).unwrap());
+    assert_eq!(tail.to_vec(), original[..20].to_vec());
+    assert_eq!(tail.bits().bit_len(), 20 * 3);
+
+    let out_of_bounds = string.drain_interval(UsizeCO::checked_from_start_len(99, 4).unwrap());
+    assert_eq!(out_of_bounds.to_vec(), original);
+    assert_eq!(out_of_bounds.bits().words(), string.bits().words());
+
+    let wide_values: Vec<_> = (0..10)
+        .map(|index| WideCode((index * 13) as u8 % 128))
+        .collect();
+    let wide = PackedString::from_chars(wide_values.clone());
+    let wide_drained = wide.drain_interval(UsizeCO::checked_from_start_len(7, 2).unwrap());
+    let mut wide_expected = wide_values.clone();
+    wide_expected.drain(7..9);
+    assert_eq!(wide_drained.to_vec(), wide_expected);
+    assert_eq!(wide_drained.bits().bit_len(), wide_expected.len() * 7);
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
