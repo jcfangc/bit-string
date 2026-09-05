@@ -1,5 +1,11 @@
 use super::*;
+use proc_macro2::{Delimiter, Spacing, TokenTree};
 use quote::quote;
+use std::{
+    fs,
+    process::Command,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use syn::parse2;
 
 fn error(input: TokenStream2) -> String {
@@ -12,6 +18,44 @@ fn parsed_bits(input: TokenStream2) -> u8 {
 
 fn bits_error(input: TokenStream2) -> String {
     parse_bits(&parse2(input).unwrap()).unwrap_err().to_string()
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum TokenShape {
+    Group(u8, Vec<TokenShape>),
+    Ident(String),
+    Literal(String),
+    Punct(char, bool),
+}
+
+fn token_shapes(tokens: TokenStream2) -> Vec<TokenShape> {
+    tokens
+        .into_iter()
+        .map(|token| match token {
+            TokenTree::Group(group) => TokenShape::Group(
+                match group.delimiter() {
+                    Delimiter::Parenthesis => 0,
+                    Delimiter::Brace => 1,
+                    Delimiter::Bracket => 2,
+                    Delimiter::None => 3,
+                },
+                token_shapes(group.stream()),
+            ),
+            TokenTree::Ident(ident) => TokenShape::Ident(ident.to_string()),
+            TokenTree::Literal(literal) => TokenShape::Literal(literal.to_string()),
+            TokenTree::Punct(punct) => {
+                TokenShape::Punct(punct.as_char(), punct.spacing() == Spacing::Joint)
+            }
+        })
+        .collect()
+}
+
+struct FixtureGuard(std::path::PathBuf);
+
+impl Drop for FixtureGuard {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
 }
 
 #[test]
@@ -109,6 +153,84 @@ fn accepts_top_level_u8_in_repr_metadata() {
     ] {
         assert!(require_repr_u8(&parse2(input).unwrap()).is_ok());
     }
+}
+
+#[test]
+fn falls_back_to_conventional_bit_string_path_when_unresolved() {
+    assert_eq!(
+        token_shapes(bit_string_path()),
+        token_shapes(quote!(::bit_string))
+    );
+}
+
+#[test]
+fn resolves_renamed_bit_string_dependency_in_isolated_fixture() {
+    let fixture = std::env::temp_dir().join(format!(
+        "bit-string-derive-renamed-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    let _cleanup = FixtureGuard(fixture.clone());
+    fs::create_dir_all(fixture.join("src")).unwrap();
+
+    let bit_string = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .canonicalize()
+        .unwrap();
+    fs::write(
+        fixture.join("Cargo.toml"),
+        format!(
+            "[package]\nname = \"renamed-bit-string-fixture\"\nversion = \"0.0.0\"\nedition = \"2024\"\n\n[workspace]\n\n[dependencies]\nbit_string_alias = {{ package = \"bit-string\", path = {:?} }}\n",
+            bit_string,
+        ),
+    )
+    .unwrap();
+    fs::write(
+        fixture.join("src/main.rs"),
+        r#"
+use bit_string_alias::{packed, traits::PackedChar};
+
+#[packed(bits = 2)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Symbol {
+    Zero = 0,
+    Two = 2,
+}
+
+fn main() {
+    assert_eq!(Symbol::Zero.code(), 0);
+    assert_eq!(Symbol::Two.code(), 2);
+    assert_eq!(Symbol::from_code(0), Some(Symbol::Zero));
+    assert_eq!(Symbol::from_code(1), None);
+    assert_eq!(Symbol::from_code(2), Some(Symbol::Two));
+}
+"#,
+    )
+    .unwrap();
+
+    let lockfile = Command::new("cargo")
+        .args(["generate-lockfile", "--offline", "--manifest-path"])
+        .arg(fixture.join("Cargo.toml"))
+        .output()
+        .unwrap();
+    assert!(
+        lockfile.status.success(),
+        "failed to generate fixture lockfile:\n{}",
+        String::from_utf8_lossy(&lockfile.stderr)
+    );
+
+    let run = Command::new("cargo")
+        .args(["run", "--locked", "--offline", "--manifest-path"])
+        .arg(fixture.join("Cargo.toml"))
+        .output()
+        .unwrap();
+    assert!(
+        run.status.success(),
+        "renamed dependency fixture failed:\n{}",
+        String::from_utf8_lossy(&run.stderr)
+    );
 }
 
 #[test]
