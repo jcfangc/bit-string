@@ -102,6 +102,8 @@ mod tests_for_conversion;
 mod tests_for_editing;
 #[path = "packed/tests_for_eq.rs"]
 mod tests_for_eq;
+#[path = "packed/tests_for_iter.rs"]
+mod tests_for_iter;
 #[path = "packed/tests_for_matching.rs"]
 mod tests_for_matching;
 #[path = "packed/tests_for_ord.rs"]
