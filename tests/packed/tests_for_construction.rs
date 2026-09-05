@@ -109,6 +109,53 @@ fn bits_exposes_the_owned_bitstring_layout() {
     assert_eq!(wide_owner.bits().words(), wide_expected.words());
 }
 
+fn assert_default_matches_new<C, const BITS: u8>()
+where
+    C: PackedChar<BITS>,
+{
+    let default = PackedString::<C, BITS>::default();
+    let new = PackedString::<C, BITS>::new();
+    assert!(default == new);
+    assert!(default.is_empty());
+    assert_eq!(default.char_len(), 0);
+    assert_eq!(default.bits().bit_len(), 0);
+    assert!(default.bits().words().is_empty());
+    assert_eq!(default.bits_per_char(), usize::from(BITS));
+}
+
+#[test]
+fn packed_default_is_canonical_and_editable() {
+    assert_default_matches_new::<PackedSymbol, 1>();
+    assert_default_matches_new::<Symbol, 2>();
+    assert_default_matches_new::<Oct, 3>();
+    assert_default_matches_new::<WideCode, 7>();
+    assert_default_matches_new::<SparseByte, 8>();
+
+    let mut default = PackedString::<Oct, 3>::default();
+    let mut new = PackedString::<Oct, 3>::new();
+    for code in [
+        Oct::V0,
+        Oct::V7,
+        Oct::V3,
+        Oct::V4,
+        Oct::V1,
+        Oct::V6,
+        Oct::V2,
+        Oct::V5,
+    ] {
+        default.push(code);
+        new.push(code);
+    }
+    assert!(default == new);
+    assert_eq!(default.char_len(), 8);
+
+    default.clear();
+    new.clear();
+    assert!(default == new);
+    assert!(default.is_empty());
+    assert_eq!(default.pop(), None);
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct ManualSymbol;
 
