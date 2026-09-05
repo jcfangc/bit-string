@@ -240,6 +240,70 @@ fn main() {
 }
 
 #[test]
+fn public_packed_rejects_existing_repr_without_u8() {
+    let fixture = std::env::temp_dir().join(format!(
+        "bit-string-derive-existing-repr-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    let _cleanup = FixtureGuard(fixture.clone());
+    fs::create_dir_all(fixture.join("src")).unwrap();
+
+    let bit_string = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .canonicalize()
+        .unwrap();
+    fs::write(
+        fixture.join("Cargo.toml"),
+        format!(
+            "[package]\nname = \"existing-repr-fixture\"\nversion = \"0.0.0\"\nedition = \"2024\"\n\n[workspace]\n\n[dependencies]\nbit-string = {{ path = {:?} }}\n",
+            bit_string,
+        ),
+    )
+    .unwrap();
+    fs::write(
+        fixture.join("src/main.rs"),
+        r#"
+use bit_string::packed;
+
+#[repr(C)]
+#[packed(bits = 2)]
+enum Symbol {
+    Zero = 0,
+}
+
+fn main() {}
+"#,
+    )
+    .unwrap();
+
+    let lockfile = Command::new("cargo")
+        .args(["generate-lockfile", "--offline", "--manifest-path"])
+        .arg(fixture.join("Cargo.toml"))
+        .output()
+        .unwrap();
+    assert!(
+        lockfile.status.success(),
+        "failed to generate fixture lockfile:\n{}",
+        String::from_utf8_lossy(&lockfile.stderr)
+    );
+
+    let check = Command::new("cargo")
+        .args(["check", "--locked", "--offline", "--manifest-path"])
+        .arg(fixture.join("Cargo.toml"))
+        .output()
+        .unwrap();
+    assert!(!check.status.success());
+    assert!(
+        String::from_utf8_lossy(&check.stderr).contains("packed requires #[repr(u8)]"),
+        "missing packed repr diagnostic:\n{}",
+        String::from_utf8_lossy(&check.stderr)
+    );
+}
+
+#[test]
 fn rejects_repr_without_top_level_u8() {
     for input in [
         quote! { enum Letter { A = 0 } },
