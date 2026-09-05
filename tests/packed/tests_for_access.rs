@@ -315,6 +315,33 @@ fn packed_string_first_is_index_zero_and_empty_safe() {
 }
 
 #[test]
+fn packed_string_get_matches_character_oracle_and_bounds() {
+    let codes: Vec<_> = (0..22).map(|index| index as u8 % 8).collect();
+    let string = packed_as::<Oct, 3>(&codes, oct);
+    for (index, &code) in codes.iter().enumerate() {
+        assert_eq!(string.get(index), Some(oct(code)));
+        assert_eq!(string.get(index), string.as_packed_str().get(index));
+        assert_eq!(string.get(index), string.as_packed_str().iter().nth(index));
+    }
+    assert_eq!(string.get(codes.len()), None);
+    assert_eq!(string.get(codes.len() + 1), None);
+    assert_eq!(string.get(usize::MAX), None);
+
+    let all_zero = packed_as::<Oct, 3>(&[0; 22], oct);
+    assert_eq!(all_zero.get(0), Some(Oct::V0));
+    assert_eq!(all_zero.get(21), Some(Oct::V0));
+
+    let maximum = packed_as::<SparseByte, 8>(&[255, 0], |code| match code {
+        0 => SparseByte::Zero,
+        255 => SparseByte::Maximum,
+        _ => unreachable!(),
+    });
+    assert_eq!(maximum.get(0), Some(SparseByte::Maximum));
+    assert_eq!(maximum.get(1), Some(SparseByte::Zero));
+    assert_eq!(maximum.get(2), None);
+}
+
+#[test]
 fn packed_str_first_is_view_relative_and_empty_safe() {
     let empty = PackedString::<PackedSymbol, 1>::new();
     assert_eq!(empty.as_packed_str().first(), None);
