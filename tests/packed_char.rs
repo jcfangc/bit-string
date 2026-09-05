@@ -284,6 +284,44 @@ fn packed_str_get_decodes_bounds_offsets_and_cross_word_codes() {
     assert_eq!(wide_slice.get(usize::MAX), None);
 }
 
+#[test]
+fn packed_str_first_is_view_relative_and_empty_safe() {
+    let empty = PackedString::<PackedSymbol, 1>::new();
+    assert_eq!(empty.as_packed_str().first(), None);
+
+    let binary = packed_as::<PackedSymbol, 1>(&[1], |code| match code {
+        0 => PackedSymbol::Zero,
+        1 => PackedSymbol::One,
+        _ => unreachable!(),
+    });
+    assert_eq!(binary.as_packed_str().first(), Some(PackedSymbol::One));
+
+    let bytes = packed_as::<SparseByte, 8>(&[255, 0], |code| match code {
+        0 => SparseByte::Zero,
+        255 => SparseByte::Maximum,
+        _ => unreachable!(),
+    });
+    let byte_view = bytes.as_packed_str();
+    assert_eq!(byte_view.first(), Some(SparseByte::Maximum));
+    assert_eq!(byte_view.slice_from(1).first(), Some(SparseByte::Zero));
+    assert_eq!(byte_view.slice_from(2).first(), None);
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_string = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_view = oct_string
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(21, 2).unwrap());
+    assert_eq!(oct_view.first(), Some(oct(5)));
+    assert_eq!(oct_view.first(), oct_view.clone().get(0));
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_string = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_view = wide_string
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(9, 2).unwrap());
+    assert_eq!(wide_view.first(), Some(wide(wide_codes[9])));
+}
+
 fn wide(code: u8) -> WideCode {
     WideCode(code)
 }
