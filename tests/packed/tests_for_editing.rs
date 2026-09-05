@@ -691,6 +691,74 @@ fn packed_insert_matches_vec_insert_and_clamps_out_of_bounds_indices() {
 }
 
 #[test]
+fn packed_insert_packed_string_splices_codes_and_preserves_source() {
+    let original_codes: Vec<_> = (0..22).map(|index| index as u8 % 8).collect();
+    let replacement_codes = vec![7, 0, 3];
+    let mut string = packed_as::<Oct, 3>(&original_codes, super::oct);
+    let replacement = packed_as::<Oct, 3>(&replacement_codes, super::oct);
+    let mut oracle = original_codes.clone();
+
+    string.insert_packed_string(9, &replacement);
+    oracle.splice(9..9, replacement_codes.iter().copied());
+    assert_eq!(
+        string
+            .to_vec()
+            .iter()
+            .map(|value| value.code())
+            .collect::<Vec<_>>(),
+        oracle
+    );
+    assert_eq!(string.bits().bit_len(), oracle.len() * 3);
+    assert_eq!(
+        replacement.to_vec(),
+        replacement_codes
+            .iter()
+            .map(|&code| super::oct(code))
+            .collect::<Vec<_>>()
+    );
+
+    string.insert_packed_string(usize::MAX, &replacement);
+    oracle.extend(replacement_codes.iter().copied());
+    assert_eq!(
+        string
+            .to_vec()
+            .iter()
+            .map(|value| value.code())
+            .collect::<Vec<_>>(),
+        oracle
+    );
+    assert_eq!(string.bits().bit_len(), oracle.len() * 3);
+
+    let empty = PackedString::<Oct, 3>::new();
+    let before = string.clone();
+    string.insert_packed_string(4, &empty);
+    assert_eq!(string, before);
+
+    let wide = packed_as::<WideCode, 7>(&[1, 64, 127], super::wide);
+    let mut wide_target = packed_as::<WideCode, 7>(&[0; 10], super::wide);
+    wide_target.insert_packed_string(8, &wide);
+    assert_eq!(
+        wide_target.to_vec(),
+        vec![
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(1),
+            WideCode(64),
+            WideCode(127),
+            WideCode(0),
+            WideCode(0),
+        ]
+    );
+    assert_eq!(wide_target.bits().bit_len(), 13 * 7);
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
