@@ -30,6 +30,14 @@ enum Oct {
     V7 = 7,
 }
 
+#[packed(bits = 8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SparseByte {
+    Maximum = 255,
+    Zero = 0,
+    Middle = 3,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct WideCode(u8);
 
@@ -63,6 +71,23 @@ fn oct(code: u8) -> Oct {
         6 => Oct::V6,
         7 => Oct::V7,
         _ => unreachable!(),
+    }
+}
+
+#[test]
+fn generated_sparse_code_round_trip_is_executable() {
+    assert_eq!(SparseByte::Zero.code(), 0);
+    assert_eq!(SparseByte::Middle.code(), 3);
+    assert_eq!(SparseByte::Maximum.code(), u8::MAX);
+
+    for code in 0..=u8::MAX {
+        let expected = match code {
+            0 => Some(SparseByte::Zero),
+            3 => Some(SparseByte::Middle),
+            u8::MAX => Some(SparseByte::Maximum),
+            _ => None,
+        };
+        assert_eq!(SparseByte::from_code(code), expected);
     }
 }
 

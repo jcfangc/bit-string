@@ -20,6 +20,128 @@ fn accepts_strict_enum_encoding() {
 }
 
 #[test]
+fn accepts_width_boundaries_and_rejects_first_out_of_range_code() {
+    assert!(
+        expand(
+            parse2(quote! {
+                #[repr(u8)]
+                #[packed(bits = 1)]
+                enum Binary { Zero = 0, One = 1 }
+            })
+            .unwrap(),
+        )
+        .is_ok()
+    );
+
+    assert!(
+        expand(
+            parse2(quote! {
+                #[repr(u8)]
+                #[packed(bits = 8)]
+                enum Byte { Zero = 0, Maximum = 255 }
+            })
+            .unwrap(),
+        )
+        .is_ok()
+    );
+
+    assert!(
+        error(quote! {
+            #[repr(u8)]
+            #[packed(bits = 8)]
+            enum Byte { TooLarge = 256 }
+        })
+        .contains("does not fit in 8 bits")
+    );
+}
+
+#[test]
+fn emits_code_wise_decoding_for_sparse_alphabet() {
+    let output = expand(
+        parse2(quote! {
+            #[repr(u8)]
+            #[packed(bits = 3)]
+            enum Sparse { High = 7, Low = 0, Middle = 3 }
+        })
+        .unwrap(),
+    )
+    .unwrap()
+    .to_string();
+
+    assert!(output.contains("PackedChar < 3 > for Sparse"));
+    for (code, variant) in [(0, "Low"), (3, "Middle"), (7, "High")] {
+        let code = syn::LitInt::new(&code.to_string(), proc_macro2::Span::call_site());
+        let variant = syn::Ident::new(variant, proc_macro2::Span::call_site());
+        let expected = quote!(
+            #code => ::core::option::Option::Some(Self::#variant)
+        )
+        .to_string();
+        assert!(
+            output.contains(&expected),
+            "missing `{expected}` in `{output}`"
+        );
+    }
+    assert!(output.contains(&quote!(_ => ::core::option::Option::None).to_string()));
+}
+
+#[test]
+fn emits_empty_enum_decoding_fallback() {
+    let output = expand(
+        parse2(quote! {
+            #[repr(u8)]
+            #[packed(bits = 2)]
+            enum Empty {}
+        })
+        .unwrap(),
+    )
+    .unwrap()
+    .to_string();
+
+    assert!(output.contains("PackedChar < 2 > for Empty"));
+    assert!(output.contains(&quote!(_ => ::core::option::Option::None).to_string()));
+    assert!(!output.contains("Option :: Some"));
+}
+
+#[test]
+fn preserves_generics_and_where_clause() {
+    let output = expand(
+        parse2(quote! {
+            #[repr(u8)]
+            #[packed(bits = 1)]
+            enum Generic<T> where T: Copy { Zero = 0, One = 1 }
+        })
+        .unwrap(),
+    )
+    .unwrap()
+    .to_string();
+
+    assert!(output.contains("impl < T >"));
+    assert!(output.contains("for Generic < T > where T : Copy"));
+}
+
+#[test]
+fn rejects_non_enum_inputs() {
+    for input in [
+        quote! {
+            #[repr(u8)]
+            #[packed(bits = 1)]
+            struct NotAnEnum;
+        },
+        quote! {
+            #[repr(u8)]
+            #[packed(bits = 1)]
+            union NotAnEnum { value: u8 }
+        },
+    ] {
+        let message = error(input);
+        assert!(
+            message.contains("packed can only be applied to enums"),
+            "unexpected error: {message}"
+        );
+    }
+}
+
+#[test]
 fn requires_explicit_discriminants() {
     assert!(
         error(quote! {
