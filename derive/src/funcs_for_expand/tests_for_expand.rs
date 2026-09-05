@@ -6,6 +6,86 @@ fn error(input: TokenStream2) -> String {
     expand(parse2(input).unwrap()).unwrap_err().to_string()
 }
 
+fn parsed_bits(input: TokenStream2) -> u8 {
+    parse_bits(&parse2(input).unwrap()).unwrap().0
+}
+
+fn bits_error(input: TokenStream2) -> String {
+    parse_bits(&parse2(input).unwrap()).unwrap_err().to_string()
+}
+
+#[test]
+fn parses_bits_literals_and_defers_range_validation() {
+    for (input, expected) in [
+        (quote! { #[packed(bits = 0)] enum Letter {} }, 0),
+        (quote! { #[packed(bits = 1)] enum Letter {} }, 1),
+        (quote! { #[packed(bits = 8)] enum Letter {} }, 8),
+        (quote! { #[packed(bits = 9)] enum Letter {} }, 9),
+        (quote! { #[packed(bits = 0xff)] enum Letter {} }, 255),
+        (quote! { #[packed(bits = 0b1)] enum Letter {} }, 1),
+        (quote! { #[packed(bits = 0o10)] enum Letter {} }, 8),
+        (quote! { #[packed(bits = 8u8)] enum Letter {} }, 8),
+    ] {
+        assert_eq!(parsed_bits(input), expected);
+    }
+}
+
+#[test]
+fn rejects_missing_unknown_duplicate_and_invalid_bits_metadata() {
+    for input in [
+        quote! { enum Letter {} },
+        quote! { #[derive(Clone)] enum Letter {} },
+        quote! { #[packed()] enum Letter {} },
+    ] {
+        assert!(bits_error(input).contains("packed requires #[packed(bits = N)]"));
+    }
+
+    for input in [
+        quote! { #[packed(width = 2)] enum Letter {} },
+        quote! { #[packed(bits = 2, width = 3)] enum Letter {} },
+    ] {
+        assert!(bits_error(input).contains("expected `bits = N`"));
+    }
+
+    for input in [
+        quote! { #[packed(bits = 1, bits = 2)] enum Letter {} },
+        quote! { #[packed(bits = 1)] #[packed(bits = 2)] enum Letter {} },
+    ] {
+        assert!(bits_error(input).contains("duplicate packed bit width"));
+    }
+
+    for input in [
+        quote! { #[packed(bits = "2")] enum Letter {} },
+        quote! { #[packed(bits = true)] enum Letter {} },
+        quote! { #[packed(bits = 1 + 1)] enum Letter {} },
+        quote! { #[packed(bits = -1)] enum Letter {} },
+        quote! { #[packed(bits = 256)] enum Letter {} },
+        quote! { #[packed(bits)] enum Letter {} },
+    ] {
+        assert!(parse_bits(&parse2(input).unwrap()).is_err());
+    }
+}
+
+#[test]
+fn returns_span_of_bits_literal() {
+    let input = syn::parse_str::<syn::DeriveInput>("#[packed(bits = 17)]\nenum Letter {}").unwrap();
+    let (_, span) = parse_bits(&input).unwrap();
+
+    let mut expected = None;
+    input.attrs[0]
+        .parse_nested_meta(|meta| {
+            if meta.path.is_ident("bits") {
+                expected = Some(meta.value()?.parse::<syn::LitInt>()?.span());
+            }
+            Ok(())
+        })
+        .unwrap();
+    let expected = expected.unwrap();
+
+    assert_eq!(span.start(), expected.start());
+    assert_eq!(span.end(), expected.end());
+}
+
 #[test]
 fn accepts_top_level_u8_in_repr_metadata() {
     for input in [
