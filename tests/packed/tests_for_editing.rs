@@ -259,6 +259,64 @@ fn packed_pop_returns_final_codes_and_shrinks_to_empty() {
 }
 
 #[test]
+fn packed_push_packed_string_concatenates_raw_payloads() {
+    let mut oct_left = packed_as::<Oct, 3>(&[7; 21], super::oct);
+    let oct_right_codes = [0, 7, 3];
+    let oct_right = packed_as::<Oct, 3>(&oct_right_codes, super::oct);
+    let oct_right_snapshot = oct_right.clone();
+    let mut oct_oracle = oct_left.to_vec();
+    oct_oracle.extend(oct_right.to_vec());
+
+    oct_left.push_packed_string(&oct_right);
+    assert_eq!(oct_left.to_vec(), oct_oracle);
+    assert_eq!(oct_left.char_len(), 24);
+    assert_eq!(oct_left.bits().bit_len(), 24 * 3);
+    assert!(oct_right == oct_right_snapshot);
+    assert_eq!(oct_left.get(21), Some(Oct::V0));
+    assert_eq!(oct_left.get(22), Some(Oct::V7));
+    assert_eq!(oct_left.get(23), Some(Oct::V3));
+
+    let expected_bits = BitString::from_iter(
+        oct_oracle
+            .iter()
+            .flat_map(|character| (0..3).map(move |offset| character.code() & (1 << offset) != 0)),
+    );
+    assert_eq!(oct_left.bits().words(), expected_bits.words());
+
+    let empty = PackedString::<Oct, 3>::new();
+    let before_empty_append = oct_left.clone();
+    oct_left.push_packed_string(&empty);
+    assert!(oct_left == before_empty_append);
+
+    let original = packed_as::<Oct, 3>(&[0, 7, 3, 1], super::oct);
+    let mut duplicated = original.clone();
+    let source = original.clone();
+    duplicated.push_packed_string(&source);
+    assert_eq!(
+        duplicated.to_vec(),
+        [0, 7, 3, 1, 0, 7, 3, 1].map(super::oct)
+    );
+
+    let mut wide_left = packed_as::<WideCode, 7>(&[126; 9], super::wide);
+    let wide_right = packed_as::<WideCode, 7>(&[0, 127, 64], super::wide);
+    wide_left.push_packed_string(&wide_right);
+    assert_eq!(wide_left.char_len(), 12);
+    assert_eq!(wide_left.bits().bit_len(), 12 * 7);
+    assert_eq!(wide_left.get(9), Some(WideCode(0)));
+    assert_eq!(wide_left.get(10), Some(WideCode(127)));
+    assert_eq!(wide_left.get(11), Some(WideCode(64)));
+
+    let mut bytes = PackedString::<super::SparseByte, 8>::new();
+    let byte_right =
+        PackedString::from_chars([super::SparseByte::Zero, super::SparseByte::Maximum]);
+    bytes.push_packed_string(&byte_right);
+    assert_eq!(
+        bytes.to_vec(),
+        vec![super::SparseByte::Zero, super::SparseByte::Maximum]
+    );
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
