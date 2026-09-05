@@ -274,6 +274,103 @@ fn packed_str_last_is_view_relative_and_empty_safe() {
     assert_eq!(wide_string.as_packed_str().slice_from(16).last(), None);
 }
 
+#[test]
+fn packed_str_slice_uses_clamped_character_ranges() {
+    let owner = super::packed(&[0, 1, 2, 1, 0]);
+    let view = owner.as_packed_str();
+    let full = view.slice(UsizeCO::checked_from_start_len(0, 5).unwrap());
+    assert_eq!(full.iter().collect::<Vec<_>>(), owner.to_vec());
+
+    let middle = view.slice(UsizeCO::checked_from_start_len(1, 3).unwrap());
+    assert_eq!(
+        middle.iter().collect::<Vec<_>>(),
+        vec![super::Symbol::One, super::Symbol::Two, super::Symbol::One]
+    );
+    let singleton = view.slice(UsizeCO::checked_from_start_len(4, 1).unwrap());
+    assert_eq!(
+        singleton.iter().collect::<Vec<_>>(),
+        vec![super::Symbol::Zero]
+    );
+    let clamped_end = view.slice(UsizeCO::checked_from_start_len(3, 99).unwrap());
+    assert_eq!(
+        clamped_end.iter().collect::<Vec<_>>(),
+        vec![super::Symbol::One, super::Symbol::Zero]
+    );
+    assert!(
+        view.slice(UsizeCO::checked_from_start_len(99, 1).unwrap())
+            .is_empty()
+    );
+    assert!(
+        view.slice(UsizeCO::checked_from_start_len(5, 1).unwrap())
+            .is_empty()
+    );
+
+    let nested = middle.slice(UsizeCO::checked_from_start_len(1, 1).unwrap());
+    assert_eq!(nested.iter().collect::<Vec<_>>(), vec![super::Symbol::Two]);
+    assert_eq!(nested.to_packed_string().to_vec(), vec![super::Symbol::Two]);
+
+    let binary = packed_as::<PackedSymbol, 1>(&[0, 1, 1], |code| match code {
+        0 => PackedSymbol::Zero,
+        1 => PackedSymbol::One,
+        _ => unreachable!(),
+    });
+    let binary_slice = binary
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(1, 2).unwrap());
+    assert_eq!(
+        binary_slice.iter().collect::<Vec<_>>(),
+        vec![PackedSymbol::One, PackedSymbol::One]
+    );
+
+    let bytes = packed_as::<SparseByte, 8>(&[0, 255, 3], |code| match code {
+        0 => SparseByte::Zero,
+        255 => SparseByte::Maximum,
+        3 => SparseByte::Middle,
+        _ => unreachable!(),
+    });
+    let byte_slice = bytes
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(1, 2).unwrap());
+    assert_eq!(
+        byte_slice.to_packed_string().to_vec(),
+        vec![SparseByte::Maximum, SparseByte::Middle]
+    );
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_owner = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_slice = oct_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(20, 4).unwrap())
+        .slice(UsizeCO::checked_from_start_len(1, 2).unwrap());
+    assert_eq!(
+        oct_slice
+            .iter()
+            .map(|character| character.code())
+            .collect::<Vec<_>>(),
+        vec![5, 6]
+    );
+    assert_eq!(oct_slice.to_packed_string().bits().bit_len(), 6);
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_slice = wide_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(8, 5).unwrap())
+        .slice(UsizeCO::checked_from_start_len(1, 3).unwrap());
+    assert_eq!(
+        wide_slice
+            .iter()
+            .map(|character| character.code())
+            .collect::<Vec<_>>(),
+        vec![99, 110, 121]
+    );
+    assert_eq!(wide_slice.to_packed_string().bits().bit_len(), 21);
+
+    assert_eq!(view.char_len(), 5);
+    assert_eq!(view.get(0), Some(super::Symbol::Zero));
+    assert_eq!(view.get(4), Some(super::Symbol::Zero));
+}
+
 fn assert_access_slice_order<C, const BITS: u8>(
     left: &[u8],
     right: &[u8],
