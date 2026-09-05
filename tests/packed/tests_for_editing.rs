@@ -629,6 +629,39 @@ fn packed_reverse_assign_matches_reverse_and_preserves_packed_invariants() {
 }
 
 #[test]
+fn packed_truncate_keeps_the_prefix_and_clamps_at_current_length() {
+    let original: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let mut string = PackedString::from_chars(original.clone());
+    let original_bits = string.bits().clone();
+
+    string.truncate(21);
+    assert_eq!(string.to_vec(), original[..21].to_vec());
+    assert_eq!(string.char_len(), 21);
+    assert_eq!(string.bits().bit_len(), 21 * 3);
+
+    let truncated_bits = string.bits().clone();
+    string.truncate(usize::MAX);
+    assert_eq!(string.bits().words(), truncated_bits.words());
+    assert_eq!(string.to_vec(), original[..21].to_vec());
+
+    string.truncate(0);
+    assert!(string.is_empty());
+    assert!(string.bits().words().is_empty());
+
+    let wide_values: Vec<_> = (0..10)
+        .map(|index| WideCode((index * 17) as u8 % 128))
+        .collect();
+    let mut wide = PackedString::from_chars(wide_values.clone());
+    wide.truncate(9);
+    assert_eq!(wide.to_vec(), wide_values[..9].to_vec());
+    assert_eq!(wide.bits().bit_len(), 9 * 7);
+
+    let mut unchanged = PackedString::from_chars(original);
+    unchanged.truncate(22);
+    assert_eq!(unchanged.bits().words(), original_bits.words());
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
