@@ -55,6 +55,31 @@ fn packed_str_to_packed_string_preserves_views_and_owns_storage() {
 }
 
 #[test]
+fn packed_str_materialization_does_not_alias_the_source_storage() {
+    let codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let mut owner = packed_as::<Oct, 3>(&codes, oct);
+    let materialized = {
+        let view = owner
+            .as_packed_str()
+            .slice(UsizeCO::checked_from_start_len(20, 4).unwrap());
+        view.to_packed_string()
+    };
+
+    owner.set(20, Oct::V0);
+    assert_eq!(
+        materialized.to_vec(),
+        codes[20..].iter().copied().map(oct).collect::<Vec<_>>()
+    );
+    assert_eq!(materialized.bits().bit_len(), 4 * 3);
+
+    let mut changed = materialized.clone();
+    changed.set(0, Oct::V7);
+    assert_eq!(materialized.get(0), Some(Oct::V4));
+    assert_eq!(changed.get(0), Some(Oct::V7));
+    assert_eq!(owner.get(20), Some(Oct::V0));
+}
+
+#[test]
 fn packed_string_as_packed_str_covers_the_full_owner_without_copying_values() {
     let empty = PackedString::<PackedSymbol, 1>::new();
     let empty_view = empty.as_packed_str();
