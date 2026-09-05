@@ -100,3 +100,40 @@ fn packed_string_as_packed_str_covers_the_full_owner_without_copying_values() {
     assert!(wide_view.to_packed_string().bits() == wide_owner.bits());
     assert!(wide_view == wide_view.clone());
 }
+
+#[test]
+fn packed_into_bits_moves_exact_payload_and_round_trips() {
+    let empty = PackedString::<PackedSymbol, 1>::new();
+    let empty_bits = empty.into_bits();
+    assert_eq!(empty_bits.bit_len(), 0);
+    assert!(empty_bits.words().is_empty());
+
+    let zero = packed_as::<SparseByte, 8>(&[0], |code| match code {
+        0 => SparseByte::Zero,
+        _ => unreachable!(),
+    });
+    let zero_bit_len = zero.bits().bit_len();
+    let zero_words = zero.bits().words().to_vec();
+    let zero_bits = zero.into_bits();
+    assert_eq!(zero_bits.bit_len(), zero_bit_len);
+    assert_eq!(zero_bits.words(), zero_words.as_slice());
+    assert_eq!(zero_bits.bit_len(), 8);
+
+    let oct_codes: Vec<_> = (0..22).map(|index| index as u8 % 8).collect();
+    let oct_owner = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_bit_len = oct_owner.bits().bit_len();
+    let oct_words = oct_owner.bits().words().to_vec();
+    let oct_round_trip = PackedString::<Oct, 3>::from_bits(oct_owner.clone().into_bits())
+        .expect("a packed owner must round-trip through raw bits");
+    assert_eq!(oct_round_trip.to_vec(), oct_owner.to_vec());
+    let oct_bits = oct_owner.into_bits();
+    assert_eq!(oct_bits.bit_len(), oct_bit_len);
+    assert_eq!(oct_bits.words(), oct_words.as_slice());
+    assert_eq!(oct_bits.bit_len(), 22 * 3);
+
+    let wide_codes: Vec<_> = (0..10).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_bits = wide_owner.into_bits();
+    assert_eq!(wide_bits.bit_len(), 10 * 7);
+    assert_eq!(wide_bits.words().len(), 2);
+}
