@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: linux-x64-scalar
+          - name: linux-x64-baseline
             os: ubuntu-latest
             rustflags: ""
 
@@ -40,6 +40,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -60,3 +62,7 @@ jobs:
 
       - name: Test
         run: cargo test --locked
+
+      - name: Test benchmark tooling
+        if: matrix.name == 'linux-x64-baseline'
+        run: python3 -m unittest discover -s scripts/tests -v

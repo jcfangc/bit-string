@@ -4,7 +4,7 @@
 use proptest::collection::vec;
 use proptest::prelude::*;
 
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 use crate::BitString;
 

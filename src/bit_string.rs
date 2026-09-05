@@ -23,7 +23,7 @@ impl BitString {
         &self.words
     }
 
-    /// Returns a zero-copy [`BitStr`] view of the entire bit string.
+    /// Returns a zero-copy [`crate::BitStr`] view of the entire bit string.
     #[inline]
     pub fn as_bit_str(&self) -> crate::BitStr<'_> {
         crate::BitStr {

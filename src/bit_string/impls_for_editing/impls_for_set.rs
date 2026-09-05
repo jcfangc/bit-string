@@ -1,4 +1,3 @@
-use crate::funcs_for_bits::*;
 use crate::traits::*;
 
 use super::*;
@@ -17,27 +16,22 @@ impl BitString {
         Some(old)
     }
 
-    /// Writes `len` bits of `value` starting at `bit_start`, OR-ing them
-    /// with the existing bits.  Bits beyond `self.len()` are ignored.
+    /// Overwrites `len` bits starting at `bit_start` with the low bits of
+    /// `value`. Bits beyond `self.len()` are ignored.
     ///
     /// Only the low `len` bits of `value` are used; higher bits are
     /// masked out.
     #[inline]
     pub fn set_chunk(&mut self, bit_start: usize, value: u64, len: usize) {
-        let value = value & low_mask(len);
-        let word = bit_start / WORD_BITS;
-        let shift = bit_start % WORD_BITS;
-
-        if let Some(w) = self.words.get_mut(word) {
-            *w |= value << shift;
+        let len = len
+            .min(WORD_BITS)
+            .min(self.bit_len.saturating_sub(bit_start));
+        if len == 0 {
+            return;
         }
 
-        if shift != 0 {
-            if let Some(w) = self.words.get_mut(word + 1) {
-                *w |= value >> (WORD_BITS - shift);
-            }
-        }
-
+        self.words.clear_bits_at(bit_start, len);
+        self.words.write_word_at::<false>(bit_start, value, len);
         self.words.mask_unused_bits(self.bit_len);
     }
 }

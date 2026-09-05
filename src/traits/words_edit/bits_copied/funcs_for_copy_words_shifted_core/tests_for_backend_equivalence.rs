@@ -12,14 +12,6 @@ fn config() -> ProptestConfig {
     }
 }
 
-fn scalar_copy(dst: &mut [u64], src: &[u64], count: usize, shift: usize) {
-    for i in 0..count {
-        let w0 = src[i];
-        let w1 = src[i + 1];
-        dst[i] = (w0 >> shift) | (w1 << (64 - shift));
-    }
-}
-
 proptest! {
     #![proptest_config(config())]
 
@@ -34,7 +26,7 @@ proptest! {
         let mut dst_scalar = vec![0u64; count + extra];
 
         super::copy_words_shifted(&mut dst_simd, &src, count, shift);
-        scalar_copy(&mut dst_scalar, &src, count, shift);
+        super::scalar::copy_words_shifted(&mut dst_scalar, &src, count, shift);
 
         assert_eq!(&dst_simd[..count], &dst_scalar[..count]);
     }

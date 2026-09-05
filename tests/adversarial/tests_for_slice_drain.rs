@@ -1,5 +1,5 @@
 use super::*;
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 #[test]
 fn attack_slice_interval_clamping() {

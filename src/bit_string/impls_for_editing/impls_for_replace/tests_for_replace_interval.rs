@@ -1,7 +1,7 @@
 use crate::BitString;
 use alloc::string::ToString;
 
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 #[inline]
 fn iv(start: usize, end_excl: usize) -> UsizeCO {

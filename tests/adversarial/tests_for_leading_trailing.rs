@@ -1,5 +1,5 @@
 use super::*;
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 // ===========================================================================
 // A. BitString leading/trailing — exhaustive small-length coverage

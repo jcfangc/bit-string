@@ -10,7 +10,7 @@ impl From<&[bool]> for BitString {
         let src = values.as_ptr() as *const u8;
         let len = values.len();
         Self {
-            words: super::bools_core(src, len),
+            words: super::funcs_for_pack_bools_core::bools_core(src, len),
             bit_len: len,
         }
     }
@@ -25,7 +25,7 @@ impl<const N: usize> From<[bool; N]> for BitString {
         // - Valid bool values are 0x00 (false) or 0x01 (true).
         let src = values.as_ptr() as *const u8;
         Self {
-            words: super::bools_core(src, N),
+            words: super::funcs_for_pack_bools_core::bools_core(src, N),
             bit_len: N,
         }
     }

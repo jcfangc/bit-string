@@ -1,5 +1,5 @@
 use super::*;
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 fn alignment_pattern(len: usize) -> String {
     (0..len)

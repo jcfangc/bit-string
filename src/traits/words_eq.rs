@@ -1,22 +1,20 @@
 /// Word-level equality comparison on `[u64]` backing storage.
 ///
-/// Accepts a bit-level `offset` and handles word slicing and intra-word
-/// shift internally:
-/// - `offset % WORD_BITS == 0` — word-aligned, uses [`funcs_for_eq_words_aligned_core`].
-/// - `offset % WORD_BITS != 0` — unaligned shifted-window, uses [`funcs_for_eq_words_unaligned_core`].
+/// The caller pre-trims both slices to the relevant backing words and passes
+/// the haystack's intra-word shift separately:
+/// - `haystack_shift == 0` — word-aligned, uses [`funcs_for_eq_words_aligned_core`].
+/// - `haystack_shift != 0` — unaligned shifted-window, uses [`funcs_for_eq_words_unaligned_core`].
 ///
-/// Short inputs fall back to scalar in both backends.
+/// This trait does not perform bit-level slicing or derive backing-word
+/// offsets; those are handled by the higher-level view implementation.
+///
+/// Short inputs fall back to scalar before SIMD dispatch.
 pub(crate) trait WordsEq {
-    /// Returns `true` if `other` matches `self` starting at `offset` bits.
+    /// Compares `full_words` logical haystack words with `needle`.
     ///
-    /// `count` is the number of full `u64` words to compare (computed from
-    /// the needle bit length).  The intra-word shift and word slicing are
-    /// derived from `offset` internally.
-    /// `self` is pre-trimmed haystack `words[base..]`.
-    /// `needle` is always word-aligned (pre-trimmed by the caller).
-    /// `full_words` is `needle_bit_len / WORD_BITS` — how many
-    /// complete u64 words to compare.
-    /// `haystack_shift` is `original_offset % WORD_BITS`.
+    /// `self` is the pre-trimmed haystack backing slice.
+    /// `needle` is word-aligned and pre-trimmed by the caller.
+    /// `haystack_shift` is the physical start offset within `self[0]`.
     /// When `HS_WORD_ALIGNED` is `true`, `haystack_shift == 0` is
     /// guaranteed and the aligned backend is used unconditionally.
     /// When it is `false`, no alignment guarantee is made.
