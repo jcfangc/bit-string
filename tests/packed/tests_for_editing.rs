@@ -364,6 +364,61 @@ fn packed_remove_returns_deleted_code_and_preserves_the_rest() {
 }
 
 #[test]
+fn packed_replace_splices_characters_without_mutating_the_source() {
+    let original_codes: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let original = PackedString::from_chars(original_codes.clone());
+    let replacement = PackedString::from_chars([Oct::V7, Oct::V0, Oct::V3]);
+
+    let mut expected = original_codes.clone();
+    expected.splice(10..13, [Oct::V7, Oct::V0, Oct::V3]);
+    let replaced = original.replace(10, &replacement);
+    assert_eq!(replaced.to_vec(), expected);
+    assert_eq!(replaced.bits().bit_len(), expected.len() * 3);
+    assert_eq!(original.to_vec(), original_codes);
+
+    let mut appended = original_codes.clone();
+    appended.extend([Oct::V7, Oct::V0, Oct::V3]);
+    assert_eq!(
+        original.replace(usize::MAX, &replacement).to_vec(),
+        appended
+    );
+
+    let empty_replacement = PackedString::<Oct, 3>::new();
+    assert!(original.replace(5, &empty_replacement) == original);
+
+    let wide_original = PackedString::from_chars([
+        WideCode(0),
+        WideCode(11),
+        WideCode(22),
+        WideCode(33),
+        WideCode(44),
+        WideCode(55),
+        WideCode(66),
+        WideCode(77),
+        WideCode(88),
+    ]);
+    let wide_replacement = PackedString::from_chars([WideCode(127), WideCode(1), WideCode(64)]);
+    let wide_result = wide_original.replace(8, &wide_replacement);
+    assert_eq!(
+        wide_result.to_vec(),
+        vec![
+            WideCode(0),
+            WideCode(11),
+            WideCode(22),
+            WideCode(33),
+            WideCode(44),
+            WideCode(55),
+            WideCode(66),
+            WideCode(77),
+            WideCode(127),
+            WideCode(1),
+            WideCode(64),
+        ]
+    );
+    assert_eq!(wide_result.bits().bit_len(), 11 * 7);
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
