@@ -73,6 +73,42 @@ fn bits_per_char_is_the_type_level_width() {
     );
 }
 
+#[test]
+fn bits_exposes_the_owned_bitstring_layout() {
+    let empty = PackedString::<Symbol, 2>::new();
+    assert!(empty.bits().words().is_empty());
+    assert_eq!(empty.bits().bit_len(), 0);
+    assert!(core::ptr::eq(empty.bits(), empty.bits()));
+
+    let zero = packed_as::<SparseByte, 8>(&[0], |code| match code {
+        0 => SparseByte::Zero,
+        _ => unreachable!(),
+    });
+    assert_eq!(zero.bits().bit_len(), 8);
+    assert_eq!(zero.bits().words(), &[0]);
+    assert!(!zero.is_empty());
+
+    let oct_codes: Vec<_> = (0..22).map(|index| index as u8 % 8).collect();
+    let oct_owner = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_expected = BitString::from_iter(
+        oct_codes
+            .iter()
+            .flat_map(|&code| (0..3).map(move |offset| code & (1 << offset) != 0)),
+    );
+    assert_eq!(oct_owner.bits().bit_len(), oct_expected.bit_len());
+    assert_eq!(oct_owner.bits().words(), oct_expected.words());
+
+    let wide_codes: Vec<_> = (0..10).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_expected = BitString::from_iter(
+        wide_codes
+            .iter()
+            .flat_map(|&code| (0..7).map(move |offset| code & (1 << offset) != 0)),
+    );
+    assert_eq!(wide_owner.bits().bit_len(), wide_expected.bit_len());
+    assert_eq!(wide_owner.bits().words(), wide_expected.words());
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct ManualSymbol;
 
