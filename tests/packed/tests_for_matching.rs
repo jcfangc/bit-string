@@ -411,6 +411,37 @@ fn packed_string_contains_searches_character_aligned_windows() {
 }
 
 #[test]
+fn packed_string_find_returns_the_earliest_character_index() {
+    let haystack = packed(&[0, 1, 0, 1, 2, 1]);
+    assert_eq!(haystack.find(&packed(&[0, 1])), Some(0));
+    assert_eq!(haystack.find(&packed(&[1, 2])), Some(3));
+    assert_eq!(haystack.find(&packed(&[2, 0])), None);
+    assert_eq!(haystack.find(&packed(&[0, 1, 0, 1, 2, 1, 0])), None);
+    assert_eq!(
+        haystack.find(&PackedString::<super::Symbol, 2>::new()),
+        Some(0)
+    );
+
+    let empty = PackedString::<super::Symbol, 2>::new();
+    assert_eq!(empty.find(&empty), Some(0));
+    assert_eq!(empty.find(&packed(&[0])), None);
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_haystack = packed_as::<Oct, 3>(&oct_codes, oct);
+    assert_eq!(
+        oct_haystack.find(&packed_as::<Oct, 3>(&[4, 5, 6], oct)),
+        Some(4)
+    );
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_haystack = packed_as::<WideCode, 7>(&wide_codes, wide);
+    assert_eq!(
+        wide_haystack.find(&packed_as::<WideCode, 7>(&[88, 99], wide)),
+        Some(8)
+    );
+}
+
+#[test]
 fn packed_str_find_returns_the_earliest_character_index() {
     let repeated_owner = packed(&[0, 0, 0]);
     let repeated_needle = packed(&[0, 0]);
