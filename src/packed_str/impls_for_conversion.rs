@@ -11,7 +11,7 @@ where
     #[inline]
     pub(crate) fn from_valid_bit_str(bits: BitStr<'ps>) -> Self {
         let width = usize::from(BITS);
-        let _ = crate::packed_string::funcs_for_code::code_mask::<BITS>();
+        crate::assert_valid_width::<BITS>();
         debug_assert_eq!(bits.start() % width, 0);
         debug_assert_eq!(bits.bit_len() % width, 0);
         Self {

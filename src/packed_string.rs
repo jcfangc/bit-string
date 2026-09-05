@@ -18,7 +18,7 @@ where
     marker: PhantomData<fn() -> C>,
 }
 
-pub(crate) mod funcs_for_code;
+mod funcs_for_code;
 mod impls_for_access;
 mod impls_for_construction;
 mod impls_for_editing;
@@ -29,7 +29,8 @@ mod impls_for_iter;
 mod impls_for_matching;
 mod impls_for_ord;
 
-use funcs_for_code::{code_mask, write_code};
+use crate::{assert_valid_width, code_mask};
+use funcs_for_code::write_code;
 
 #[cfg(test)]
 mod tests_for_support;

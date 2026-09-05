@@ -7,7 +7,7 @@ where
     C: PackedChar<BITS>,
 {
     pub(crate) fn cmp_codes(&self, other: &Self) -> Ordering {
-        let mask = u64::from(crate::packed_string::funcs_for_code::code_mask::<BITS>());
+        let mask = u64::from(crate::code_mask::<BITS>());
         let shared_len = self.char_len().min(other.char_len());
         for index in 0..shared_len {
             let start = index * usize::from(BITS);

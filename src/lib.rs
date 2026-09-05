@@ -4,10 +4,12 @@ extern crate alloc;
 
 mod consts_for_bits;
 mod funcs_for_bits;
+mod funcs_for_packed;
 
 pub mod traits;
 pub(crate) use consts_for_bits::*;
 pub(crate) use funcs_for_bits::*;
+pub(crate) use funcs_for_packed::*;
 
 mod bit_str;
 mod bit_string;

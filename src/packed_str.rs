@@ -6,7 +6,6 @@ use crate::{BitStr, PackedString, traits::PackedChar};
 
 /// A character-aligned borrowed view into a [`PackedString`].
 #[derive(Clone, Copy)]
-#[allow(dead_code)]
 pub struct PackedStr<'ps, C, const BITS: u8>
 where
     C: PackedChar<BITS>,

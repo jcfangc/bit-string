@@ -14,7 +14,7 @@ where
             .min(self.char_len())
             .saturating_mul(bits);
         if end <= start {
-            return Self::from_valid_bit_str(self.bits.slice_until(0));
+            return Self::from_valid_bit_str(self.bits.slice_from(start));
         }
         let interval = UsizeCO::checked_from_start_len(start, end - start).unwrap();
         Self::from_valid_bit_str(self.bits.slice(interval))

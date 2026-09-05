@@ -6,7 +6,7 @@ where
 {
     /// Validates and adopts an already packed bit payload.
     pub fn from_bits(bits: BitString) -> Option<Self> {
-        let () = Self::VALID_WIDTH;
+        assert_valid_width::<BITS>();
         let bits_per_char = usize::from(BITS);
         if bits.bit_len() % bits_per_char != 0 {
             return None;
@@ -22,7 +22,7 @@ where
     #[inline]
     pub(crate) fn from_valid_bits(bits: BitString) -> Self {
         let width = usize::from(BITS);
-        let _ = code_mask::<BITS>();
+        assert_valid_width::<BITS>();
         debug_assert_eq!(bits.bit_len() % width, 0);
         Self {
             bits,
