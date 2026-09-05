@@ -850,6 +850,51 @@ fn packed_str_strip_prefix_returns_the_remaining_character_view() {
 }
 
 #[test]
+fn packed_string_strip_suffix_returns_the_remaining_owner() {
+    let receiver = packed(&[0, 1, 2, 1, 0]);
+    let suffix = packed(&[1, 0]);
+    assert_eq!(
+        receiver.strip_suffix(&suffix).unwrap().to_vec(),
+        vec![super::Symbol::Zero, super::Symbol::One, super::Symbol::Two]
+    );
+    assert_eq!(
+        receiver.strip_suffix(&PackedString::<super::Symbol, 2>::new()),
+        Some(receiver.clone())
+    );
+    assert!(receiver.strip_suffix(&receiver).unwrap().is_empty());
+    assert!(receiver.strip_suffix(&packed(&[0, 1])).is_none());
+    assert!(
+        receiver
+            .strip_suffix(&packed(&[1, 0, 1, 0, 1, 0]))
+            .is_none()
+    );
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_receiver = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_suffix = packed_as::<Oct, 3>(&oct_codes[20..], oct);
+    let oct_stripped = oct_receiver.strip_suffix(&oct_suffix).unwrap();
+    assert_eq!(
+        oct_stripped.to_vec(),
+        oct_codes[..20].iter().copied().map(oct).collect::<Vec<_>>()
+    );
+    assert_eq!(oct_stripped.bits().bit_len(), 20 * 3);
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_receiver = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_suffix = packed_as::<WideCode, 7>(&wide_codes[8..], wide);
+    let wide_stripped = wide_receiver.strip_suffix(&wide_suffix).unwrap();
+    assert_eq!(
+        wide_stripped.to_vec(),
+        wide_codes[..8]
+            .iter()
+            .copied()
+            .map(wide)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(wide_stripped.bits().bit_len(), 8 * 7);
+}
+
+#[test]
 fn packed_str_strip_suffix_returns_the_remaining_character_view() {
     let owner = packed(&[0, 1, 2, 1, 0]);
     let receiver = owner.as_packed_str();
