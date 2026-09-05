@@ -80,6 +80,49 @@ fn packed_out_of_bounds_intervals_preserve_empty_semantics() {
 }
 
 #[test]
+fn packed_clear_removes_all_codes_and_allows_reuse() {
+    let mut empty = PackedString::<super::Symbol, 2>::new();
+    empty.clear();
+    empty.clear();
+    assert!(empty.is_empty());
+    assert_eq!(empty.char_len(), 0);
+    assert_eq!(empty.bits().bit_len(), 0);
+    assert!(empty.bits().words().is_empty());
+    assert!(empty.to_vec().is_empty());
+    assert_eq!(empty.get(0), None);
+    assert_eq!(empty.first(), None);
+    assert_eq!(empty.last(), None);
+    assert_eq!(empty.as_packed_str().iter().next(), None);
+
+    let mut zero = packed_as::<super::SparseByte, 8>(&[0], |code| match code {
+        0 => super::SparseByte::Zero,
+        _ => unreachable!(),
+    });
+    assert!(!zero.is_empty());
+    assert_eq!(zero.bits().words(), &[0]);
+    zero.clear();
+    assert!(zero.is_empty());
+    assert!(zero.bits().words().is_empty());
+
+    let oct_codes: Vec<_> = (0..22).map(|index| index as u8 % 8).collect();
+    let mut oct_string = packed_as::<Oct, 3>(&oct_codes, super::oct);
+    oct_string.clear();
+    assert_eq!(oct_string.char_len(), 0);
+    assert_eq!(oct_string.bits().bit_len(), 0);
+    assert!(oct_string.bits().words().is_empty());
+    oct_string.push(Oct::V7);
+    assert_eq!(oct_string.to_vec(), vec![Oct::V7]);
+    assert_eq!(oct_string.bits().bit_len(), 3);
+
+    let wide_codes: Vec<_> = (0..10).map(|index| (index * 11) as u8 % 128).collect();
+    let mut wide_string = packed_as::<WideCode, 7>(&wide_codes, super::wide);
+    wide_string.clear();
+    wide_string.push(WideCode(127));
+    assert_eq!(wide_string.to_vec(), vec![WideCode(127)]);
+    assert_eq!(wide_string.bits().bit_len(), 7);
+}
+
+#[test]
 fn packed_views_and_editing_remain_character_aligned() {
     let mut string = PackedString::<super::Symbol, 2>::from_chars([
         super::Symbol::Zero,
