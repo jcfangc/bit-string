@@ -197,6 +197,69 @@ fn packed_str_get_decodes_bounds_offsets_and_cross_word_codes() {
 }
 
 #[test]
+fn packed_string_get_isolates_codes_at_width_boundaries() {
+    let binary = packed_as::<PackedSymbol, 1>(&[0, 1, 0, 1], |code| match code {
+        0 => PackedSymbol::Zero,
+        1 => PackedSymbol::One,
+        _ => unreachable!(),
+    });
+    assert_eq!(
+        binary.to_vec(),
+        vec![
+            PackedSymbol::Zero,
+            PackedSymbol::One,
+            PackedSymbol::Zero,
+            PackedSymbol::One,
+        ]
+    );
+    assert_eq!(binary.get(4), None);
+    assert_eq!(binary.get(usize::MAX), None);
+
+    let bytes = packed_as::<SparseByte, 8>(&[0, 255, 3, 255], |code| match code {
+        0 => SparseByte::Zero,
+        255 => SparseByte::Maximum,
+        3 => SparseByte::Middle,
+        _ => unreachable!(),
+    });
+    for (index, code) in [0, 255, 3, 255].into_iter().enumerate() {
+        assert_eq!(bytes.get(index).map(PackedChar::code), Some(code));
+    }
+
+    let oct_codes: Vec<_> = (0..22)
+        .map(|index| if index == 21 { 1 } else { index as u8 % 8 })
+        .collect();
+    let oct_string = packed_as::<Oct, 3>(&oct_codes, oct);
+    for (index, &code) in oct_codes.iter().enumerate() {
+        assert_eq!(oct_string.get(index).map(PackedChar::code), Some(code));
+    }
+    assert_eq!(
+        oct_string.get(20).map(PackedChar::code),
+        Some(oct_codes[20])
+    );
+    assert_eq!(oct_string.get(21).map(PackedChar::code), Some(1));
+
+    let wide_codes: Vec<_> = (0..10)
+        .map(|index| {
+            if index == 9 {
+                1
+            } else {
+                (index * 11) as u8 % 128
+            }
+        })
+        .collect();
+    let wide_string = packed_as::<WideCode, 7>(&wide_codes, wide);
+    for (index, &code) in wide_codes.iter().enumerate() {
+        assert_eq!(wide_string.get(index).map(PackedChar::code), Some(code));
+    }
+    assert_eq!(
+        wide_string.get(8).map(PackedChar::code),
+        Some(wide_codes[8])
+    );
+    assert_eq!(wide_string.get(9).map(PackedChar::code), Some(1));
+    assert_eq!(wide_string.get(10), None);
+}
+
+#[test]
 fn packed_str_first_is_view_relative_and_empty_safe() {
     let empty = PackedString::<PackedSymbol, 1>::new();
     assert_eq!(empty.as_packed_str().first(), None);
