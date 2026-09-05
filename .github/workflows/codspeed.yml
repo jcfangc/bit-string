@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   benchmarks:
-    uses: jcfangc/ci/.github/workflows/rust-codspeed.yml@v0
+    uses: jcfangc/ci/.github/workflows/rust-codspeed.yml@ccd19196bcd8e8a42924c0621c321ee2dc2db61a
     with:
       rust_toolchain: "1.98.1"
       cargo_codspeed_version: "5.0.1"
