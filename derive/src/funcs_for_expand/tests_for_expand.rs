@@ -7,6 +7,56 @@ fn error(input: TokenStream2) -> String {
 }
 
 #[test]
+fn accepts_top_level_u8_in_repr_metadata() {
+    for input in [
+        quote! {
+            #[repr(u8)]
+            enum Letter { A = 0 }
+        },
+        quote! {
+            #[repr(C, u8)]
+            enum Letter { A = 0 }
+        },
+        quote! {
+            #[repr(u8, C)]
+            enum Letter { A = 0 }
+        },
+        quote! {
+            #[repr(C)]
+            #[repr(u8)]
+            enum Letter { A = 0 }
+        },
+    ] {
+        assert!(require_repr_u8(&parse2(input).unwrap()).is_ok());
+    }
+}
+
+#[test]
+fn rejects_repr_without_top_level_u8() {
+    for input in [
+        quote! { enum Letter { A = 0 } },
+        quote! {
+            #[repr(C)]
+            enum Letter { A = 0 }
+        },
+        quote! {
+            #[repr(usize)]
+            enum Letter { A = 0 }
+        },
+        quote! {
+            #[repr(transparent)]
+            enum Letter { A = 0 }
+        },
+        quote! {
+            #[repr(align(8))]
+            enum Letter { A = 0 }
+        },
+    ] {
+        assert!(require_repr_u8(&parse2(input).unwrap()).is_err());
+    }
+}
+
+#[test]
 fn accepts_strict_enum_encoding() {
     let result = expand(
         parse2(quote! {
