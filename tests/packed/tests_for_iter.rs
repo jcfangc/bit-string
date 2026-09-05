@@ -87,3 +87,27 @@ fn packed_str_iter_cursor_state_meets_at_the_middle() {
     assert_eq!(iterator.next_back(), None);
     assert_eq!(iterator.len(), 0);
 }
+
+#[test]
+fn packed_str_iter_next_advances_one_front_cursor_and_fuses() {
+    let owner = packed_as::<Oct, 3>(&[0, 1, 2, 3, 4], oct);
+    let view = owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(1, 3).unwrap());
+    let mut iterator = view.iter();
+
+    assert_eq!(iterator.next(), Some(Oct::V1));
+    assert_eq!(iterator.len(), 2);
+    assert_eq!(iterator.next(), Some(Oct::V2));
+    assert_eq!(iterator.len(), 1);
+    assert_eq!(iterator.next(), Some(Oct::V3));
+    assert_eq!(iterator.len(), 0);
+    assert_eq!(iterator.next(), None);
+    assert_eq!(iterator.next(), None);
+    assert_eq!(iterator.len(), 0);
+
+    let empty = PackedString::<PackedSymbol, 1>::new();
+    let mut empty_iterator = empty.as_packed_str().iter();
+    assert_eq!(empty_iterator.next(), None);
+    assert_eq!(empty_iterator.len(), 0);
+}
