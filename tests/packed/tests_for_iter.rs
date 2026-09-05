@@ -111,3 +111,21 @@ fn packed_str_iter_next_advances_one_front_cursor_and_fuses() {
     assert_eq!(empty_iterator.next(), None);
     assert_eq!(empty_iterator.len(), 0);
 }
+
+#[test]
+fn packed_str_iter_size_hint_tracks_exact_remaining_count() {
+    let owner = packed_as::<Oct, 3>(&[0, 1, 2, 3], oct);
+    let mut iterator = owner.as_packed_str().iter();
+
+    assert_eq!(iterator.size_hint(), (4, Some(4)));
+    assert_eq!(iterator.next(), Some(Oct::V0));
+    assert_eq!(iterator.size_hint(), (3, Some(3)));
+    assert_eq!(iterator.next_back(), Some(Oct::V3));
+    assert_eq!(iterator.size_hint(), (2, Some(2)));
+    assert_eq!(iterator.next(), Some(Oct::V1));
+    assert_eq!(iterator.next_back(), Some(Oct::V2));
+    assert_eq!(iterator.size_hint(), (0, Some(0)));
+    assert_eq!(iterator.next(), None);
+    assert_eq!(iterator.next_back(), None);
+    assert_eq!(iterator.size_hint(), (0, Some(0)));
+}
