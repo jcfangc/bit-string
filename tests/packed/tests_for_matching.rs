@@ -254,3 +254,77 @@ fn packed_str_ends_with_compares_character_aligned_suffixes() {
     assert!(wide_receiver.ends_with(wide_receiver.slice_from(2)));
     assert!(!wide_receiver.ends_with(wide_receiver.slice_from(1).slice_until(2)));
 }
+
+#[test]
+fn packed_str_contains_searches_character_aligned_windows() {
+    let haystack_owner = packed(&[0, 0, 0]);
+    let haystack = haystack_owner.as_packed_str();
+    let repeated = packed(&[0, 0]);
+    let final_haystack_owner = packed(&[1, 2, 0]);
+    let final_haystack = final_haystack_owner.as_packed_str();
+    let final_window = packed(&[2, 0]);
+    let different = packed(&[1, 2]);
+    let oversized = packed(&[0, 0, 0, 1]);
+
+    assert!(haystack.contains(repeated.as_packed_str()));
+    assert!(final_haystack.contains(final_window.as_packed_str()));
+    assert!(!haystack.contains(different.as_packed_str()));
+    assert!(!haystack.contains(oversized.as_packed_str()));
+    assert!(haystack.contains(haystack.slice_until(0)));
+
+    let empty_owner = packed(&[]);
+    let empty = empty_owner.as_packed_str();
+    let singleton_owner = packed(&[0]);
+    assert!(empty.contains(empty));
+    assert!(!empty.contains(singleton_owner.as_packed_str()));
+
+    let offset_owner = packed(&[0, 1, 2, 1, 0]);
+    let offset_haystack = offset_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(1, 3).unwrap());
+    let offset_needle = offset_haystack.slice_from(1);
+    let offset_different_owner = packed(&[2, 2]);
+    let offset_different = offset_different_owner.as_packed_str();
+    assert!(offset_haystack.contains(offset_needle));
+    assert!(!offset_haystack.contains(offset_different));
+
+    let binary = packed_as::<super::PackedSymbol, 1>(&[0, 1, 1], |code| match code {
+        0 => super::PackedSymbol::Zero,
+        1 => super::PackedSymbol::One,
+        _ => unreachable!(),
+    });
+    assert!(
+        binary
+            .as_packed_str()
+            .contains(binary.as_packed_str().slice_from(1))
+    );
+
+    let bytes = packed_as::<super::SparseByte, 8>(&[0, 255], |code| match code {
+        0 => super::SparseByte::Zero,
+        255 => super::SparseByte::Maximum,
+        _ => unreachable!(),
+    });
+    assert!(
+        bytes
+            .as_packed_str()
+            .contains(bytes.as_packed_str().slice_from(1))
+    );
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_owner = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_haystack = oct_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(20, 4).unwrap());
+    let oct_different_owner = packed_as::<Oct, 3>(&[5, 4], oct);
+    assert!(oct_haystack.contains(oct_haystack.slice_from(1)));
+    assert!(!oct_haystack.contains(oct_different_owner.as_packed_str()));
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_haystack = wide_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(8, 4).unwrap());
+    let wide_different_owner = packed_as::<WideCode, 7>(&[11, 0], wide);
+    assert!(wide_haystack.contains(wide_haystack.slice_from(1)));
+    assert!(!wide_haystack.contains(wide_different_owner.as_packed_str()));
+}
