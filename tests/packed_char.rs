@@ -149,6 +149,7 @@ fn assert_edits<C, const BITS: u8>(
     insert_index: usize,
     remove_index: usize,
     replace_start: usize,
+    inserted_code: u8,
     decode: fn(u8) -> C,
 ) where
     C: PackedChar<BITS> + core::fmt::Debug,
@@ -157,8 +158,8 @@ fn assert_edits<C, const BITS: u8>(
     let mut oracle = initial.to_vec();
 
     let oracle_insert_index = insert_index.min(oracle.len());
-    string.insert(insert_index, decode(2));
-    oracle.insert(oracle_insert_index, 2);
+    string.insert(insert_index, decode(inserted_code));
+    oracle.insert(oracle_insert_index, inserted_code);
 
     if !oracle.is_empty() {
         let remove_index = remove_index.min(oracle.len() - 1);
@@ -340,6 +341,7 @@ proptest! {
             insert_index,
             remove_index,
             replace_start,
+            2,
             oct,
         );
         assert_edits::<WideCode, 7>(
@@ -348,6 +350,7 @@ proptest! {
             insert_index,
             remove_index,
             replace_start,
+            2,
             wide,
         );
     }
