@@ -45,6 +45,45 @@ fn packed_attribute_encoding_round_trips_through_packed_string() {
 }
 
 #[test]
+fn packed_from_array_preserves_order_length_and_layout() {
+    let empty_array: [Symbol; 0] = [];
+    let empty = PackedString::<Symbol, 2>::from(empty_array);
+    assert!(empty.is_empty());
+    assert_eq!(empty.char_len(), 0);
+    assert_eq!(empty.bits().bit_len(), 0);
+
+    let singleton = PackedString::<SparseByte, 8>::from([SparseByte::Maximum]);
+    assert_eq!(singleton.to_vec(), vec![SparseByte::Maximum]);
+    assert_eq!(singleton.char_len(), 1);
+    assert_eq!(singleton.bits().bit_len(), 8);
+
+    let symbols = [Symbol::Zero, Symbol::Two, Symbol::One, Symbol::Zero];
+    let symbol_from_array = PackedString::<Symbol, 2>::from(symbols);
+    let symbol_from_chars = PackedString::from_chars(symbols);
+    assert!(symbol_from_array == symbol_from_chars);
+    assert_eq!(symbol_from_array.to_vec(), symbols);
+
+    let oct_values = [Oct::V7; 22];
+    let oct_from_array = PackedString::<Oct, 3>::from(oct_values);
+    let oct_from_chars = PackedString::from_chars(oct_values);
+    assert!(oct_from_array == oct_from_chars);
+    assert_eq!(oct_from_array.char_len(), 22);
+    assert_eq!(oct_from_array.bits().bit_len(), 22 * 3);
+    assert_eq!(oct_from_array.bits().words(), oct_from_chars.bits().words());
+
+    let wide_values = [WideCode(127); 10];
+    let wide_from_array = PackedString::<WideCode, 7>::from(wide_values);
+    let wide_from_chars = PackedString::from_chars(wide_values);
+    assert!(wide_from_array == wide_from_chars);
+    assert_eq!(wide_from_array.char_len(), 10);
+    assert_eq!(wide_from_array.bits().bit_len(), 10 * 7);
+    assert_eq!(
+        wide_from_array.bits().words(),
+        wide_from_chars.bits().words()
+    );
+}
+
+#[test]
 fn bits_per_char_is_the_type_level_width() {
     let binary_empty = PackedString::<PackedSymbol, 1>::new();
     assert_eq!(binary_empty.bits_per_char(), 1);
