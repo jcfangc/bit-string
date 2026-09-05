@@ -12,6 +12,12 @@ fn error(input: TokenStream2) -> String {
     expand(parse2(input).unwrap()).unwrap_err().to_string()
 }
 
+fn repr_error(input: TokenStream2) -> String {
+    require_repr_u8(&parse2(input).unwrap())
+        .unwrap_err()
+        .to_string()
+}
+
 fn parsed_bits(input: TokenStream2) -> u8 {
     parse_bits(&parse2(input).unwrap()).unwrap().0
 }
@@ -256,6 +262,35 @@ fn rejects_repr_without_top_level_u8() {
     ] {
         assert!(require_repr_u8(&parse2(input).unwrap()).is_err());
     }
+
+    for input in [
+        quote! {
+            #[repr(align(8))]
+            enum Letter { A = 0 }
+        },
+        quote! {
+            #[repr(C, align(8))]
+            enum Letter { A = 0 }
+        },
+        quote! {
+            #[repr(align(u8))]
+            enum Letter { A = 0 }
+        },
+    ] {
+        assert_eq!(repr_error(input), "packed requires #[repr(u8)]");
+    }
+}
+
+#[test]
+fn propagates_malformed_repr_metadata() {
+    let input = parse2(quote! {
+        #[repr(C,, u8)]
+        enum Letter { A = 0 }
+    })
+    .unwrap();
+    let error = require_repr_u8(&input).unwrap_err().to_string();
+
+    assert_ne!(error, "packed requires #[repr(u8)]");
 }
 
 #[test]
