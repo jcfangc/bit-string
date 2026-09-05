@@ -857,6 +857,78 @@ fn packed_drain_interval_assign_matches_non_mutating_drain() {
 }
 
 #[test]
+fn packed_replace_interval_assign_matches_vec_splice_semantics() {
+    let original_codes: Vec<_> = (0..22).map(|index| index as u8 % 8).collect();
+    let replacement_codes = vec![7, 0, 3];
+    let interval = UsizeCO::checked_from_start_len(9, 5).unwrap();
+    let replacement = packed_as::<Oct, 3>(&replacement_codes, super::oct);
+    let mut string = packed_as::<Oct, 3>(&original_codes, super::oct);
+    let mut oracle = original_codes.clone();
+
+    string.replace_interval_assign(interval, &replacement);
+    oracle.splice(9..14, replacement_codes.iter().copied());
+    assert_eq!(
+        string
+            .to_vec()
+            .iter()
+            .map(|value| value.code())
+            .collect::<Vec<_>>(),
+        oracle
+    );
+    assert_eq!(string.bits().bit_len(), oracle.len() * 3);
+
+    let empty = PackedString::<Oct, 3>::new();
+    string.replace_interval_assign(UsizeCO::checked_from_start_len(4, 2).unwrap(), &empty);
+    oracle.splice(4..6, core::iter::empty());
+    assert_eq!(
+        string
+            .to_vec()
+            .iter()
+            .map(|value| value.code())
+            .collect::<Vec<_>>(),
+        oracle
+    );
+    assert_eq!(string.bits().bit_len(), oracle.len() * 3);
+
+    string.replace_interval_assign(
+        UsizeCO::checked_from_start_len(99, 4).unwrap(),
+        &replacement,
+    );
+    oracle.extend(replacement_codes.iter().copied());
+    assert_eq!(
+        string
+            .to_vec()
+            .iter()
+            .map(|value| value.code())
+            .collect::<Vec<_>>(),
+        oracle
+    );
+
+    let wide_replacement = packed_as::<WideCode, 7>(&[127, 1], super::wide);
+    let mut wide = packed_as::<WideCode, 7>(&[0; 10], super::wide);
+    wide.replace_interval_assign(
+        UsizeCO::checked_from_start_len(8, 2).unwrap(),
+        &wide_replacement,
+    );
+    assert_eq!(
+        wide.to_vec(),
+        vec![
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(0),
+            WideCode(127),
+            WideCode(1),
+        ]
+    );
+    assert_eq!(wide.bits().bit_len(), 10 * 7);
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
