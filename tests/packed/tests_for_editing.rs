@@ -690,6 +690,30 @@ fn packed_slice_returns_a_clamped_character_aligned_owner() {
 }
 
 #[test]
+fn packed_slice_from_returns_the_clamped_suffix() {
+    let original: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let string = PackedString::from_chars(original.clone());
+
+    let suffix = string.slice_from(9);
+    assert_eq!(suffix.to_vec(), original[9..].to_vec());
+    assert_eq!(suffix.bits().bit_len(), (original.len() - 9) * 3);
+    assert_eq!(string.to_vec(), original);
+
+    assert_eq!(string.slice_from(0).to_vec(), original);
+    let empty = string.slice_from(usize::MAX);
+    assert!(empty.is_empty());
+    assert!(empty.bits().words().is_empty());
+
+    let wide_values: Vec<_> = (0..16)
+        .map(|index| WideCode((index * 13) as u8 % 128))
+        .collect();
+    let wide = PackedString::from_chars(wide_values.clone());
+    let wide_suffix = wide.slice_from(8);
+    assert_eq!(wide_suffix.to_vec(), wide_values[8..].to_vec());
+    assert_eq!(wide_suffix.bits().bit_len(), 8 * 7);
+}
+
+#[test]
 fn packed_insert_matches_vec_insert_and_clamps_out_of_bounds_indices() {
     let mut string = PackedString::from_chars((0..22).map(|index| super::oct(index as u8 % 8)));
     let mut oracle = string.to_vec();
