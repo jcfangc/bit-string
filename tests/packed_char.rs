@@ -362,6 +362,58 @@ fn packed_str_last_is_view_relative_and_empty_safe() {
     assert_eq!(wide_string.as_packed_str().slice_from(16).last(), None);
 }
 
+#[test]
+fn packed_str_to_packed_string_preserves_views_and_owns_storage() {
+    let empty_owner = PackedString::<PackedSymbol, 1>::new();
+    let empty = empty_owner.as_packed_str().to_packed_string();
+    assert!(empty.is_empty());
+    assert_eq!(empty.char_len(), 0);
+    assert_eq!(empty.bits().bit_len(), 0);
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_owner = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_view = oct_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(20, 4).unwrap());
+    let oct_materialized = oct_view.to_packed_string();
+    assert_eq!(oct_materialized.char_len(), 4);
+    assert_eq!(
+        oct_materialized.to_vec(),
+        oct_codes[20..24]
+            .iter()
+            .copied()
+            .map(oct)
+            .collect::<Vec<_>>()
+    );
+    assert!(oct_materialized.as_packed_str() == oct_view);
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_view = wide_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(8, 5).unwrap());
+    let wide_materialized = wide_view.to_packed_string();
+    assert!(wide_materialized.as_packed_str() == wide_view);
+    assert_eq!(wide_materialized.bits().bit_len(), 35);
+
+    let sparse_materialized = {
+        let owner = packed_as::<SparseByte, 8>(&[255, 3, 0], |code| match code {
+            0 => SparseByte::Zero,
+            3 => SparseByte::Middle,
+            255 => SparseByte::Maximum,
+            _ => unreachable!(),
+        });
+        owner
+            .as_packed_str()
+            .slice(UsizeCO::checked_from_start_len(1, 2).unwrap())
+            .to_packed_string()
+    };
+    assert_eq!(
+        sparse_materialized.to_vec(),
+        vec![SparseByte::Middle, SparseByte::Zero]
+    );
+}
+
 fn wide(code: u8) -> WideCode {
     WideCode(code)
 }
