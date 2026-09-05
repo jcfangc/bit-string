@@ -15,3 +15,6 @@ pub(crate) const fn code_mask<const BITS: u8>() -> u8 {
         _ => unreachable!(),
     }
 }
+
+#[cfg(test)]
+mod tests_for_packed;
