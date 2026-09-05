@@ -714,6 +714,28 @@ fn packed_slice_from_returns_the_clamped_suffix() {
 }
 
 #[test]
+fn packed_slice_until_returns_the_clamped_prefix() {
+    let original: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let string = PackedString::from_chars(original.clone());
+
+    let prefix = string.slice_until(9);
+    assert_eq!(prefix.to_vec(), original[..9].to_vec());
+    assert_eq!(prefix.bits().bit_len(), 9 * 3);
+    assert_eq!(string.to_vec(), original);
+
+    assert!(string.slice_until(0).is_empty());
+    assert_eq!(string.slice_until(usize::MAX).to_vec(), original);
+
+    let wide_values: Vec<_> = (0..16)
+        .map(|index| WideCode((index * 13) as u8 % 128))
+        .collect();
+    let wide = PackedString::from_chars(wide_values.clone());
+    let wide_prefix = wide.slice_until(8);
+    assert_eq!(wide_prefix.to_vec(), wide_values[..8].to_vec());
+    assert_eq!(wide_prefix.bits().bit_len(), 8 * 7);
+}
+
+#[test]
 fn packed_insert_matches_vec_insert_and_clamps_out_of_bounds_indices() {
     let mut string = PackedString::from_chars((0..22).map(|index| super::oct(index as u8 % 8)));
     let mut oracle = string.to_vec();
