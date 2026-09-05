@@ -193,3 +193,28 @@ fn packed_str_borrowed_into_iter_uses_the_view_range() {
     assert_eq!(iterator.len(), 2);
     assert_eq!(iterator.collect::<Vec<_>>(), vec![Oct::V5, Oct::V6]);
 }
+
+#[test]
+fn packed_string_borrowed_into_iter_uses_the_full_owner() {
+    let codes: Vec<u8> = (0..22).map(|index| index as u8 % 8).collect();
+    let owner = packed_as::<Oct, 3>(&codes, oct);
+    let expected: Vec<_> = codes.iter().copied().map(oct).collect();
+
+    let mut iterator = (&owner).into_iter();
+    assert_eq!(iterator.len(), expected.len());
+    assert_eq!(iterator.size_hint(), (expected.len(), Some(expected.len())));
+    assert_eq!(iterator.next(), Some(expected[0]));
+    assert_eq!(iterator.next_back(), Some(*expected.last().unwrap()));
+    assert_eq!(
+        iterator.collect::<Vec<_>>(),
+        expected[1..expected.len() - 1]
+    );
+
+    let wide_codes: Vec<u8> = (0..10).map(|index| (index * 13) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_expected: Vec<_> = wide_codes.iter().copied().map(wide).collect();
+    assert_eq!((&wide_owner).into_iter().collect::<Vec<_>>(), wide_expected);
+
+    let empty = PackedString::<PackedSymbol, 1>::new();
+    assert_eq!((&empty).into_iter().next(), None);
+}
