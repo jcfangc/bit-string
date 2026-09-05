@@ -156,6 +156,49 @@ fn packed_str_is_a_fixed_size_typed_view_with_value_semantics() {
     assert!(left.as_packed_str() != different.as_packed_str());
 }
 
+#[test]
+fn packed_str_char_len_tracks_widths_boundaries_and_clamped_slices() {
+    let binary = packed_as::<PackedSymbol, 1>(&[0, 1], |code| {
+        if code == 0 {
+            PackedSymbol::Zero
+        } else {
+            PackedSymbol::One
+        }
+    });
+    assert_eq!(binary.as_packed_str().char_len(), 2);
+
+    let bytes = packed_as::<SparseByte, 8>(&[0, 3, 255], |code| match code {
+        0 => SparseByte::Zero,
+        3 => SparseByte::Middle,
+        255 => SparseByte::Maximum,
+        _ => unreachable!(),
+    });
+    assert_eq!(bytes.as_packed_str().char_len(), 3);
+
+    for (codes, expected) in [
+        ((0..21).map(|index| index as u8 % 8).collect::<Vec<_>>(), 21),
+        ((0..22).map(|index| index as u8 % 8).collect::<Vec<_>>(), 22),
+    ] {
+        let string = packed_as::<Oct, 3>(&codes, oct);
+        assert_eq!(string.as_packed_str().char_len(), expected);
+        let sliced = string
+            .as_packed_str()
+            .slice(UsizeCO::checked_from_start_len(1, expected - 2).unwrap());
+        assert_eq!(sliced.char_len(), expected - 2);
+    }
+
+    for length in [9, 10] {
+        let codes: Vec<_> = (0..length).map(|index| (index * 7) as u8 % 128).collect();
+        let string = packed_as::<WideCode, 7>(&codes, wide);
+        assert_eq!(string.as_packed_str().char_len(), length);
+    }
+
+    let empty = bytes
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(99, 1).unwrap());
+    assert_eq!(empty.char_len(), 0);
+}
+
 fn wide(code: u8) -> WideCode {
     WideCode(code)
 }
