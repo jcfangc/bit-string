@@ -419,6 +419,42 @@ fn packed_replace_splices_characters_without_mutating_the_source() {
 }
 
 #[test]
+fn packed_replace_assign_matches_replace_in_place() {
+    let original = packed_as::<Oct, 3>(&[0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3], super::oct);
+    let replacement = packed_as::<Oct, 3>(
+        &[Oct::V7.code(), Oct::V0.code(), Oct::V3.code()],
+        super::oct,
+    );
+
+    let expected = original.replace(8, &replacement);
+    let mut assigned = original.clone();
+    assigned.replace_assign(8, &replacement);
+    assert!(assigned == expected);
+    assert_eq!(assigned.bits().words(), expected.bits().words());
+
+    let mut appended = original.clone();
+    appended.replace_assign(usize::MAX, &replacement);
+    assert_eq!(appended.to_vec(), {
+        let mut values = original.to_vec();
+        values.extend(replacement.to_vec());
+        values
+    });
+
+    let empty = PackedString::<Oct, 3>::new();
+    let before = assigned.clone();
+    assigned.replace_assign(4, &empty);
+    assert!(assigned == before);
+
+    let wide = packed_as::<WideCode, 7>(&[0; 9], super::wide);
+    let wide_replacement = packed_as::<WideCode, 7>(&[127, 64, 1], super::wide);
+    let wide_expected = wide.replace(8, &wide_replacement);
+    let mut wide_assigned = wide.clone();
+    wide_assigned.replace_assign(8, &wide_replacement);
+    assert!(wide_assigned == wide_expected);
+    assert_eq!(wide_assigned.bits().bit_len(), 11 * 7);
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
