@@ -1,4 +1,4 @@
-use super::{Oct, PackedSymbol, SparseByte, WideCode, oct, packed_as, wide};
+use super::{Oct, PackedSymbol, SparseByte, Symbol, WideCode, oct, packed_as, wide};
 use bit_string::{BitStr, PackedString, traits::PackedChar};
 use int_intervals::UsizeCO;
 use proptest::prelude::*;
@@ -257,6 +257,61 @@ fn packed_string_get_isolates_codes_at_width_boundaries() {
     );
     assert_eq!(wide_string.get(9).map(PackedChar::code), Some(1));
     assert_eq!(wide_string.get(10), None);
+}
+
+#[test]
+fn packed_string_first_is_index_zero_and_empty_safe() {
+    let new = PackedString::<Symbol, 2>::new();
+    let default = PackedString::<Symbol, 2>::default();
+    let from_empty = PackedString::<Symbol, 2>::from_chars(core::iter::empty());
+    for string in [&new, &default, &from_empty] {
+        assert_eq!(string.first(), None);
+        assert_eq!(string.first(), string.get(0));
+    }
+
+    let binary = packed_as::<PackedSymbol, 1>(&[0, 1], |code| match code {
+        0 => PackedSymbol::Zero,
+        1 => PackedSymbol::One,
+        _ => unreachable!(),
+    });
+    assert_eq!(binary.first(), Some(PackedSymbol::Zero));
+    assert_eq!(binary.first(), binary.get(0));
+
+    let bytes = packed_as::<SparseByte, 8>(&[255, 0], |code| match code {
+        0 => SparseByte::Zero,
+        255 => SparseByte::Maximum,
+        _ => unreachable!(),
+    });
+    assert_eq!(bytes.first(), Some(SparseByte::Maximum));
+
+    let oct_codes: Vec<_> = (0..22).map(|index| index as u8 % 8).collect();
+    let mut oct_string = packed_as::<Oct, 3>(&oct_codes, oct);
+    assert_eq!(oct_string.first(), Some(Oct::V0));
+    assert_eq!(oct_string.first(), oct_string.to_vec().first().copied());
+
+    oct_string.insert(0, Oct::V7);
+    assert_eq!(oct_string.first(), Some(Oct::V7));
+    assert_eq!(oct_string.remove(0), Oct::V7);
+    assert_eq!(oct_string.first(), Some(Oct::V0));
+    assert_eq!(oct_string.set(0, Oct::V6), Some(Oct::V0));
+    assert_eq!(oct_string.first(), Some(Oct::V6));
+    oct_string.clear();
+    assert_eq!(oct_string.first(), None);
+    oct_string.push(Oct::V3);
+    assert_eq!(oct_string.first(), Some(Oct::V3));
+
+    let wide_codes: Vec<_> = (0..10)
+        .map(|index| {
+            if index == 0 {
+                127
+            } else {
+                (index * 11) as u8 % 128
+            }
+        })
+        .collect();
+    let wide_string = packed_as::<WideCode, 7>(&wide_codes, wide);
+    assert_eq!(wide_string.first(), Some(WideCode(127)));
+    assert_eq!(wide_string.first(), wide_string.get(0));
 }
 
 #[test]
