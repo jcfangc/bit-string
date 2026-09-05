@@ -317,6 +317,53 @@ fn packed_push_packed_string_concatenates_raw_payloads() {
 }
 
 #[test]
+fn packed_remove_returns_deleted_code_and_preserves_the_rest() {
+    let mut oct_codes: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let mut oct_string = PackedString::from_chars(oct_codes.clone());
+    for index in [0, 10, 19] {
+        let expected = oct_codes.remove(index);
+        assert_eq!(oct_string.remove(index), expected);
+        assert_eq!(oct_string.to_vec(), oct_codes);
+        assert_eq!(oct_string.char_len(), oct_codes.len());
+        assert_eq!(oct_string.bits().bit_len(), oct_codes.len() * 3);
+    }
+
+    let mut wide_codes: Vec<_> = (0..10)
+        .map(|index| {
+            if index == 9 {
+                WideCode(127)
+            } else {
+                WideCode((index * 11) as u8 % 128)
+            }
+        })
+        .collect();
+    let mut wide_string = PackedString::from_chars(wide_codes.clone());
+    assert_eq!(wide_string.remove(9), WideCode(127));
+    wide_codes.pop();
+    assert_eq!(wide_string.to_vec(), wide_codes);
+    assert_eq!(wide_string.bits().bit_len(), wide_codes.len() * 7);
+
+    let mut bytes = PackedString::from_chars([
+        super::SparseByte::Zero,
+        super::SparseByte::Maximum,
+        super::SparseByte::Middle,
+    ]);
+    assert_eq!(bytes.remove(1), super::SparseByte::Maximum);
+    assert_eq!(
+        bytes.to_vec(),
+        vec![super::SparseByte::Zero, super::SparseByte::Middle]
+    );
+
+    let mut empty = PackedString::<Oct, 3>::new();
+    assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| empty.remove(0))).is_err());
+    let mut singleton = PackedString::from_chars([Oct::V0]);
+    assert!(
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| singleton.remove(1))).is_err()
+    );
+    assert_eq!(singleton.to_vec(), vec![Oct::V0]);
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
