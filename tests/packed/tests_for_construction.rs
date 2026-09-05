@@ -195,6 +195,50 @@ fn packed_default_is_canonical_and_editable() {
     assert_eq!(default.pop(), None);
 }
 
+#[test]
+fn packed_new_is_canonical_at_width_boundaries() {
+    fn assert_new_empty<C, const BITS: u8>()
+    where
+        C: PackedChar<BITS>,
+    {
+        let value = PackedString::<C, BITS>::new();
+        assert!(value.is_empty());
+        assert_eq!(value.char_len(), 0);
+        assert_eq!(value.bits().bit_len(), 0);
+        assert!(value.bits().words().is_empty());
+    }
+    assert_new_empty::<PackedSymbol, 1>();
+    assert_new_empty::<Symbol, 2>();
+    assert_new_empty::<Oct, 3>();
+    assert_new_empty::<WideCode, 7>();
+    assert_new_empty::<SparseByte, 8>();
+
+    let mut oct_string = PackedString::<Oct, 3>::new();
+    oct_string.extend([Oct::V7; 22]);
+    assert_eq!(oct_string.char_len(), 22);
+    assert_eq!(oct_string.bits().bit_len(), 22 * 3);
+    assert_eq!(oct_string.get(21), Some(Oct::V7));
+
+    let mut wide_string = PackedString::<WideCode, 7>::new();
+    wide_string.extend([WideCode(127); 10]);
+    assert_eq!(wide_string.char_len(), 10);
+    assert_eq!(wide_string.bits().bit_len(), 10 * 7);
+    assert_eq!(wide_string.get(9), Some(WideCode(127)));
+
+    assert!(
+        std::panic::catch_unwind(|| {
+            PackedString::<UnsupportedWidth, 0>::new();
+        })
+        .is_err()
+    );
+    assert!(
+        std::panic::catch_unwind(|| {
+            PackedString::<UnsupportedWidth, 9>::new();
+        })
+        .is_err()
+    );
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct ManualSymbol;
 
