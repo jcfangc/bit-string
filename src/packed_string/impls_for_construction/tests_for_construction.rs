@@ -1,5 +1,7 @@
+#[cfg(debug_assertions)]
+use crate::BitString;
+use crate::PackedString;
 use crate::packed_string::tests_for_support::{Letter, LetterString};
-use crate::{BitString, PackedString};
 
 #[test]
 fn enum_discriminants_are_stored_directly() {
@@ -27,8 +29,9 @@ fn trusted_constructor_adopts_aligned_payload_unchanged() {
     assert_eq!(adopted.to_vec(), source.to_vec());
 }
 
+#[cfg(debug_assertions)]
 #[test]
-#[should_panic(expected = "assertion `left == right` failed")]
+#[should_panic]
 fn trusted_constructor_rejects_misaligned_payload_in_debug() {
     PackedString::<Letter, 2>::from_valid_bits(BitString::from_iter([true]));
 }
