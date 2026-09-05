@@ -1,0 +1,82 @@
+use super::{Oct, WideCode, oct, packed, packed_as, wide};
+use bit_string::traits::PackedChar;
+use int_intervals::UsizeCO;
+use proptest::prelude::*;
+
+fn matches_at(haystack: &[u8], start: usize, needle: &[u8]) -> bool {
+    haystack
+        .get(start..start.saturating_add(needle.len()))
+        .is_some_and(|window| window == needle)
+}
+
+fn assert_matching<C, const BITS: u8>(haystack: &[u8], needle: &[u8], decode: fn(u8) -> C)
+where
+    C: PackedChar<BITS>,
+{
+    let haystack_string = packed_as(haystack, decode);
+    let needle_string = packed_as(needle, decode);
+    let haystack_view = haystack_string.as_packed_str();
+    let needle_view = needle_string.as_packed_str();
+    let max_start = haystack.len().saturating_sub(needle.len());
+    let expected_find = (0..=max_start).find(|&start| matches_at(haystack, start, needle));
+    let expected_rfind = (0..=max_start)
+        .rev()
+        .find(|&start| matches_at(haystack, start, needle));
+
+    assert_eq!(haystack_view.find(needle_view), expected_find);
+    assert_eq!(haystack_view.rfind(needle_view), expected_rfind);
+    assert_eq!(haystack_view.contains(needle_view), expected_find.is_some());
+}
+
+proptest! {
+    #[test]
+    fn packed_matching_matches_vec_sliding_windows(
+        haystack in prop::collection::vec(0u8..=2, 0..=32),
+        needle in prop::collection::vec(0u8..=2, 0..=16),
+    ) {
+        let haystack_string = packed(&haystack);
+        let needle_string = packed(&needle);
+        let haystack_view = haystack_string.as_packed_str();
+        let needle_view = needle_string.as_packed_str();
+        let max_start = haystack.len().saturating_sub(needle.len());
+        let expected_find = (0..=max_start).find(|&start| matches_at(&haystack, start, &needle));
+        let expected_rfind = (0..=max_start).rev().find(|&start| matches_at(&haystack, start, &needle));
+
+        prop_assert_eq!(haystack_view.find(needle_view), expected_find);
+        prop_assert_eq!(haystack_view.rfind(needle_view), expected_rfind);
+        prop_assert_eq!(haystack_view.contains(needle_view), expected_find.is_some());
+    }
+
+    #[test]
+    fn three_and_seven_bit_matching_crosses_word_boundaries(
+        haystack3 in prop::collection::vec(0u8..=7, 22..=128),
+        needle3 in prop::collection::vec(0u8..=7, 0..=32),
+        haystack7 in prop::collection::vec(0u8..=127, 10..=128),
+        needle7 in prop::collection::vec(0u8..=127, 0..=16),
+    ) {
+        assert_matching::<Oct, 3>(&haystack3, &needle3, oct);
+        assert_matching::<WideCode, 7>(&haystack7, &needle7, wide);
+    }
+}
+
+#[test]
+fn packed_views_match_only_at_character_boundaries() {
+    let string = packed(&[0, 1, 2, 1]);
+    let view = string.as_packed_str();
+    assert_eq!(
+        view.slice(UsizeCO::checked_from_start_len(1, 2).unwrap())
+            .get(0),
+        Some(super::Symbol::One)
+    );
+    assert_eq!(view.find(view.slice_until(1)), Some(0));
+    assert!(view.contains(view.slice(UsizeCO::checked_from_start_len(1, 1).unwrap())));
+
+    let haystack_string = packed(&[0, 0, 1]);
+    let needle_string = packed(&[2]);
+    let haystack = haystack_string.as_packed_str();
+    let needle = needle_string.as_packed_str();
+    assert!(!haystack.contains(needle));
+    assert_eq!(haystack.find(needle), None);
+    assert_eq!(haystack.rfind(needle), None);
+    assert!(!haystack.matches_at(1, needle));
+}
