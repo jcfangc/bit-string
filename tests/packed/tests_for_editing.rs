@@ -662,6 +662,35 @@ fn packed_truncate_keeps_the_prefix_and_clamps_at_current_length() {
 }
 
 #[test]
+fn packed_insert_matches_vec_insert_and_clamps_out_of_bounds_indices() {
+    let mut string = PackedString::from_chars((0..22).map(|index| super::oct(index as u8 % 8)));
+    let mut oracle = string.to_vec();
+
+    for (index, character) in [(0, Oct::V7), (10, Oct::V0), (usize::MAX, Oct::V5)] {
+        let insertion_index = index.min(oracle.len());
+        string.insert(index, character);
+        oracle.insert(insertion_index, character);
+        assert_eq!(string.to_vec(), oracle);
+        assert_eq!(string.char_len(), oracle.len());
+        assert_eq!(string.bits().bit_len(), oracle.len() * 3);
+    }
+
+    let mut wide =
+        PackedString::from_chars((0..10).map(|index| WideCode((index * 13) as u8 % 128)));
+    let mut wide_oracle = wide.to_vec();
+    let insertion_index = 9;
+    wide.insert(insertion_index, WideCode(127));
+    wide_oracle.insert(insertion_index, WideCode(127));
+    assert_eq!(wide.to_vec(), wide_oracle);
+    assert_eq!(wide.bits().bit_len(), wide_oracle.len() * 7);
+
+    let mut empty = PackedString::<Oct, 3>::new();
+    empty.insert(usize::MAX, Oct::V0);
+    assert_eq!(empty.to_vec(), vec![Oct::V0]);
+    assert_eq!(empty.bits().bit_len(), 3);
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
