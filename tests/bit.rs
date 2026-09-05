@@ -51,41 +51,41 @@ pub(crate) fn cat(parts: &[&str]) -> String {
 // Module declarations
 // ---------------------------------------------------------------------------
 
-#[path = "adversarial/tests_for_access.rs"]
+#[path = "bit/adversarial/tests_for_access.rs"]
 mod tests_for_access;
-#[path = "adversarial/tests_for_bitstr.rs"]
+#[path = "bit/adversarial/tests_for_bitstr.rs"]
 mod tests_for_bitstr;
-#[path = "adversarial/tests_for_bitwise.rs"]
+#[path = "bit/adversarial/tests_for_bitwise.rs"]
 mod tests_for_bitwise;
-#[path = "adversarial/tests_for_bugs.rs"]
+#[path = "bit/adversarial/tests_for_bugs.rs"]
 mod tests_for_bugs;
-#[path = "adversarial/tests_for_concat.rs"]
+#[path = "bit/adversarial/tests_for_concat.rs"]
 mod tests_for_concat;
-#[path = "adversarial/tests_for_construction.rs"]
+#[path = "bit/adversarial/tests_for_construction.rs"]
 mod tests_for_construction;
-#[path = "adversarial/tests_for_count.rs"]
+#[path = "bit/adversarial/tests_for_count.rs"]
 mod tests_for_count;
-#[path = "adversarial/tests_for_editing.rs"]
+#[path = "bit/adversarial/tests_for_editing.rs"]
 mod tests_for_editing;
-#[path = "adversarial/tests_for_fmt.rs"]
+#[path = "bit/adversarial/tests_for_fmt.rs"]
 mod tests_for_fmt;
-#[path = "adversarial/tests_for_iter.rs"]
+#[path = "bit/adversarial/tests_for_iter.rs"]
 mod tests_for_iter;
-#[path = "adversarial/tests_for_leading_trailing.rs"]
+#[path = "bit/adversarial/tests_for_leading_trailing.rs"]
 mod tests_for_leading_trailing;
-#[path = "adversarial/tests_for_matching.rs"]
+#[path = "bit/adversarial/tests_for_matching.rs"]
 mod tests_for_matching;
-#[path = "adversarial/tests_for_ord_hash.rs"]
+#[path = "bit/adversarial/tests_for_ord_hash.rs"]
 mod tests_for_ord_hash;
-#[path = "adversarial/tests_for_predicates.rs"]
+#[path = "bit/adversarial/tests_for_predicates.rs"]
 mod tests_for_predicates;
-#[path = "adversarial/tests_for_replace.rs"]
+#[path = "bit/adversarial/tests_for_replace.rs"]
 mod tests_for_replace;
-#[path = "adversarial/tests_for_retain.rs"]
+#[path = "bit/adversarial/tests_for_retain.rs"]
 mod tests_for_retain;
-#[path = "adversarial/tests_for_shift.rs"]
+#[path = "bit/adversarial/tests_for_shift.rs"]
 mod tests_for_shift;
-#[path = "adversarial/tests_for_slice_drain.rs"]
+#[path = "bit/adversarial/tests_for_slice_drain.rs"]
 mod tests_for_slice_drain;
-#[path = "adversarial/tests_for_stress.rs"]
+#[path = "bit/adversarial/tests_for_stress.rs"]
 mod tests_for_stress;
