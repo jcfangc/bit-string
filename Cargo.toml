@@ -1,6 +1,6 @@
 [package]
 name = "bit-string"
-version = "0.6.0"
+version.workspace = true
 edition = "2024"
 description = "A compact owned bit string type with editing, matching, and bitwise operations."
 readme = "README.md"
@@ -13,8 +13,14 @@ exclude = ["/benches", "/scripts", "/src/**/tests_for_*", "/tests", ".github/"]
 [workspace]
 members = ["derive"]
 
+[workspace.package]
+version = "0.6.0"
+
+[workspace.dependencies]
+bit-string-derive = { version = "0.6", path = "derive" }
+
 [dependencies]
-bit-string-derive = { version = "0.6.0", path = "derive" }
+bit-string-derive.workspace = true
 int-interval = "0.9.6"
 witnessed = "0.8.0"
 

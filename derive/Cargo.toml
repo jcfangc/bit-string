@@ -1,6 +1,6 @@
 [package]
 name = "bit-string-derive"
-version = "0.6.0"
+version.workspace = true
 edition = "2024"
 description = "Procedural macros for bit-string"
 repository = "https://github.com/jcfangc/bit-string"
