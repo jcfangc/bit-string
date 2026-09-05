@@ -129,3 +129,41 @@ fn packed_str_iter_size_hint_tracks_exact_remaining_count() {
     assert_eq!(iterator.next_back(), None);
     assert_eq!(iterator.size_hint(), (0, Some(0)));
 }
+
+#[test]
+fn packed_str_iter_next_back_decrements_from_the_exclusive_end() {
+    let owner = packed_as::<Oct, 3>(&[0, 1, 2, 3, 4], oct);
+    let view = owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(1, 3).unwrap());
+    let mut iterator = view.iter();
+
+    assert_eq!(iterator.next_back(), Some(Oct::V3));
+    assert_eq!(iterator.len(), 2);
+    assert_eq!(iterator.next_back(), Some(Oct::V2));
+    assert_eq!(iterator.len(), 1);
+    assert_eq!(iterator.next_back(), Some(Oct::V1));
+    assert_eq!(iterator.len(), 0);
+    assert_eq!(iterator.next_back(), None);
+    assert_eq!(iterator.next_back(), None);
+    assert_eq!(iterator.len(), 0);
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_owner = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_view = oct_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(20, 2).unwrap());
+    let mut oct_iterator = oct_view.iter();
+    assert_eq!(oct_iterator.next_back(), Some(Oct::V5));
+    assert_eq!(oct_iterator.next_back(), Some(Oct::V4));
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_view = wide_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(8, 2).unwrap());
+    assert_eq!(wide_view.iter().next_back(), Some(wide(wide_codes[9])));
+
+    let empty = PackedString::<PackedSymbol, 1>::new();
+    assert_eq!(empty.as_packed_str().iter().next_back(), None);
+}
