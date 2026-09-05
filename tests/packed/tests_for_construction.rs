@@ -391,6 +391,61 @@ fn packed_from_chars_preserves_sequence_and_packed_layout() {
 }
 
 #[test]
+fn packed_from_iter_matches_from_chars_for_single_pass_inputs() {
+    let empty: PackedString<Symbol, 2> = core::iter::empty().collect();
+    assert!(empty.is_empty());
+    assert_eq!(empty.bits().bit_len(), 0);
+
+    let oct_codes: Vec<_> = (0..22).map(|index| index as u8 % 8).collect();
+    let collected: PackedString<Oct, 3> = oct_codes.iter().copied().map(oct).collect();
+    let constructed = PackedString::from_chars(oct_codes.iter().copied().map(oct));
+    assert!(collected == constructed);
+    assert_eq!(
+        collected.to_vec(),
+        oct_codes.iter().copied().map(oct).collect::<Vec<_>>()
+    );
+    assert_eq!(collected.bits().bit_len(), 22 * 3);
+    assert_eq!(collected.bits().words(), constructed.bits().words());
+
+    let mut next = 0;
+    let lazy = core::iter::from_fn(|| {
+        let value = (next < 10).then_some(WideCode((next * 11) as u8 % 128));
+        next += 1;
+        value
+    });
+    let wide: PackedString<WideCode, 7> = lazy.collect();
+    assert_eq!(wide.char_len(), 10);
+    assert_eq!(wide.bits().bit_len(), 10 * 7);
+    assert_eq!(wide.last(), Some(WideCode(99)));
+
+    let filtered: PackedString<SparseByte, 8> =
+        [SparseByte::Zero, SparseByte::Maximum, SparseByte::Middle]
+            .into_iter()
+            .filter(|_| false)
+            .collect();
+    assert!(filtered.is_empty());
+    assert_eq!(filtered.bits().bit_len(), 0);
+
+    let zeros: PackedString<Oct, 3> = core::iter::repeat(Oct::V0).take(22).collect();
+    assert!(!zeros.is_empty());
+    assert_eq!(zeros.char_len(), 22);
+    assert_eq!(zeros.bits().words(), &[0, 0]);
+
+    assert!(
+        std::panic::catch_unwind(|| {
+            let _: PackedString<UnsupportedWidth, 0> = core::iter::empty().collect();
+        })
+        .is_err()
+    );
+    assert!(
+        std::panic::catch_unwind(|| {
+            let _: PackedString<UnsupportedWidth, 9> = core::iter::empty().collect();
+        })
+        .is_err()
+    );
+}
+
+#[test]
 fn packed_string_clone_copies_storage_and_preserves_invariants() {
     let oct_codes: Vec<u8> = (0..22).map(|index| index as u8 % 8).collect();
     let original = packed_as::<Oct, 3>(&oct_codes, oct);
