@@ -124,3 +124,68 @@ fn packed_str_matches_at_is_character_aligned_and_bounds_checked() {
     assert!(!wide_haystack.matches_at(3, wide_needle));
     assert!(!wide_haystack.matches_at(usize::MAX, wide_needle));
 }
+
+#[test]
+fn packed_str_starts_with_compares_character_aligned_prefixes() {
+    let owner = packed(&[0, 1, 2, 1, 0]);
+    let receiver = owner.as_packed_str();
+    let exact = packed(&[0, 1, 2, 1, 0]);
+    let shorter = packed(&[0, 1, 2]);
+    let different = packed(&[0, 2]);
+    let oversized = packed(&[0, 1, 2, 1, 0, 1]);
+    assert!(receiver.starts_with(exact.as_packed_str()));
+    assert!(receiver.starts_with(shorter.as_packed_str()));
+    assert!(!receiver.starts_with(different.as_packed_str()));
+    assert!(!receiver.starts_with(oversized.as_packed_str()));
+
+    let empty_owner = packed(&[]);
+    let empty = empty_owner.as_packed_str();
+    let nonempty_owner = packed(&[0]);
+    assert!(empty.starts_with(empty));
+    assert!(receiver.starts_with(empty));
+    assert!(!empty.starts_with(nonempty_owner.as_packed_str()));
+
+    let offset_receiver = receiver.slice(UsizeCO::checked_from_start_len(1, 3).unwrap());
+    let offset_prefix = receiver.slice(UsizeCO::checked_from_start_len(1, 2).unwrap());
+    let offset_different = receiver.slice(UsizeCO::checked_from_start_len(2, 2).unwrap());
+    assert!(offset_receiver.starts_with(offset_prefix));
+    assert!(!offset_receiver.starts_with(offset_different));
+
+    let binary = packed_as::<super::PackedSymbol, 1>(&[0, 1], |code| match code {
+        0 => super::PackedSymbol::Zero,
+        1 => super::PackedSymbol::One,
+        _ => unreachable!(),
+    });
+    assert!(
+        binary
+            .as_packed_str()
+            .starts_with(binary.as_packed_str().slice_until(1))
+    );
+
+    let bytes = packed_as::<super::SparseByte, 8>(&[255, 0], |code| match code {
+        0 => super::SparseByte::Zero,
+        255 => super::SparseByte::Maximum,
+        _ => unreachable!(),
+    });
+    assert!(
+        bytes
+            .as_packed_str()
+            .starts_with(bytes.as_packed_str().slice_until(1))
+    );
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_owner = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_receiver = oct_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(20, 4).unwrap());
+    assert!(oct_receiver.starts_with(oct_receiver.slice_until(2)));
+    assert!(!oct_receiver.starts_with(oct_receiver.slice_from(1).slice_until(2)));
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_receiver = wide_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(8, 4).unwrap());
+    assert!(wide_receiver.starts_with(wide_receiver.slice_until(2)));
+    assert!(!wide_receiver.starts_with(wide_receiver.slice_from(1).slice_until(2)));
+}
