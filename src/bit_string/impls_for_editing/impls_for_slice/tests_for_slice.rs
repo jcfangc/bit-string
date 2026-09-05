@@ -1,5 +1,5 @@
 use alloc::string::ToString;
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 use crate::BitString;
 

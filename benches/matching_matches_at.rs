@@ -1,6 +1,6 @@
 use bit_string::BitString;
 use divan::{Bencher, black_box};
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 fn main() {
     divan::main();

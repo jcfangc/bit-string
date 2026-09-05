@@ -54,7 +54,7 @@ dependencies = [
  "bit-string-derive",
  "bitvec_simd",
  "codspeed-divan-compat",
- "int-interval",
+ "int-intervals",
  "proptest",
  "witnessed",
 ]
@@ -329,10 +329,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "int-interval"
-version = "0.9.6"
+name = "int-intervals"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9801bebb6a8355e9a7bcc42ce9cc910b045bd5217cb750b8b9e0528eb1842e37"
+checksum = "bbae229a6c2c8562cc2bee9365152c5787dd6ec7f42404fbd3563f2b437c4094"
 
 [[package]]
 name = "itertools"

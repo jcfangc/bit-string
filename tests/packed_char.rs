@@ -1,5 +1,5 @@
 use bit_string::{BitString, PackedString, packed, traits::PackedChar};
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 use proptest::prelude::*;
 
 #[packed(bits = 1)]

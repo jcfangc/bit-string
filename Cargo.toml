@@ -21,7 +21,7 @@ bit-string-derive = { version = "0.6", path = "derive" }
 
 [dependencies]
 bit-string-derive.workspace = true
-int-interval = "0.9.6"
+int-intervals = "0.1"
 witnessed = "0.8.0"
 
 [lib]

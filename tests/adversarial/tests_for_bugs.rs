@@ -1,5 +1,5 @@
 use super::*;
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 /// Regression test for B1: `set_chunk` must mask unused high bits after writing.
 #[test]

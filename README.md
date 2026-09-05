@@ -68,7 +68,7 @@ let v: BitString = (0..8).map(|i| i % 2 == 0).collect();
 
 ```rust
 use bit_string::BitString;
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 let bits = BitString::try_from("11001010").unwrap();
 
@@ -123,7 +123,7 @@ bits.truncate(4);                    // "1001"
 bits.split_off(2);                   // → BitString "01", bits = "10"
 
 // Range operations
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 let interval = UsizeCO::try_new(1, 3).unwrap();
 let replaced = bits.replace_interval(interval, &BitString::ones(2)); // "111"
 let drained = replaced.drain_interval(UsizeCO::try_new(0, 2).unwrap()); // "1"

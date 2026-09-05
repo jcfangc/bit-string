@@ -1,4 +1,4 @@
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 use super::*;
 

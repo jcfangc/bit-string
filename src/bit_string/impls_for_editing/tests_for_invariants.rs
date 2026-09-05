@@ -5,7 +5,7 @@ use alloc::string::ToString;
 
 use crate::BitString;
 use crate::word_len;
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 /// Verify that `self.as_words().len() == word_len(self.bit_len())`.
 fn assert_invariants(bits: &BitString) {

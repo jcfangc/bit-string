@@ -1,7 +1,7 @@
 use bit_string::BitString;
 use bitvec_simd::BitVec;
 use divan::{Bencher, black_box};
-use int_interval::UsizeCO;
+use int_intervals::UsizeCO;
 
 fn main() {
     divan::main();
