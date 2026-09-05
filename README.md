@@ -40,8 +40,36 @@ assert_eq!((!a).to_string(),               "0101");
 |------|------|------|--------|
 | `BitString` | Owned, `Vec<u64>` backing | 4×usize | No |
 | `BitStr<'bs>` | Zero-copy borrowed view | 3×usize | **Yes** |
+| `PackedString<C, BITS>` | Owned fixed-width code sequence | 4×usize + marker | No |
+| `PackedStr<'ps, C, BITS>` | Zero-copy borrowed packed view | 3×usize + marker | **Yes** |
 
 Bits are packed little-endian into `u64` words. Unused high bits in the last word are always zero.
+
+## Packed strings
+
+Use `#[packed(bits = N)]` to define a compact code alphabet. Codes are stored in
+exactly `N` bits, where `N` is between 1 and 8.
+
+```rust
+use bit_string::{PackedString, packed};
+
+#[packed(bits = 2)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Base {
+    A = 0,
+    C = 1,
+    G = 2,
+    T = 3,
+}
+
+let sequence =
+    PackedString::<Base, 2>::from_chars([Base::A, Base::C, Base::G]);
+assert_eq!(sequence.char_len(), 3);
+```
+
+`PackedString` owns the packed storage, while `PackedStr` provides a
+zero-copy, character-aligned view. Manual `PackedChar` implementations remain
+available when an alphabet needs custom code conversion.
 
 ## API by category
 

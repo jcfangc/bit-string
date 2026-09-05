@@ -45,9 +45,35 @@ jobs:
         run: |
           if [ "${{ inputs.mode || 'real' }}" = "dryrun" ]; then
             cargo publish --locked --dry-run --manifest-path derive/Cargo.toml
+            exit 0
+          fi
+
+          derive_package="$(cargo metadata --locked --no-deps --format-version 1 --manifest-path derive/Cargo.toml \
+            | python3 -c 'import json, sys; package = next(p for p in json.load(sys.stdin)["packages"] if p["manifest_path"].endswith("/derive/Cargo.toml")); print(package["name"], package["version"])')"
+          read -r derive_name derive_version <<< "$derive_package"
+          registry_url="https://crates.io/api/v1/crates/${derive_name}/${derive_version}"
+
+          registry_version_available() {
+            test "$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$registry_url")" = 200
+          }
+
+          if registry_version_available; then
+            echo "${derive_name} ${derive_version} is already published; skipping"
           else
             cargo publish --locked --manifest-path derive/Cargo.toml
           fi
+
+          for attempt in $(seq 1 30); do
+            if registry_version_available; then
+              echo "${derive_name} ${derive_version} is visible on crates.io"
+              exit 0
+            fi
+            echo "waiting for ${derive_name} ${derive_version} to become visible (attempt ${attempt}/30)"
+            sleep 5
+          done
+
+          echo "${derive_name} ${derive_version} did not become visible on crates.io" >&2
+          exit 1
 
   release:
     needs: publish-derive
