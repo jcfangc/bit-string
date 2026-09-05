@@ -572,6 +572,37 @@ fn packed_retain_matches_vec_order_and_predicate_calls() {
 }
 
 #[test]
+fn packed_reverse_reverses_characters_without_mutating_source() {
+    let original: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let string = PackedString::from_chars(original.clone());
+    let reversed = string.reverse();
+
+    let mut expected = original.clone();
+    expected.reverse();
+    assert_eq!(reversed.to_vec(), expected);
+    assert_eq!(string.to_vec(), original);
+    assert_eq!(reversed.char_len(), expected.len());
+    assert_eq!(reversed.bits().bit_len(), expected.len() * 3);
+
+    let wide_values: Vec<_> = (0..10)
+        .map(|index| WideCode((index * 17) as u8 % 128))
+        .collect();
+    let wide = PackedString::from_chars(wide_values.clone());
+    let wide_reversed = wide.reverse();
+    let mut wide_expected = wide_values.clone();
+    wide_expected.reverse();
+    assert_eq!(wide_reversed.to_vec(), wide_expected);
+    assert_eq!(wide.to_vec(), wide_values);
+    assert_eq!(wide_reversed.bits().bit_len(), wide_expected.len() * 7);
+
+    assert!(PackedString::<Oct, 3>::new().reverse().is_empty());
+    assert_eq!(
+        PackedString::from_chars([Oct::V6]).reverse().to_vec(),
+        vec![Oct::V6]
+    );
+}
+
+#[test]
 fn packed_push_appends_one_aligned_code_at_a_time() {
     let mut oct_string = PackedString::<Oct, 3>::new();
     let mut oracle = Vec::new();
