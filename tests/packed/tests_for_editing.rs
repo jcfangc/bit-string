@@ -1,4 +1,4 @@
-use super::{Oct, WideCode, packed, packed_as, symbol};
+use super::{Oct, PackedSymbol, WideCode, packed, packed_as, symbol};
 use bit_string::{BitString, PackedString, traits::PackedChar};
 use int_intervals::UsizeCO;
 use proptest::prelude::*;
@@ -256,6 +256,47 @@ fn packed_pop_returns_final_codes_and_shrinks_to_empty() {
         assert_eq!(wide_string.bits().bit_len(), wide_codes.len() * 7);
     }
     assert!(wide_string.is_empty());
+}
+
+#[test]
+fn packed_push_appends_one_aligned_code_at_a_time() {
+    let mut oct_string = PackedString::<Oct, 3>::new();
+    let mut oracle = Vec::new();
+    let values: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+
+    for value in values.iter().copied() {
+        let old_prefix = oct_string.to_vec();
+        let old_bit_len = oct_string.bits().bit_len();
+        oct_string.push(value);
+        oracle.push(value);
+        assert_eq!(oct_string.to_vec(), oracle);
+        assert_eq!(oct_string.bits().bit_len(), old_bit_len + 3);
+        assert_eq!(oct_string.to_vec()[..old_prefix.len()], old_prefix);
+    }
+    assert_eq!(oct_string.get(21), Some(Oct::V5));
+    assert_eq!(oct_string.char_len(), 22);
+
+    oct_string.push(Oct::V0);
+    oracle.push(Oct::V0);
+    assert_eq!(oct_string.to_vec(), oracle);
+    assert_eq!(oct_string.bits().bit_len(), 23 * 3);
+    assert_eq!(oct_string.get(22), Some(Oct::V0));
+    assert!(!oct_string.is_empty());
+
+    let mut binary = PackedString::<PackedSymbol, 1>::new();
+    binary.push(PackedSymbol::One);
+    binary.push(PackedSymbol::Zero);
+    assert_eq!(binary.to_vec(), vec![PackedSymbol::One, PackedSymbol::Zero]);
+    assert_eq!(binary.bits().bit_len(), 2);
+
+    let mut bytes = PackedString::<super::SparseByte, 8>::new();
+    bytes.push(super::SparseByte::Zero);
+    bytes.push(super::SparseByte::Maximum);
+    assert_eq!(
+        bytes.to_vec(),
+        vec![super::SparseByte::Zero, super::SparseByte::Maximum]
+    );
+    assert_eq!(bytes.bits().bit_len(), 16);
 }
 
 #[test]
