@@ -639,6 +639,37 @@ fn packed_str_rfind_returns_the_latest_character_index() {
 }
 
 #[test]
+fn packed_string_rfind_returns_the_latest_character_index() {
+    let haystack = packed(&[0, 1, 0, 1, 2, 1]);
+    assert_eq!(haystack.rfind(&packed(&[0, 1])), Some(2));
+    assert_eq!(haystack.rfind(&packed(&[1, 2])), Some(3));
+    assert_eq!(haystack.rfind(&packed(&[2, 0])), None);
+    assert_eq!(haystack.rfind(&packed(&[0, 1, 0, 1, 2, 1, 0])), None);
+    assert_eq!(
+        haystack.rfind(&PackedString::<super::Symbol, 2>::new()),
+        Some(6)
+    );
+
+    let empty = PackedString::<super::Symbol, 2>::new();
+    assert_eq!(empty.rfind(&empty), Some(0));
+    assert_eq!(empty.rfind(&packed(&[0])), None);
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_haystack = packed_as::<Oct, 3>(&oct_codes, oct);
+    assert_eq!(
+        oct_haystack.rfind(&packed_as::<Oct, 3>(&[4, 5, 6], oct)),
+        Some(20)
+    );
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_haystack = packed_as::<WideCode, 7>(&wide_codes, wide);
+    assert_eq!(
+        wide_haystack.rfind(&packed_as::<WideCode, 7>(&[88, 99], wide)),
+        Some(8)
+    );
+}
+
+#[test]
 fn packed_str_strip_prefix_returns_the_remaining_character_view() {
     let owner = packed(&[0, 1, 2, 1, 0]);
     let receiver = owner.as_packed_str();
