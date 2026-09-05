@@ -123,6 +123,52 @@ fn packed_clear_removes_all_codes_and_allows_reuse() {
 }
 
 #[test]
+fn packed_extend_copies_borrowed_codes_in_order() {
+    let mut oct_string = packed_as::<Oct, 3>(&[Oct::V7.code()], super::oct);
+    let mut oct_source: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
+    let mut oct_expected = oct_string.to_vec();
+    oct_expected.extend(oct_source.iter().copied());
+    oct_string.extend(oct_source.iter());
+    assert_eq!(oct_string.to_vec(), oct_expected);
+    assert_eq!(oct_string.char_len(), oct_expected.len());
+    assert_eq!(oct_string.bits().bit_len(), oct_expected.len() * 3);
+
+    oct_source[0] = Oct::V0;
+    oct_source.clear();
+    assert_eq!(oct_string.to_vec(), oct_expected);
+
+    let mut wide_string = packed_as::<WideCode, 7>(&[126], super::wide);
+    let mut wide_source: Vec<_> = (0..10)
+        .map(|index| {
+            if index == 9 {
+                WideCode(127)
+            } else {
+                WideCode((index * 11) as u8 % 128)
+            }
+        })
+        .collect();
+    let mut wide_expected = wide_string.to_vec();
+    wide_expected.extend(wide_source.iter().copied());
+    wide_string.extend(wide_source.iter());
+    assert_eq!(wide_string.to_vec(), wide_expected);
+    assert_eq!(wide_string.bits().bit_len(), wide_expected.len() * 7);
+
+    wide_source.clear();
+    wide_string.extend(wide_source.iter());
+    assert_eq!(wide_string.to_vec(), wide_expected);
+
+    let mut bytes = PackedString::<super::SparseByte, 8>::new();
+    let byte_source = [
+        super::SparseByte::Zero,
+        super::SparseByte::Maximum,
+        super::SparseByte::Middle,
+    ];
+    bytes.extend(byte_source.iter());
+    assert_eq!(bytes.to_vec(), byte_source);
+    assert_eq!(bytes.bits().bit_len(), 24);
+}
+
+#[test]
 fn packed_views_and_editing_remain_character_aligned() {
     let mut string = PackedString::<super::Symbol, 2>::from_chars([
         super::Symbol::Zero,
