@@ -1,4 +1,4 @@
-use super::{Oct, WideCode, oct, packed, packed_as, wide};
+use super::{Oct, PackedString, WideCode, oct, packed, packed_as, wide};
 use bit_string::traits::PackedChar;
 use int_intervals::UsizeCO;
 use proptest::prelude::*;
@@ -123,6 +123,26 @@ fn packed_str_matches_at_is_character_aligned_and_bounds_checked() {
     assert!(wide_haystack.matches_at(1, wide_needle));
     assert!(!wide_haystack.matches_at(3, wide_needle));
     assert!(!wide_haystack.matches_at(usize::MAX, wide_needle));
+}
+
+#[test]
+fn packed_string_matches_at_is_character_aligned_and_bounds_checked() {
+    let haystack = packed_as::<Oct, 3>(&[0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3], oct);
+    let needle = packed_as::<Oct, 3>(&[4, 5], oct);
+    assert!(haystack.matches_at(4, &needle));
+    assert!(!haystack.matches_at(3, &needle));
+    assert!(!haystack.matches_at(11, &needle));
+    assert!(!haystack.matches_at(usize::MAX, &needle));
+
+    let empty = PackedString::<Oct, 3>::new();
+    assert!(haystack.matches_at(haystack.char_len(), &empty));
+    assert!(!haystack.matches_at(haystack.char_len() + 1, &empty));
+
+    let wide_haystack = packed_as::<WideCode, 7>(&[0, 11, 22, 33, 44, 55, 66, 77, 88, 99], wide);
+    let wide_needle = packed_as::<WideCode, 7>(&[88, 99], wide);
+    assert!(wide_haystack.matches_at(8, &wide_needle));
+    assert!(!wide_haystack.matches_at(7, &wide_needle));
+    assert!(!wide_haystack.matches_at(9, &wide_needle));
 }
 
 #[test]
