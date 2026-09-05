@@ -44,6 +44,35 @@ fn packed_attribute_encoding_round_trips_through_packed_string() {
     assert_eq!(string.get(2), Some(Symbol::One));
 }
 
+#[test]
+fn bits_per_char_is_the_type_level_width() {
+    let binary_empty = PackedString::<PackedSymbol, 1>::new();
+    assert_eq!(binary_empty.bits_per_char(), 1);
+
+    let oct_string = packed_as::<Oct, 3>(&[0; 22], oct);
+    assert_eq!(oct_string.bits_per_char(), 3);
+    assert_eq!(oct_string.bits().bit_len(), 22 * oct_string.bits_per_char());
+
+    let wide_string = packed_as::<WideCode, 7>(&[0, 127], wide);
+    assert_eq!(wide_string.bits_per_char(), 7);
+    assert_eq!(
+        wide_string.bits().bit_len(),
+        2 * wide_string.bits_per_char()
+    );
+
+    let byte_string = packed_as::<SparseByte, 8>(&[0, 255, 3], |code| match code {
+        0 => SparseByte::Zero,
+        255 => SparseByte::Maximum,
+        3 => SparseByte::Middle,
+        _ => unreachable!(),
+    });
+    assert_eq!(byte_string.bits_per_char(), 8);
+    assert_eq!(
+        byte_string.bits().bit_len(),
+        3 * byte_string.bits_per_char()
+    );
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct ManualSymbol;
 
