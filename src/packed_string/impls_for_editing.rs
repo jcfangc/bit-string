@@ -7,13 +7,7 @@ where
     /// Appends the character's code directly to the payload.
     pub fn push(&mut self, character: C) {
         let code = character.code();
-        self.bits
-            .bit_len()
-            .checked_add(usize::from(BITS))
-            .expect("packed string length overflow");
-        for shift in 0..BITS {
-            self.bits.push((code >> shift) & 1 != 0);
-        }
+        self.bits.push_chunk(u64::from(code), usize::from(BITS));
     }
 
     pub fn pop(&mut self) -> Option<C> {
