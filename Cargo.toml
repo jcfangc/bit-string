@@ -29,8 +29,12 @@ doctest = false
 
 [dev-dependencies]
 bitvec_simd = "0.20.5"
+compressed-intvec = { version = "0.6.0", default-features = false }
 divan = { package = "codspeed-divan-compat", version = "4.7.0" }
+grit-bitvec = "0.4.3"
 proptest = "1.11.0"
+sux = { version = "0.14.0", default-features = false }
+value-traits = "0.2.1"
 
 
 [[bench]]
@@ -131,6 +135,10 @@ harness = false
 
 [[bench]]
 name = "packed_editing"
+harness = false
+
+[[bench]]
+name = "packed_competitors"
 harness = false
 
 [[bench]]
