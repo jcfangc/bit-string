@@ -4,32 +4,6 @@ use crate::traits::*;
 use super::*;
 
 impl BitString {
-    /// Appends the low `len` bits of `value` to the end.
-    ///
-    /// The appended bits use the same least-significant-bit-first order as
-    /// [`BitString::get_chunk`]. This is an internal primitive for callers
-    /// that already have a packed chunk, and `len` must not exceed a word.
-    #[inline]
-    pub(crate) fn push_chunk(&mut self, value: u64, len: usize) {
-        debug_assert!(len <= WORD_BITS);
-        if len == 0 {
-            return;
-        }
-
-        let new_len = self
-            .bit_len
-            .checked_add(len)
-            .expect("bit string length overflow");
-        let new_words = word_len(new_len);
-
-        if new_words > self.words.len() {
-            self.words.resize(new_words, 0);
-        }
-
-        self.words.write_word_at::<false>(self.bit_len, value, len);
-        self.bit_len = new_len;
-    }
-
     /// Appends a single bit to the end.
     ///
     /// Panics if the bit string length would overflow `usize`.
