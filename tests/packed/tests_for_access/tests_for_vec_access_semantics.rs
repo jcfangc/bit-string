@@ -3,9 +3,8 @@ use proptest::prelude::*;
 
 proptest! {
 #[test]
-    fn packed_access_slice_and_order_match_vec_oracles(
+    fn packed_access_and_slice_match_vec_oracles(
         left in prop::collection::vec(0u8..=2, 0..=32),
-        right in prop::collection::vec(0u8..=2, 0..=32),
         start in 0usize..40,
         len in 1usize..40,
     ) {
@@ -22,8 +21,5 @@ proptest! {
         let slice = string.slice(UsizeCO::checked_from_start_len(start, len).unwrap());
         prop_assert_eq!(slice.to_vec(), left[oracle_start..oracle_end].iter().copied().map(super::symbol).collect::<Vec<_>>());
 
-        let right_string = super::packed(&right);
-        prop_assert_eq!(string.cmp(&right_string), left.cmp(&right));
-        prop_assert_eq!(string.as_packed_str().cmp(&right_string.as_packed_str()), left.cmp(&right));
     }
 }

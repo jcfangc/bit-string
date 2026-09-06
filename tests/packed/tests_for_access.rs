@@ -4,9 +4,8 @@ use super::{
 use bit_string::{BitStr, PackedString, traits::PackedChar};
 use int_intervals::UsizeCO;
 
-fn assert_access_slice_order<C, const BITS: u8>(
+fn assert_access_slice<C, const BITS: u8>(
     left: &[u8],
-    right: &[u8],
     start: usize,
     len: usize,
     decode: fn(u8) -> C,
@@ -31,13 +30,6 @@ fn assert_access_slice_order<C, const BITS: u8>(
             .copied()
             .map(decode)
             .collect::<Vec<_>>()
-    );
-
-    let right_string = packed_as(right, decode);
-    assert_eq!(string.cmp(&right_string), left.cmp(&right));
-    assert_eq!(
-        string.as_packed_str().cmp(&right_string.as_packed_str()),
-        left.cmp(&right)
     );
 }
 

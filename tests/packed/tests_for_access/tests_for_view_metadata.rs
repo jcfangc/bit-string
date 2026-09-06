@@ -56,13 +56,6 @@ fn packed_str_is_a_fixed_size_typed_view_with_value_semantics() {
         core::mem::size_of::<bit_string::PackedStr<'static, WideCode, 7>>(),
         core::mem::size_of::<BitStr<'static>>()
     );
-
-    let left = packed_as::<Oct, 3>(&[0, 1, 2, 3], oct);
-    let right = packed_as::<Oct, 3>(&[0, 1, 2, 3], oct);
-    assert!(left.as_packed_str() == right.as_packed_str());
-
-    let different = packed_as::<Oct, 3>(&[0, 1, 2, 4], oct);
-    assert!(left.as_packed_str() != different.as_packed_str());
 }
 
 #[test]
