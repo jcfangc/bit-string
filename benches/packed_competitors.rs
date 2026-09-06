@@ -100,6 +100,16 @@ fn pop_fixed_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
+#[divan::bench(name = "extend/fixed_vec", consts = WIDTHS, args = LENGTHS)]
+fn extend_fixed_vec<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = fixed_vec(BITS, &codes(BITS, len));
+    let extension = codes(BITS, len / 4);
+    bencher.with_inputs(|| input.clone()).bench_refs(|value| {
+        value.extend_from_slice(&extension);
+        black_box(&*value);
+    });
+}
+
 #[divan::bench(name = "insert/middle/fixed_vec", consts = WIDTHS, args = LENGTHS)]
 fn insert_middle_fixed_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
@@ -210,6 +220,16 @@ fn pop_bit_field_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
+#[divan::bench(name = "extend/bit_field_vec", consts = WIDTHS, args = LENGTHS)]
+fn extend_bit_field_vec<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = bit_field_vec(BITS, &codes(BITS, len));
+    let extension = codes(BITS, len / 4);
+    bencher.with_inputs(|| input.clone()).bench_refs(|value| {
+        value.extend(extension.iter().map(|&code| usize::from(code)));
+        black_box(&*value);
+    });
+}
+
 // ---------------------------------------------------------------------------
 // grit-bitvec::TypedBitVec
 // ---------------------------------------------------------------------------
@@ -288,6 +308,166 @@ where
         let checksum = (0..len).fold(0u8, |checksum, index| checksum ^ value.get(index).unwrap());
         black_box(checksum)
     });
+}
+
+#[divan::bench(
+    name = "set/middle/typed_bit_vec",
+    types = [
+        grit_bitvec::u8_as_u1,
+        grit_bitvec::u8_as_u2,
+        grit_bitvec::u8_as_u3,
+        grit_bitvec::u8_as_u4,
+        grit_bitvec::u8_as_u5,
+        grit_bitvec::u8_as_u6,
+        grit_bitvec::u8_as_u7,
+    ],
+    args = LENGTHS,
+)]
+fn set_middle_typed_bit_vec<T>(bencher: Bencher, len: usize)
+where
+    T: TypedBitElem<Base = u8> + 'static,
+{
+    let input = codes(grit_width::<T>(), len);
+    let index = len / 2;
+    bencher
+        .with_inputs(|| grit_vec::<T>(&input))
+        .bench_local_refs(|value| {
+            let _ = black_box(value.set(index, 0));
+            black_box(&*value);
+        });
+}
+
+#[divan::bench(
+    name = "push/typed_bit_vec",
+    types = [
+        grit_bitvec::u8_as_u1,
+        grit_bitvec::u8_as_u2,
+        grit_bitvec::u8_as_u3,
+        grit_bitvec::u8_as_u4,
+        grit_bitvec::u8_as_u5,
+        grit_bitvec::u8_as_u6,
+        grit_bitvec::u8_as_u7,
+    ],
+    args = LENGTHS,
+)]
+fn push_typed_bit_vec<T>(bencher: Bencher, len: usize)
+where
+    T: TypedBitElem<Base = u8> + 'static,
+{
+    let input = codes(grit_width::<T>(), len);
+    bencher
+        .with_inputs(|| grit_vec::<T>(&input))
+        .bench_local_refs(|value| {
+            let _ = black_box(value.push(0));
+            black_box(&*value);
+        });
+}
+
+#[divan::bench(
+    name = "pop/typed_bit_vec",
+    types = [
+        grit_bitvec::u8_as_u1,
+        grit_bitvec::u8_as_u2,
+        grit_bitvec::u8_as_u3,
+        grit_bitvec::u8_as_u4,
+        grit_bitvec::u8_as_u5,
+        grit_bitvec::u8_as_u6,
+        grit_bitvec::u8_as_u7,
+    ],
+    args = LENGTHS,
+)]
+fn pop_typed_bit_vec<T>(bencher: Bencher, len: usize)
+where
+    T: TypedBitElem<Base = u8> + 'static,
+{
+    let input = codes(grit_width::<T>(), len);
+    bencher
+        .with_inputs(|| grit_vec::<T>(&input))
+        .bench_local_refs(|value| {
+            let _ = black_box(value.pop());
+            black_box(&*value);
+        });
+}
+
+#[divan::bench(
+    name = "insert/middle/typed_bit_vec",
+    types = [
+        grit_bitvec::u8_as_u1,
+        grit_bitvec::u8_as_u2,
+        grit_bitvec::u8_as_u3,
+        grit_bitvec::u8_as_u4,
+        grit_bitvec::u8_as_u5,
+        grit_bitvec::u8_as_u6,
+        grit_bitvec::u8_as_u7,
+    ],
+    args = LENGTHS,
+)]
+fn insert_middle_typed_bit_vec<T>(bencher: Bencher, len: usize)
+where
+    T: TypedBitElem<Base = u8> + 'static,
+{
+    let input = codes(grit_width::<T>(), len);
+    let index = len / 2;
+    bencher
+        .with_inputs(|| grit_vec::<T>(&input))
+        .bench_local_refs(|value| {
+            let _ = black_box(value.insert(index, 0));
+            black_box(&*value);
+        });
+}
+
+#[divan::bench(
+    name = "remove/middle/typed_bit_vec",
+    types = [
+        grit_bitvec::u8_as_u1,
+        grit_bitvec::u8_as_u2,
+        grit_bitvec::u8_as_u3,
+        grit_bitvec::u8_as_u4,
+        grit_bitvec::u8_as_u5,
+        grit_bitvec::u8_as_u6,
+        grit_bitvec::u8_as_u7,
+    ],
+    args = LENGTHS,
+)]
+fn remove_middle_typed_bit_vec<T>(bencher: Bencher, len: usize)
+where
+    T: TypedBitElem<Base = u8> + 'static,
+{
+    let input = codes(grit_width::<T>(), len);
+    let index = len / 2;
+    bencher
+        .with_inputs(|| grit_vec::<T>(&input))
+        .bench_local_refs(|value| {
+            let _ = black_box(value.remove(index));
+            black_box(&*value);
+        });
+}
+
+#[divan::bench(
+    name = "append/typed_bit_vec",
+    types = [
+        grit_bitvec::u8_as_u1,
+        grit_bitvec::u8_as_u2,
+        grit_bitvec::u8_as_u3,
+        grit_bitvec::u8_as_u4,
+        grit_bitvec::u8_as_u5,
+        grit_bitvec::u8_as_u6,
+        grit_bitvec::u8_as_u7,
+    ],
+    args = LENGTHS,
+)]
+fn append_typed_bit_vec<T>(bencher: Bencher, len: usize)
+where
+    T: TypedBitElem<Base = u8> + 'static,
+{
+    let input = codes(grit_width::<T>(), len);
+    let extension = codes(grit_width::<T>(), len / 4);
+    bencher
+        .with_inputs(|| grit_vec::<T>(&input))
+        .bench_local_refs(|value| {
+            let _ = black_box(value.append_iter(extension.iter().copied()));
+            black_box(&*value);
+        });
 }
 
 fn fixed_vec(bits: u8, input: &[u8]) -> UFixedVec<u8> {
