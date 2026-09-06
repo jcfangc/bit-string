@@ -3,7 +3,10 @@ use std::collections::BTreeMap;
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
-use syn::{Data, DeriveInput, Error, Expr, Fields, Lit, LitInt, Result};
+use syn::{
+    Data, DeriveInput, Error, Expr, Fields, Lit, LitInt, Meta, Result, Token,
+    punctuated::Punctuated,
+};
 
 pub(super) fn expand(input: DeriveInput) -> Result<TokenStream2> {
     require_repr_u8(&input)?;
@@ -95,10 +98,11 @@ fn require_repr_u8(input: &DeriveInput) -> Result<()> {
     let mut found = false;
     for attribute in &input.attrs {
         if attribute.path().is_ident("repr") {
-            attribute.parse_nested_meta(|meta| {
-                found |= meta.path.is_ident("u8");
-                Ok(())
-            })?;
+            let repr =
+                attribute.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)?;
+            found |= repr
+                .iter()
+                .any(|meta| matches!(meta, Meta::Path(path) if path.is_ident("u8")));
         }
     }
     if found {

@@ -1,0 +1,220 @@
+use super::{Oct, PackedSymbol, SparseByte, WideCode, oct, packed_as, wide};
+use bit_string::{PackedStr, PackedString, traits::PackedChar};
+use int_intervals::UsizeCO;
+
+fn assert_iterator<C, const BITS: u8>(view: PackedStr<'_, C, BITS>, expected: &[C])
+where
+    C: PackedChar<BITS> + core::fmt::Debug,
+{
+    let mut iterator = view.iter();
+    assert_eq!(iterator.len(), expected.len());
+    assert_eq!(iterator.size_hint(), (expected.len(), Some(expected.len())));
+
+    let mut front = 0;
+    let mut back = expected.len();
+    while front < back {
+        if front % 2 == 0 {
+            assert_eq!(iterator.next(), Some(expected[front]));
+            front += 1;
+        } else {
+            back -= 1;
+            assert_eq!(iterator.next_back(), Some(expected[back]));
+        }
+        assert_eq!(iterator.len(), back - front);
+        assert_eq!(iterator.size_hint(), (back - front, Some(back - front)));
+    }
+    assert_eq!(iterator.next(), None);
+    assert_eq!(iterator.next_back(), None);
+}
+
+#[test]
+fn packed_str_iter_is_exact_double_ended_and_view_relative() {
+    let empty = PackedString::<PackedSymbol, 1>::new();
+    assert_iterator(empty.as_packed_str(), &[]);
+
+    let bytes = packed_as::<SparseByte, 8>(&[0, 255], |code| match code {
+        0 => SparseByte::Zero,
+        255 => SparseByte::Maximum,
+        _ => unreachable!(),
+    });
+    assert_iterator(
+        bytes.as_packed_str(),
+        &[SparseByte::Zero, SparseByte::Maximum],
+    );
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_owner = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_view = oct_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(20, 4).unwrap());
+    let oct_expected: Vec<_> = oct_codes[20..24].iter().copied().map(oct).collect();
+    assert_iterator(oct_view, &oct_expected);
+    assert_eq!((&oct_view).into_iter().collect::<Vec<_>>(), oct_expected);
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_view = wide_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(8, 5).unwrap());
+    let wide_expected: Vec<_> = wide_codes[8..13].iter().copied().map(wide).collect();
+    assert_iterator(wide_view, &wide_expected);
+
+    let iterator_after_view_drop = {
+        let view = wide_owner
+            .as_packed_str()
+            .slice(UsizeCO::checked_from_start_len(8, 5).unwrap());
+        view.iter()
+    };
+    assert_eq!(iterator_after_view_drop.collect::<Vec<_>>(), wide_expected);
+}
+
+#[test]
+fn packed_str_iter_cursor_state_meets_at_the_middle() {
+    let owner = packed_as::<Oct, 3>(&[0, 1, 2, 3, 4], oct);
+    let mut iterator = owner.as_packed_str().iter();
+
+    assert_eq!(iterator.len(), 5);
+    assert_eq!(iterator.next(), Some(Oct::V0));
+    assert_eq!(iterator.len(), 4);
+    assert_eq!(iterator.next_back(), Some(Oct::V4));
+    assert_eq!(iterator.len(), 3);
+    assert_eq!(iterator.next(), Some(Oct::V1));
+    assert_eq!(iterator.next_back(), Some(Oct::V3));
+    assert_eq!(iterator.len(), 1);
+    assert_eq!(iterator.next(), Some(Oct::V2));
+    assert_eq!(iterator.len(), 0);
+    assert_eq!(iterator.next(), None);
+    assert_eq!(iterator.next_back(), None);
+    assert_eq!(iterator.len(), 0);
+}
+
+#[test]
+fn packed_str_iter_next_advances_one_front_cursor_and_fuses() {
+    let owner = packed_as::<Oct, 3>(&[0, 1, 2, 3, 4], oct);
+    let view = owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(1, 3).unwrap());
+    let mut iterator = view.iter();
+
+    assert_eq!(iterator.next(), Some(Oct::V1));
+    assert_eq!(iterator.len(), 2);
+    assert_eq!(iterator.next(), Some(Oct::V2));
+    assert_eq!(iterator.len(), 1);
+    assert_eq!(iterator.next(), Some(Oct::V3));
+    assert_eq!(iterator.len(), 0);
+    assert_eq!(iterator.next(), None);
+    assert_eq!(iterator.next(), None);
+    assert_eq!(iterator.len(), 0);
+
+    let empty = PackedString::<PackedSymbol, 1>::new();
+    let mut empty_iterator = empty.as_packed_str().iter();
+    assert_eq!(empty_iterator.next(), None);
+    assert_eq!(empty_iterator.len(), 0);
+}
+
+#[test]
+fn packed_str_iter_size_hint_tracks_exact_remaining_count() {
+    let owner = packed_as::<Oct, 3>(&[0, 1, 2, 3], oct);
+    let mut iterator = owner.as_packed_str().iter();
+
+    assert_eq!(iterator.size_hint(), (4, Some(4)));
+    assert_eq!(iterator.next(), Some(Oct::V0));
+    assert_eq!(iterator.size_hint(), (3, Some(3)));
+    assert_eq!(iterator.next_back(), Some(Oct::V3));
+    assert_eq!(iterator.size_hint(), (2, Some(2)));
+    assert_eq!(iterator.next(), Some(Oct::V1));
+    assert_eq!(iterator.next_back(), Some(Oct::V2));
+    assert_eq!(iterator.size_hint(), (0, Some(0)));
+    assert_eq!(iterator.next(), None);
+    assert_eq!(iterator.next_back(), None);
+    assert_eq!(iterator.size_hint(), (0, Some(0)));
+}
+
+#[test]
+fn packed_str_iter_next_back_decrements_from_the_exclusive_end() {
+    let owner = packed_as::<Oct, 3>(&[0, 1, 2, 3, 4], oct);
+    let view = owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(1, 3).unwrap());
+    let mut iterator = view.iter();
+
+    assert_eq!(iterator.next_back(), Some(Oct::V3));
+    assert_eq!(iterator.len(), 2);
+    assert_eq!(iterator.next_back(), Some(Oct::V2));
+    assert_eq!(iterator.len(), 1);
+    assert_eq!(iterator.next_back(), Some(Oct::V1));
+    assert_eq!(iterator.len(), 0);
+    assert_eq!(iterator.next_back(), None);
+    assert_eq!(iterator.next_back(), None);
+    assert_eq!(iterator.len(), 0);
+
+    let oct_codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let oct_owner = packed_as::<Oct, 3>(&oct_codes, oct);
+    let oct_view = oct_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(20, 2).unwrap());
+    let mut oct_iterator = oct_view.iter();
+    assert_eq!(oct_iterator.next_back(), Some(Oct::V5));
+    assert_eq!(oct_iterator.next_back(), Some(Oct::V4));
+
+    let wide_codes: Vec<u8> = (0..16).map(|index| (index * 11) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_view = wide_owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(8, 2).unwrap());
+    assert_eq!(wide_view.iter().next_back(), Some(wide(wide_codes[9])));
+
+    let empty = PackedString::<PackedSymbol, 1>::new();
+    assert_eq!(empty.as_packed_str().iter().next_back(), None);
+}
+
+#[test]
+fn packed_str_borrowed_into_iter_uses_the_view_range() {
+    let codes: Vec<u8> = (0..24).map(|index| index as u8 % 8).collect();
+    let owner = packed_as::<Oct, 3>(&codes, oct);
+    let view = owner
+        .as_packed_str()
+        .slice(UsizeCO::checked_from_start_len(20, 4).unwrap());
+    let expected: Vec<_> = codes[20..24].iter().copied().map(oct).collect();
+
+    let explicit: Vec<_> = (&view).into_iter().collect();
+    assert_eq!(explicit, expected);
+
+    let mut from_for_loop = Vec::new();
+    for value in &view {
+        from_for_loop.push(value);
+    }
+    assert_eq!(from_for_loop, expected);
+
+    let mut iterator = (&view).into_iter();
+    assert_eq!(iterator.len(), 4);
+    assert_eq!(iterator.next_back(), Some(Oct::V7));
+    assert_eq!(iterator.next(), Some(Oct::V4));
+    assert_eq!(iterator.len(), 2);
+    assert_eq!(iterator.collect::<Vec<_>>(), vec![Oct::V5, Oct::V6]);
+}
+
+#[test]
+fn packed_string_borrowed_into_iter_uses_the_full_owner() {
+    let codes: Vec<u8> = (0..22).map(|index| index as u8 % 8).collect();
+    let owner = packed_as::<Oct, 3>(&codes, oct);
+    let expected: Vec<_> = codes.iter().copied().map(oct).collect();
+
+    let mut iterator = (&owner).into_iter();
+    assert_eq!(iterator.len(), expected.len());
+    assert_eq!(iterator.size_hint(), (expected.len(), Some(expected.len())));
+    assert_eq!(iterator.next(), Some(expected[0]));
+    assert_eq!(iterator.next_back(), Some(*expected.last().unwrap()));
+    assert_eq!(
+        iterator.collect::<Vec<_>>(),
+        expected[1..expected.len() - 1]
+    );
+
+    let wide_codes: Vec<u8> = (0..10).map(|index| (index * 13) as u8 % 128).collect();
+    let wide_owner = packed_as::<WideCode, 7>(&wide_codes, wide);
+    let wide_expected: Vec<_> = wide_codes.iter().copied().map(wide).collect();
+    assert_eq!((&wide_owner).into_iter().collect::<Vec<_>>(), wide_expected);
+
+    let empty = PackedString::<PackedSymbol, 1>::new();
+    assert_eq!((&empty).into_iter().next(), None);
+}
