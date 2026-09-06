@@ -2,13 +2,12 @@
 mod support;
 
 use divan::{Bencher, black_box};
-use support::{LENGTHS, WIDTHS, codes, indices, packed};
+use support::{codes, indices, packed};
 
 fn main() {
     divan::main();
 }
 
-#[divan::bench(name = "get/sequential/packed", consts = WIDTHS, args = LENGTHS)]
 fn get_sequential_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let value = packed::<BITS>(&input);
@@ -22,7 +21,6 @@ fn get_sequential_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "get/sequential/vec", consts = WIDTHS, args = LENGTHS)]
 fn get_sequential_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     bencher.bench(|| {
@@ -35,7 +33,6 @@ fn get_sequential_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "get/random/packed", consts = WIDTHS, args = LENGTHS)]
 fn get_random_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let value = packed::<BITS>(&input);
@@ -51,7 +48,6 @@ fn get_random_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "get/random/vec", consts = WIDTHS, args = LENGTHS)]
 fn get_random_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let indexes = indices(len);
@@ -65,3 +61,57 @@ fn get_random_vec<const BITS: u8>(bencher: Bencher, len: usize) {
         black_box(checksum)
     });
 }
+
+macro_rules! define_case {
+    ($case:ident, $bits:literal, $len:literal) => {
+        mod $case {
+            use super::*;
+
+            #[divan::bench(
+                                                                name = concat!(
+                                                                    "packed_access/get_sequential/",
+                                                                    stringify!($case),
+                                                                    "/ours_packed_string"
+                                                                )
+                                                            )]
+            fn ours_packed_string(bencher: Bencher) {
+                super::get_sequential_packed::<$bits>(bencher, $len);
+            }
+
+            #[divan::bench(
+                                                                name = concat!(
+                                                                    "packed_access/get_sequential/",
+                                                                    stringify!($case),
+                                                                    "/vec_u8"
+                                                                )
+                                                            )]
+            fn vec_u8(bencher: Bencher) {
+                super::get_sequential_vec::<$bits>(bencher, $len);
+            }
+
+            #[divan::bench(
+                                                                name = concat!(
+                                                                    "packed_access/get_random/",
+                                                                    stringify!($case),
+                                                                    "/ours_packed_string"
+                                                                )
+                                                            )]
+            fn ours_packed_string_random(bencher: Bencher) {
+                super::get_random_packed::<$bits>(bencher, $len);
+            }
+
+            #[divan::bench(
+                                                                name = concat!(
+                                                                    "packed_access/get_random/",
+                                                                    stringify!($case),
+                                                                    "/vec_u8"
+                                                                )
+                                                            )]
+            fn vec_u8_random(bencher: Bencher) {
+                super::get_random_vec::<$bits>(bencher, $len);
+            }
+        }
+    };
+}
+
+crate::for_each_packed_case!(define_case);

@@ -16,8 +16,72 @@ impl<const BITS: u8> PackedChar<BITS> for Code {
     }
 }
 
-pub(crate) const WIDTHS: &[u8] = &[1, 2, 3, 4, 7, 8];
-pub(crate) const LENGTHS: &[usize] = &[16, 64, 1_024, 65_536, 1_048_576];
+#[macro_export]
+macro_rules! for_each_packed_case {
+    ($macro:ident) => {
+        $macro!(bits_1_len_16, 1, 16);
+        $macro!(bits_1_len_64, 1, 64);
+        $macro!(bits_1_len_1024, 1, 1_024);
+        $macro!(bits_1_len_65536, 1, 65_536);
+        $macro!(bits_1_len_1048576, 1, 1_048_576);
+        $macro!(bits_2_len_16, 2, 16);
+        $macro!(bits_2_len_64, 2, 64);
+        $macro!(bits_2_len_1024, 2, 1_024);
+        $macro!(bits_2_len_65536, 2, 65_536);
+        $macro!(bits_2_len_1048576, 2, 1_048_576);
+        $macro!(bits_3_len_16, 3, 16);
+        $macro!(bits_3_len_64, 3, 64);
+        $macro!(bits_3_len_1024, 3, 1_024);
+        $macro!(bits_3_len_65536, 3, 65_536);
+        $macro!(bits_3_len_1048576, 3, 1_048_576);
+        $macro!(bits_4_len_16, 4, 16);
+        $macro!(bits_4_len_64, 4, 64);
+        $macro!(bits_4_len_1024, 4, 1_024);
+        $macro!(bits_4_len_65536, 4, 65_536);
+        $macro!(bits_4_len_1048576, 4, 1_048_576);
+        $macro!(bits_7_len_16, 7, 16);
+        $macro!(bits_7_len_64, 7, 64);
+        $macro!(bits_7_len_1024, 7, 1_024);
+        $macro!(bits_7_len_65536, 7, 65_536);
+        $macro!(bits_7_len_1048576, 7, 1_048_576);
+        $macro!(bits_8_len_16, 8, 16);
+        $macro!(bits_8_len_64, 8, 64);
+        $macro!(bits_8_len_1024, 8, 1_024);
+        $macro!(bits_8_len_65536, 8, 65_536);
+        $macro!(bits_8_len_1048576, 8, 1_048_576);
+    };
+}
+
+#[macro_export]
+macro_rules! for_each_grit_case {
+    ($macro:ident) => {
+        $macro!(bits_1_len_16, 1, 16, grit_bitvec::u8_as_u1);
+        $macro!(bits_1_len_64, 1, 64, grit_bitvec::u8_as_u1);
+        $macro!(bits_1_len_1024, 1, 1_024, grit_bitvec::u8_as_u1);
+        $macro!(bits_1_len_65536, 1, 65_536, grit_bitvec::u8_as_u1);
+        $macro!(bits_1_len_1048576, 1, 1_048_576, grit_bitvec::u8_as_u1);
+        $macro!(bits_2_len_16, 2, 16, grit_bitvec::u8_as_u2);
+        $macro!(bits_2_len_64, 2, 64, grit_bitvec::u8_as_u2);
+        $macro!(bits_2_len_1024, 2, 1_024, grit_bitvec::u8_as_u2);
+        $macro!(bits_2_len_65536, 2, 65_536, grit_bitvec::u8_as_u2);
+        $macro!(bits_2_len_1048576, 2, 1_048_576, grit_bitvec::u8_as_u2);
+        $macro!(bits_3_len_16, 3, 16, grit_bitvec::u8_as_u3);
+        $macro!(bits_3_len_64, 3, 64, grit_bitvec::u8_as_u3);
+        $macro!(bits_3_len_1024, 3, 1_024, grit_bitvec::u8_as_u3);
+        $macro!(bits_3_len_65536, 3, 65_536, grit_bitvec::u8_as_u3);
+        $macro!(bits_3_len_1048576, 3, 1_048_576, grit_bitvec::u8_as_u3);
+        $macro!(bits_4_len_16, 4, 16, grit_bitvec::u8_as_u4);
+        $macro!(bits_4_len_64, 4, 64, grit_bitvec::u8_as_u4);
+        $macro!(bits_4_len_1024, 4, 1_024, grit_bitvec::u8_as_u4);
+        $macro!(bits_4_len_65536, 4, 65_536, grit_bitvec::u8_as_u4);
+        $macro!(bits_4_len_1048576, 4, 1_048_576, grit_bitvec::u8_as_u4);
+        $macro!(bits_7_len_16, 7, 16, grit_bitvec::u8_as_u7);
+        $macro!(bits_7_len_64, 7, 64, grit_bitvec::u8_as_u7);
+        $macro!(bits_7_len_1024, 7, 1_024, grit_bitvec::u8_as_u7);
+        $macro!(bits_7_len_65536, 7, 65_536, grit_bitvec::u8_as_u7);
+        $macro!(bits_7_len_1048576, 7, 1_048_576, grit_bitvec::u8_as_u7);
+    };
+}
 
 pub(crate) fn codes(bits: u8, len: usize) -> Vec<u8> {
     let mask = if bits == 8 {

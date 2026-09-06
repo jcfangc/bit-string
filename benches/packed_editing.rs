@@ -2,13 +2,12 @@
 mod support;
 
 use divan::{Bencher, black_box};
-use support::{Code, LENGTHS, WIDTHS, codes, packed};
+use support::{Code, codes, packed};
 
 fn main() {
     divan::main();
 }
 
-#[divan::bench(name = "set/middle/packed", consts = WIDTHS, args = LENGTHS)]
 fn set_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = packed::<BITS>(&codes(BITS, len));
     let index = len / 2;
@@ -19,7 +18,6 @@ fn set_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "set/middle/vec", consts = WIDTHS, args = LENGTHS)]
 fn set_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let index = len / 2;
@@ -30,7 +28,6 @@ fn set_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "push/packed", consts = WIDTHS, args = LENGTHS)]
 fn push_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = packed::<BITS>(&codes(BITS, len));
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
@@ -40,7 +37,6 @@ fn push_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "push/vec", consts = WIDTHS, args = LENGTHS)]
 fn push_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
@@ -50,7 +46,6 @@ fn push_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "pop/packed", consts = WIDTHS, args = LENGTHS)]
 fn pop_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = packed::<BITS>(&codes(BITS, len));
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
@@ -60,7 +55,6 @@ fn pop_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "pop/vec", consts = WIDTHS, args = LENGTHS)]
 fn pop_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
@@ -70,7 +64,6 @@ fn pop_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "insert/middle/packed", consts = WIDTHS, args = LENGTHS)]
 fn insert_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = packed::<BITS>(&codes(BITS, len));
     let index = len / 2;
@@ -81,7 +74,6 @@ fn insert_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "insert/middle/vec", consts = WIDTHS, args = LENGTHS)]
 fn insert_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let index = len / 2;
@@ -92,7 +84,6 @@ fn insert_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "remove/middle/packed", consts = WIDTHS, args = LENGTHS)]
 fn remove_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = packed::<BITS>(&codes(BITS, len));
     let index = len / 2;
@@ -103,7 +94,6 @@ fn remove_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "remove/middle/vec", consts = WIDTHS, args = LENGTHS)]
 fn remove_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let index = len / 2;
@@ -114,7 +104,6 @@ fn remove_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "extend/packed", consts = WIDTHS, args = LENGTHS)]
 fn extend_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = packed::<BITS>(&codes(BITS, len));
     let extension = codes(BITS, len / 4);
@@ -125,7 +114,6 @@ fn extend_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
-#[divan::bench(name = "extend/vec", consts = WIDTHS, args = LENGTHS)]
 fn extend_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let extension = codes(BITS, len / 4);
@@ -135,3 +123,50 @@ fn extend_vec<const BITS: u8>(bencher: Bencher, len: usize) {
         black_box(value.len())
     });
 }
+
+macro_rules! define_case {
+    ($case:ident, $bits:literal, $len:literal) => {
+        mod $case {
+            use super::*;
+
+            macro_rules! pair {
+                        ($scenario:literal, $packed:ident, $vec:ident) => {
+                            #[divan::bench(
+                                                                        name = concat!(
+                                                                            "packed_editing/",
+                                                                            $scenario,
+                                                                            "/",
+                                                                            stringify!($case),
+                                                                            "/ours_packed_string"
+                                                                        )
+                                                                    )]
+                            fn $packed(bencher: Bencher) {
+                                crate::$packed::<$bits>(bencher, $len);
+                            }
+
+                            #[divan::bench(
+                                                                        name = concat!(
+                                                                            "packed_editing/",
+                                                                            $scenario,
+                                                                            "/",
+                                                                            stringify!($case),
+                                                                            "/vec_u8"
+                                                                        )
+                                                                    )]
+                            fn $vec(bencher: Bencher) {
+                                crate::$vec::<$bits>(bencher, $len);
+                            }
+                        };
+                    }
+
+            pair!("set_middle", set_middle_packed, set_middle_vec);
+            pair!("push", push_packed, push_vec);
+            pair!("pop", pop_packed, pop_vec);
+            pair!("insert_middle", insert_middle_packed, insert_middle_vec);
+            pair!("remove_middle", remove_middle_packed, remove_middle_vec);
+            pair!("extend", extend_packed, extend_vec);
+        }
+    };
+}
+
+crate::for_each_packed_case!(define_case);
