@@ -1,7 +1,8 @@
-use super::{Oct, PackedString, Symbol, WideCode, oct, packed_as, wide};
+use super::{Oct, PackedString, Symbol, WideCode, oct, packed, packed_as, wide};
 use bit_string::traits::PackedChar;
 use core::cmp::Ordering;
 use int_intervals::UsizeCO;
+use proptest::prelude::*;
 
 fn assert_code_order<C, const BITS: u8>(
     left: &[u8],
@@ -205,4 +206,48 @@ fn packed_ord_cmp_is_total_and_matches_partial_order() {
         wide_left.as_packed_str().cmp(&wide_right.as_packed_str()),
         Ordering::Less
     );
+}
+
+proptest! {
+    #[test]
+    fn packed_order_matches_code_sequence_oracle(
+        left in prop::collection::vec(0u8..=2, 0..=32),
+        right in prop::collection::vec(0u8..=2, 0..=32),
+    ) {
+        let left_string = packed(&left);
+        let right_string = packed(&right);
+        let expected = left.cmp(&right);
+
+        prop_assert_eq!(left_string.cmp(&right_string), expected);
+        prop_assert_eq!(
+            left_string.as_packed_str().cmp(&right_string.as_packed_str()),
+            expected,
+        );
+    }
+
+    #[test]
+    fn packed_order_matches_code_sequence_oracle_across_word_boundaries(
+        left3 in prop::collection::vec(0u8..=7, 22..=128),
+        right3 in prop::collection::vec(0u8..=7, 22..=128),
+        left7 in prop::collection::vec(0u8..=127, 10..=128),
+        right7 in prop::collection::vec(0u8..=127, 10..=128),
+    ) {
+        let left3_string = packed_as::<Oct, 3>(&left3, oct);
+        let right3_string = packed_as::<Oct, 3>(&right3, oct);
+        let expected3 = left3.cmp(&right3);
+        prop_assert_eq!(left3_string.cmp(&right3_string), expected3);
+        prop_assert_eq!(
+            left3_string.as_packed_str().cmp(&right3_string.as_packed_str()),
+            expected3,
+        );
+
+        let left7_string = packed_as::<WideCode, 7>(&left7, wide);
+        let right7_string = packed_as::<WideCode, 7>(&right7, wide);
+        let expected7 = left7.cmp(&right7);
+        prop_assert_eq!(left7_string.cmp(&right7_string), expected7);
+        prop_assert_eq!(
+            left7_string.as_packed_str().cmp(&right7_string.as_packed_str()),
+            expected7,
+        );
+    }
 }

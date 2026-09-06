@@ -47,7 +47,7 @@ fn packed_str_clone_preserves_sliced_cross_word_views() {
 }
 
 #[test]
-fn packed_str_is_a_fixed_size_typed_view_with_value_semantics() {
+fn packed_str_adds_no_runtime_metadata() {
     assert_eq!(
         core::mem::size_of::<bit_string::PackedStr<'static, Oct, 3>>(),
         core::mem::size_of::<BitStr<'static>>()
