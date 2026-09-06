@@ -118,6 +118,22 @@ name = "editing_pop"
 harness = false
 
 [[bench]]
+name = "packed_construction"
+harness = false
+
+[[bench]]
+name = "packed_access"
+harness = false
+
+[[bench]]
+name = "packed_iteration"
+harness = false
+
+[[bench]]
+name = "packed_editing"
+harness = false
+
+[[bench]]
 name = "bit_ops_shl_assign"
 harness = false
 
