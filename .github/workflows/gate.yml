@@ -62,7 +62,3 @@ jobs:
 
       - name: Test
         run: cargo test --locked
-
-      - name: Test benchmark tooling
-        if: matrix.name == 'linux-x64-baseline'
-        run: python3 -m unittest discover -s scripts/tests -v

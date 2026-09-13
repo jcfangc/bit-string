@@ -2,7 +2,7 @@
 mod support;
 
 use divan::{Bencher, black_box};
-use support::{Code, codes, packed};
+use support::{Code, aligned_index, codes, cross_word_index, packed, unaligned_index};
 
 fn main() {
     divan::main();
@@ -10,7 +10,7 @@ fn main() {
 
 fn set_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = packed::<BITS>(&codes(BITS, len));
-    let index = len / 2;
+    let index = aligned_index::<BITS>(len);
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
         let previous = value.set(index, Code(0));
         black_box(&*value);
@@ -20,7 +20,7 @@ fn set_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
 
 fn set_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
-    let index = len / 2;
+    let index = aligned_index::<BITS>(len);
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
         let old = std::mem::replace(&mut value[index], 0);
         black_box(&*value);
@@ -37,6 +37,15 @@ fn push_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
+fn push_amortized_packed<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = packed::<BITS>(&codes(BITS, len - 1));
+    bencher.with_inputs(|| input.clone()).bench_refs(|value| {
+        value.push(Code(0));
+        black_box(&*value);
+        black_box(value.char_len())
+    });
+}
+
 fn push_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
@@ -44,6 +53,21 @@ fn push_vec<const BITS: u8>(bencher: Bencher, len: usize) {
         black_box(&*value);
         black_box(value.len())
     });
+}
+
+fn push_amortized_vec<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = codes(BITS, len - 1);
+    bencher
+        .with_inputs(|| {
+            let mut value = input.clone();
+            value.reserve(1);
+            value
+        })
+        .bench_refs(|value| {
+            value.push(0);
+            black_box(&*value);
+            black_box(value.len())
+        });
 }
 
 fn pop_packed<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -66,7 +90,7 @@ fn pop_vec<const BITS: u8>(bencher: Bencher, len: usize) {
 
 fn insert_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = packed::<BITS>(&codes(BITS, len));
-    let index = len / 2;
+    let index = unaligned_index::<BITS>(len);
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
         value.insert(index, Code(0));
         black_box(&*value);
@@ -76,7 +100,7 @@ fn insert_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
 
 fn insert_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
-    let index = len / 2;
+    let index = unaligned_index::<BITS>(len);
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
         value.insert(index, 0);
         black_box(&*value);
@@ -86,7 +110,7 @@ fn insert_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
 
 fn remove_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = packed::<BITS>(&codes(BITS, len));
-    let index = len / 2;
+    let index = cross_word_index::<BITS>(len);
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
         let removed = value.remove(index);
         black_box(&*value);
@@ -96,7 +120,7 @@ fn remove_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
 
 fn remove_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
-    let index = len / 2;
+    let index = cross_word_index::<BITS>(len);
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
         let removed = value.remove(index);
         black_box(&*value);
@@ -159,14 +183,15 @@ macro_rules! define_case {
                         };
                     }
 
-            pair!("set_middle", set_middle_packed, set_middle_vec);
-            pair!("push", push_packed, push_vec);
+            pair!("set_position/aligned", set_middle_packed, set_middle_vec);
+            pair!("push_boundary_probe", push_packed, push_vec);
+            pair!("push_amortized", push_amortized_packed, push_amortized_vec);
             pair!("pop", pop_packed, pop_vec);
-            pair!("insert_middle", insert_middle_packed, insert_middle_vec);
-            pair!("remove_middle", remove_middle_packed, remove_middle_vec);
-            pair!("extend", extend_packed, extend_vec);
+            pair!("insert_position/unaligned", insert_middle_packed, insert_middle_vec);
+            pair!("remove_position/word_boundary_or_fallback", remove_middle_packed, remove_middle_vec);
+            pair!("extend_boundary_probe", extend_packed, extend_vec);
         }
     };
 }
 
-crate::for_each_packed_case!(define_case);
+crate::for_each_packed_bench_case!(define_case);

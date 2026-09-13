@@ -57,4 +57,4 @@ macro_rules! define_case {
     };
 }
 
-crate::for_each_packed_case!(define_case);
+crate::for_each_packed_bench_case!(define_case);

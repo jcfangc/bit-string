@@ -4,7 +4,10 @@ mod support;
 use compressed_intvec::fixed::UFixedVec;
 use divan::{Bencher, black_box};
 use grit_bitvec::{TypedBitElem, TypedBitVec};
-use support::{codes, indices};
+use support::{
+    aligned_index, aligned_index_for, codes, cross_word_index, cross_word_index_for, indices,
+    unaligned_index, unaligned_index_for,
+};
 use sux::bits::BitFieldVec;
 use value_traits::slices::{SliceByValue, SliceByValueMut};
 
@@ -61,7 +64,7 @@ fn iter_fixed<const BITS: u8>(bencher: Bencher, len: usize) {
 fn set_fixed<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = fixed_vec(BITS, &codes(BITS, len));
     bencher.with_inputs(|| value.clone()).bench_refs(|value| {
-        value.set(len / 2, 0);
+        value.set(aligned_index::<BITS>(len), 0);
         black_box(&*value);
     });
 }
@@ -94,7 +97,7 @@ fn extend_fixed<const BITS: u8>(bencher: Bencher, len: usize) {
 fn insert_fixed<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = fixed_vec(BITS, &codes(BITS, len));
     bencher.with_inputs(|| value.clone()).bench_refs(|value| {
-        value.insert(len / 2, 0);
+        value.insert(unaligned_index::<BITS>(len), 0);
         black_box(&*value);
     });
 }
@@ -102,7 +105,7 @@ fn insert_fixed<const BITS: u8>(bencher: Bencher, len: usize) {
 fn remove_fixed<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = fixed_vec(BITS, &codes(BITS, len));
     bencher.with_inputs(|| value.clone()).bench_refs(|value| {
-        black_box(value.remove(len / 2));
+        black_box(value.remove(cross_word_index::<BITS>(len)));
         black_box(&*value);
     });
 }
@@ -156,7 +159,7 @@ fn iter_sux<const BITS: u8>(bencher: Bencher, len: usize) {
 fn set_sux<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = sux_vec(BITS, &codes(BITS, len));
     bencher.with_inputs(|| value.clone()).bench_refs(|value| {
-        value.set_value(len / 2, 0);
+        value.set_value(aligned_index::<BITS>(len), 0);
         black_box(&*value);
     });
 }
@@ -251,7 +254,7 @@ where
     bencher
         .with_inputs(|| grit_vec::<T>(&input))
         .bench_local_refs(|value| {
-            let _ = black_box(value.set(len / 2, 0));
+            let _ = black_box(value.set(aligned_index_for(grit_width::<T>() as usize, len), 0));
             black_box(&*value);
         });
 }
@@ -290,7 +293,8 @@ where
     bencher
         .with_inputs(|| grit_vec::<T>(&input))
         .bench_local_refs(|value| {
-            let _ = black_box(value.insert(len / 2, 0));
+            let _ =
+                black_box(value.insert(unaligned_index_for(grit_width::<T>() as usize, len), 0));
             black_box(&*value);
         });
 }
@@ -303,7 +307,7 @@ where
     bencher
         .with_inputs(|| grit_vec::<T>(&input))
         .bench_local_refs(|value| {
-            let _ = black_box(value.remove(len / 2));
+            let _ = black_box(value.remove(cross_word_index_for(grit_width::<T>() as usize, len)));
             black_box(&*value);
         });
 }
@@ -357,26 +361,26 @@ macro_rules! define_packed_case {
             );
             benchmark!("access/get_random", get_random_fixed, "compressed_intvec");
             benchmark!("iteration/iterate", iter_fixed, "compressed_intvec");
-            benchmark!("editing/set_middle", set_fixed, "compressed_intvec");
-            benchmark!("editing/push", push_fixed, "compressed_intvec");
+            benchmark!("editing/set_position/aligned", set_fixed, "compressed_intvec");
+            benchmark!("editing/push_boundary_probe", push_fixed, "compressed_intvec");
             benchmark!("editing/pop", pop_fixed, "compressed_intvec");
-            benchmark!("editing/extend", extend_fixed, "compressed_intvec");
-            benchmark!("editing/insert_middle", insert_fixed, "compressed_intvec");
-            benchmark!("editing/remove_middle", remove_fixed, "compressed_intvec");
+            benchmark!("editing/extend_boundary_probe", extend_fixed, "compressed_intvec");
+            benchmark!("editing/insert_position/unaligned", insert_fixed, "compressed_intvec");
+            benchmark!("editing/remove_position/word_boundary_or_fallback", remove_fixed, "compressed_intvec");
 
             benchmark!("construction/from_chars", construct_sux, "sux");
             benchmark!("access/get_sequential", get_sequential_sux, "sux");
             benchmark!("access/get_random", get_random_sux, "sux");
             benchmark!("iteration/iterate", iter_sux, "sux");
-            benchmark!("editing/set_middle", set_sux, "sux");
-            benchmark!("editing/push", push_sux, "sux");
+            benchmark!("editing/set_position/aligned", set_sux, "sux");
+            benchmark!("editing/push_boundary_probe", push_sux, "sux");
             benchmark!("editing/pop", pop_sux, "sux");
-            benchmark!("editing/extend", extend_sux, "sux");
+            benchmark!("editing/extend_boundary_probe", extend_sux, "sux");
         }
     };
 }
 
-crate::for_each_packed_case!(define_packed_case);
+crate::for_each_packed_bench_case!(define_packed_case);
 
 macro_rules! define_grit_case {
     ($case:ident, $bits:literal, $len:literal, $type:ty) => {
@@ -404,19 +408,19 @@ macro_rules! define_grit_case {
             benchmark!("access/get_sequential", get_sequential_grit);
             benchmark!("access/get_random", get_random_grit);
             benchmark!("iteration/iterate", iter_grit);
-            benchmark!("editing/set_middle", set_grit);
-            benchmark!("editing/push", push_grit);
+            benchmark!("editing/set_position/aligned", set_grit);
+            benchmark!("editing/push_boundary_probe", push_grit);
             benchmark!("editing/pop", pop_grit);
-            benchmark!("editing/insert_middle", insert_grit);
-            benchmark!("editing/remove_middle", remove_grit);
-            benchmark!("editing/extend", append_grit);
+            benchmark!("editing/insert_position/unaligned", insert_grit);
+            benchmark!("editing/remove_position/word_boundary_or_fallback", remove_grit);
+            benchmark!("editing/extend_boundary_probe", append_grit);
         }
     };
 }
 
 mod grit_cases {
     use super::*;
-    crate::for_each_grit_case!(define_grit_case);
+    crate::for_each_grit_bench_case!(define_grit_case);
 }
 
 fn fixed_vec(bits: u8, input: &[u8]) -> UFixedVec<u8> {

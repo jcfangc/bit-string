@@ -16,6 +16,9 @@ members = ["derive"]
 [workspace.package]
 version = "0.6.0"
 
+[features]
+characterization = []
+
 [workspace.dependencies]
 bit-string-derive = { version = "0.6", path = "derive" }
 
