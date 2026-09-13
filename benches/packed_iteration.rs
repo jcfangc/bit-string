@@ -27,6 +27,20 @@ fn iterate_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
+fn iterate_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = codes(BITS, len);
+    let mut source = Vec::with_capacity(len + 1);
+    source.push(0);
+    source.extend_from_slice(&input);
+    let owner = packed::<BITS>(&source);
+    let value = owner.as_packed_str().slice_from(1);
+    bencher.bench(|| {
+        let value = black_box(value);
+        let checksum = value.iter().fold(0u8, |checksum, code| checksum ^ code.0);
+        black_box(checksum)
+    });
+}
+
 macro_rules! define_case {
     ($case:ident, $bits:literal, $len:literal) => {
         mod $case {
@@ -41,6 +55,17 @@ macro_rules! define_case {
                                                                     )]
             fn ours_packed_string(bencher: Bencher) {
                 super::iterate_packed::<$bits>(bencher, $len);
+            }
+
+            #[divan::bench(
+                                                                        name = concat!(
+                                    "packed_iteration/iterate/",
+                                    stringify!($case),
+                                                                            "/ours_packed_str_unaligned"
+                                                                        )
+                                                                    )]
+            fn ours_packed_str(bencher: Bencher) {
+                super::iterate_packed_str::<$bits>(bencher, $len);
             }
 
             #[divan::bench(

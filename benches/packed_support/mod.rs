@@ -189,12 +189,18 @@ pub(crate) fn unaligned_index<const BITS: u8>(len: usize) -> usize {
 }
 
 pub(crate) fn unaligned_index_for(bits: usize, len: usize) -> usize {
-    let aligned = aligned_index_for(bits, len);
-    if aligned + 1 < len {
-        aligned + 1
-    } else {
-        aligned.saturating_sub(1)
+    let middle = len / 2;
+    let period = 64 / gcd(bits, 64);
+    for distance in 0..=len {
+        let left = middle.checked_sub(distance);
+        let right = middle.checked_add(distance);
+        for candidate in [right, left].into_iter().flatten() {
+            if candidate < len && candidate % period != 0 {
+                return candidate;
+            }
+        }
     }
+    0
 }
 
 /// Select a position whose packed character is close to the end of a word.

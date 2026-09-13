@@ -33,6 +33,23 @@ fn get_sequential_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
+fn get_sequential_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = codes(BITS, len);
+    let mut source = Vec::with_capacity(len + 1);
+    source.push(0);
+    source.extend_from_slice(&input);
+    let owner = packed::<BITS>(&source);
+    let value = owner.as_packed_str().slice_from(1);
+    bencher.bench(|| {
+        let value = black_box(value);
+        let mut checksum = 0u8;
+        for index in 0..len {
+            checksum ^= value.get(index).unwrap().0;
+        }
+        black_box(checksum)
+    });
+}
+
 fn get_random_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let value = packed::<BITS>(&input);
@@ -62,6 +79,25 @@ fn get_random_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
+fn get_random_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = codes(BITS, len);
+    let mut source = Vec::with_capacity(len + 1);
+    source.push(0);
+    source.extend_from_slice(&input);
+    let owner = packed::<BITS>(&source);
+    let value = owner.as_packed_str().slice_from(1);
+    let indexes = indices(len);
+    bencher.bench(|| {
+        let value = black_box(value);
+        let indexes = black_box(&indexes);
+        let mut checksum = 0u8;
+        for &index in indexes {
+            checksum ^= value.get(index).unwrap().0;
+        }
+        black_box(checksum)
+    });
+}
+
 macro_rules! define_case {
     ($case:ident, $bits:literal, $len:literal) => {
         mod $case {
@@ -76,6 +112,17 @@ macro_rules! define_case {
                                                             )]
             fn ours_packed_string(bencher: Bencher) {
                 super::get_sequential_packed::<$bits>(bencher, $len);
+            }
+
+            #[divan::bench(
+                                                                name = concat!(
+                                                                    "packed_access/get_sequential/",
+                                                                    stringify!($case),
+                                                                    "/ours_packed_str_unaligned"
+                                                                )
+                                                            )]
+            fn ours_packed_str(bencher: Bencher) {
+                super::get_sequential_packed_str::<$bits>(bencher, $len);
             }
 
             #[divan::bench(
@@ -98,6 +145,17 @@ macro_rules! define_case {
                                                             )]
             fn ours_packed_string_random(bencher: Bencher) {
                 super::get_random_packed::<$bits>(bencher, $len);
+            }
+
+            #[divan::bench(
+                                                                name = concat!(
+                                                                    "packed_access/get_random_stream/",
+                                                                    stringify!($case),
+                                                                    "/ours_packed_str_unaligned"
+                                                                )
+                                                            )]
+            fn ours_packed_str_random(bencher: Bencher) {
+                super::get_random_packed_str::<$bits>(bencher, $len);
             }
 
             #[divan::bench(
