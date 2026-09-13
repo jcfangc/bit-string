@@ -340,7 +340,7 @@ define_two_case_benchmarks!(
 );
 define_two_case_benchmarks!(
     find_absent_cases,
-    "packed_matching/find_absent",
+    "packed_matching/find_absent_early_reject",
     find_absent_packed_string,
     find_absent_packed_str
 );
@@ -352,7 +352,7 @@ define_two_case_benchmarks!(
 );
 define_two_case_benchmarks!(
     rfind_absent_cases,
-    "packed_matching/rfind_absent",
+    "packed_matching/rfind_absent_early_reject",
     rfind_absent_packed_string,
     rfind_absent_packed_str
 );
@@ -364,7 +364,7 @@ define_two_case_benchmarks!(
 );
 define_two_case_benchmarks!(
     contains_absent_cases,
-    "packed_matching/contains_absent",
+    "packed_matching/contains_absent_early_reject",
     contains_absent_packed_string,
     contains_absent_packed_str
 );
@@ -445,9 +445,7 @@ fn search_needle_length(bits: u8, len: usize) -> usize {
     let len = len.max(1);
     let logarithm = (usize::BITS - (len - 1).leading_zeros()) as usize;
     let needed_bits = logarithm + 10;
-    (needed_bits + usize::from(bits) - 1)
-        .div_ceil(usize::from(bits))
-        .clamp(1, len)
+    needed_bits.div_ceil(usize::from(bits)).clamp(1, len)
 }
 
 fn present_case<const BITS: u8>(len: usize, from_right: bool) -> (Vec<u8>, Vec<u8>, usize) {

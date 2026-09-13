@@ -91,7 +91,7 @@ macro_rules! define_case {
 
             #[divan::bench(
                                                                 name = concat!(
-                                                                    "packed_access/get_random/",
+                                                                    "packed_access/get_random_stream/",
                                                                     stringify!($case),
                                                                     "/ours_packed_string"
                                                                 )
@@ -102,7 +102,7 @@ macro_rules! define_case {
 
             #[divan::bench(
                                                                 name = concat!(
-                                                                    "packed_access/get_random/",
+                                                                    "packed_access/get_random_stream/",
                                                                     stringify!($case),
                                                                     "/vec_u8"
                                                                 )

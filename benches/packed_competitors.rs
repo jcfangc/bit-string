@@ -62,9 +62,12 @@ fn iter_fixed<const BITS: u8>(bencher: Bencher, len: usize) {
 }
 
 fn set_fixed<const BITS: u8>(bencher: Bencher, len: usize) {
-    let value = fixed_vec(BITS, &codes(BITS, len));
+    let input = codes(BITS, len);
+    let index = aligned_index::<BITS>(len);
+    let replacement = input[index] ^ 1;
+    let value = fixed_vec(BITS, &input);
     bencher.with_inputs(|| value.clone()).bench_refs(|value| {
-        value.set(aligned_index::<BITS>(len), 0);
+        value.set(index, replacement);
         black_box(&*value);
     });
 }
@@ -157,9 +160,12 @@ fn iter_sux<const BITS: u8>(bencher: Bencher, len: usize) {
 }
 
 fn set_sux<const BITS: u8>(bencher: Bencher, len: usize) {
-    let value = sux_vec(BITS, &codes(BITS, len));
+    let input = codes(BITS, len);
+    let index = aligned_index::<BITS>(len);
+    let replacement = input[index] ^ 1;
+    let value = sux_vec(BITS, &input);
     bencher.with_inputs(|| value.clone()).bench_refs(|value| {
-        value.set_value(aligned_index::<BITS>(len), 0);
+        value.set_value(index, usize::from(replacement));
         black_box(&*value);
     });
 }
@@ -250,11 +256,15 @@ fn set_grit<T>(bencher: Bencher, len: usize)
 where
     T: TypedBitElem<Base = u8> + 'static,
 {
-    let input = codes(grit_width::<T>(), len);
+    let bits = grit_width::<T>();
+    let width = usize::from(bits);
+    let input = codes(bits, len);
+    let index = aligned_index_for(width, len);
+    let replacement = input[index] ^ 1;
     bencher
         .with_inputs(|| grit_vec::<T>(&input))
         .bench_local_refs(|value| {
-            let _ = black_box(value.set(aligned_index_for(grit_width::<T>() as usize, len), 0));
+            let _ = black_box(value.set(index, replacement));
             black_box(&*value);
         });
 }
@@ -359,23 +369,23 @@ macro_rules! define_packed_case {
                 get_sequential_fixed,
                 "compressed_intvec"
             );
-            benchmark!("access/get_random", get_random_fixed, "compressed_intvec");
+            benchmark!("access/get_random_stream", get_random_fixed, "compressed_intvec");
             benchmark!("iteration/iterate", iter_fixed, "compressed_intvec");
             benchmark!("editing/set_position/aligned", set_fixed, "compressed_intvec");
             benchmark!("editing/push_boundary_probe", push_fixed, "compressed_intvec");
             benchmark!("editing/pop", pop_fixed, "compressed_intvec");
-            benchmark!("editing/extend_boundary_probe", extend_fixed, "compressed_intvec");
+            benchmark!("editing/extend_bulk_25pct", extend_fixed, "compressed_intvec");
             benchmark!("editing/insert_position/unaligned", insert_fixed, "compressed_intvec");
             benchmark!("editing/remove_position/word_boundary_or_fallback", remove_fixed, "compressed_intvec");
 
             benchmark!("construction/from_chars", construct_sux, "sux");
             benchmark!("access/get_sequential", get_sequential_sux, "sux");
-            benchmark!("access/get_random", get_random_sux, "sux");
+            benchmark!("access/get_random_stream", get_random_sux, "sux");
             benchmark!("iteration/iterate", iter_sux, "sux");
             benchmark!("editing/set_position/aligned", set_sux, "sux");
             benchmark!("editing/push_boundary_probe", push_sux, "sux");
             benchmark!("editing/pop", pop_sux, "sux");
-            benchmark!("editing/extend_boundary_probe", extend_sux, "sux");
+            benchmark!("editing/extend_bulk_25pct", extend_sux, "sux");
         }
     };
 }
@@ -406,14 +416,14 @@ macro_rules! define_grit_case {
 
             benchmark!("construction/from_chars", construct_grit);
             benchmark!("access/get_sequential", get_sequential_grit);
-            benchmark!("access/get_random", get_random_grit);
+            benchmark!("access/get_random_stream", get_random_grit);
             benchmark!("iteration/iterate", iter_grit);
             benchmark!("editing/set_position/aligned", set_grit);
             benchmark!("editing/push_boundary_probe", push_grit);
             benchmark!("editing/pop", pop_grit);
             benchmark!("editing/insert_position/unaligned", insert_grit);
             benchmark!("editing/remove_position/word_boundary_or_fallback", remove_grit);
-            benchmark!("editing/extend_boundary_probe", append_grit);
+            benchmark!("editing/extend_bulk_25pct", append_grit);
         }
     };
 }

@@ -9,10 +9,12 @@ fn main() {
 }
 
 fn set_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
-    let input = packed::<BITS>(&codes(BITS, len));
+    let input_codes = codes(BITS, len);
     let index = aligned_index::<BITS>(len);
+    let replacement = Code(input_codes[index] ^ 1);
+    let input = packed::<BITS>(&input_codes);
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
-        let previous = value.set(index, Code(0));
+        let previous = value.set(index, replacement);
         black_box(&*value);
         black_box(previous)
     });
@@ -21,8 +23,9 @@ fn set_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
 fn set_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let index = aligned_index::<BITS>(len);
+    let replacement = input[index] ^ 1;
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
-        let old = std::mem::replace(&mut value[index], 0);
+        let old = std::mem::replace(&mut value[index], replacement);
         black_box(&*value);
         black_box(old)
     });
@@ -189,7 +192,7 @@ macro_rules! define_case {
             pair!("pop", pop_packed, pop_vec);
             pair!("insert_position/unaligned", insert_middle_packed, insert_middle_vec);
             pair!("remove_position/word_boundary_or_fallback", remove_middle_packed, remove_middle_vec);
-            pair!("extend_boundary_probe", extend_packed, extend_vec);
+            pair!("extend_bulk_25pct", extend_packed, extend_vec);
         }
     };
 }
