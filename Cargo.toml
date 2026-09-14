@@ -8,13 +8,16 @@ repository = "https://github.com/jcfangc/bit-string"
 license = "MIT OR Apache-2.0"
 keywords = ["bitstring", "bits", "bitset", "sequence"]
 categories = ["data-structures", "no-std"]
-exclude = ["/benches", "/scripts", "/src/**/tests_for_*", "/tests", ".github/"]
+exclude = ["/benches", "/src/**/tests_for_*", "/tests", ".github/"]
 
 [workspace]
 members = ["derive"]
 
 [workspace.package]
 version = "0.6.0"
+
+[features]
+characterization = []
 
 [workspace.dependencies]
 bit-string-derive = { version = "0.6", path = "derive" }
@@ -29,8 +32,12 @@ doctest = false
 
 [dev-dependencies]
 bitvec_simd = "0.20.5"
+compressed-intvec = { version = "0.6.0", default-features = false }
 divan = { package = "codspeed-divan-compat", version = "4.7.0" }
+grit-bitvec = "0.4.3"
 proptest = "1.11.0"
+sux = { version = "0.14.0", default-features = false }
+value-traits = "0.2.1"
 
 
 [[bench]]
@@ -115,6 +122,30 @@ harness = false
 
 [[bench]]
 name = "editing_pop"
+harness = false
+
+[[bench]]
+name = "packed_construction"
+harness = false
+
+[[bench]]
+name = "packed_access"
+harness = false
+
+[[bench]]
+name = "packed_iteration"
+harness = false
+
+[[bench]]
+name = "packed_editing"
+harness = false
+
+[[bench]]
+name = "packed_competitors"
+harness = false
+
+[[bench]]
+name = "packed_native"
 harness = false
 
 [[bench]]
