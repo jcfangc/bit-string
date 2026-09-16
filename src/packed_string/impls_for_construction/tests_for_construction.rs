@@ -1,7 +1,20 @@
 #[cfg(debug_assertions)]
 use crate::BitString;
-use crate::PackedString;
 use crate::packed_string::tests_for_support::{Letter, LetterString};
+use crate::{PackedString, traits::PackedChar};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct Code(u8);
+
+impl<const BITS: u8> PackedChar<BITS> for Code {
+    fn code(self) -> u8 {
+        self.0
+    }
+
+    fn from_code(code: u8) -> Option<Self> {
+        Some(Self(code))
+    }
+}
 
 #[test]
 fn enum_discriminants_are_stored_directly() {
@@ -16,6 +29,49 @@ fn collect_constructs_a_packed_string() {
     let value: LetterString = [Letter::A, Letter::C].into_iter().collect();
     assert_eq!(value.char_len(), 2);
     assert_eq!(value.get(0), Some(Letter::A));
+}
+
+#[test]
+fn construction_and_extend_preserve_values_across_word_boundaries() {
+    fn check<const BITS: u8>() {
+        let mask = if BITS == 8 {
+            u8::MAX
+        } else {
+            (1u16 << BITS) as u8 - 1
+        };
+        let initial = (0..7)
+            .map(|index| Code(((index * 3 + 1) as u8) & mask))
+            .collect::<alloc::vec::Vec<_>>();
+        let suffix = (7..30)
+            .map(|index| Code(((index * 5 + 2) as u8) & mask))
+            .collect::<alloc::vec::Vec<_>>();
+        let expected = initial
+            .iter()
+            .chain(&suffix)
+            .map(|code| code.0)
+            .collect::<alloc::vec::Vec<_>>();
+
+        let mut value = PackedString::<Code, BITS>::from_chars(initial.iter().copied());
+        value.extend(suffix.iter().copied());
+
+        assert_eq!(value.bits().bit_len(), expected.len() * usize::from(BITS));
+        assert_eq!(
+            value
+                .iter()
+                .map(|code| code.0)
+                .collect::<alloc::vec::Vec<_>>(),
+            expected
+        );
+    }
+
+    check::<1>();
+    check::<2>();
+    check::<3>();
+    check::<4>();
+    check::<5>();
+    check::<6>();
+    check::<7>();
+    check::<8>();
 }
 
 #[test]

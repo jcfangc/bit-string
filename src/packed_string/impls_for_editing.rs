@@ -46,8 +46,14 @@ where
     C: PackedChar<BITS>,
 {
     fn extend<I: IntoIterator<Item = C>>(&mut self, iter: I) {
+        let iter = iter.into_iter();
+        let width = usize::from(BITS);
+        let (lower_bound, _) = iter.size_hint();
+        if let Some(additional_bits) = lower_bound.checked_mul(width) {
+            self.bits.reserve_bits(additional_bits);
+        }
         for character in iter {
-            self.push(character);
+            self.bits.push_bits(u64::from(character.code()), width);
         }
     }
 }
