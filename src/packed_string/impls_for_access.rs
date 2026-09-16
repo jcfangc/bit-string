@@ -1,4 +1,5 @@
 use super::*;
+use crate::extract_code;
 
 impl<C, const BITS: u8> PackedString<C, BITS>
 where
@@ -48,18 +49,7 @@ where
 
     #[inline]
     fn code_at(&self, index: usize) -> u8 {
-        let bits = usize::from(BITS);
-        let bit_index = index * bits;
-        let word_index = bit_index / 64;
-        let offset = bit_index % 64;
-        let words = self.bits.words();
-
-        let mut code = words[word_index] >> offset;
-        if 64 % bits != 0 && offset + bits > 64 {
-            code |= words[word_index + 1] << (64 - offset);
-        }
-
-        (code & u64::from(code_mask::<BITS>())) as u8
+        extract_code::<BITS>(self.bits.words(), 0, index)
     }
 }
 

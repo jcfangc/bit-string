@@ -16,5 +16,21 @@ pub(crate) const fn code_mask<const BITS: u8>() -> u8 {
     }
 }
 
+/// Extracts one fixed-width packed code from a word-aligned or offset view.
+#[inline]
+pub(crate) fn extract_code<const BITS: u8>(words: &[u64], bit_start: usize, index: usize) -> u8 {
+    let bits = usize::from(BITS);
+    let bit_index = bit_start + index * bits;
+    let word_index = bit_index / 64;
+    let offset = bit_index % 64;
+
+    let mut code = words[word_index] >> offset;
+    if 64 % bits != 0 && offset + bits > 64 {
+        code |= words[word_index + 1] << (64 - offset);
+    }
+
+    (code & u64::from(code_mask::<BITS>())) as u8
+}
+
 #[cfg(test)]
 mod tests_for_packed;
