@@ -1,8 +1,8 @@
 use alloc::vec;
 use alloc::vec::Vec;
 
+use super::scalar;
 use crate::traits::layout_block_len;
-use crate::traits::words_pack::funcs_for_pack_codes_core::scalar;
 
 fn codes<const BITS: u8>(len: usize) -> Vec<u8> {
     let mask = crate::code_mask::<BITS>();

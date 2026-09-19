@@ -1,11 +1,13 @@
-use crate::assert_valid_width;
+use crate::{WORD_BITS, assert_valid_width};
 
 /// Fixed-width code packing operations on `[u64]` backing storage.
 ///
 /// The destination is expected to contain exactly the words produced by the
 /// complete layout blocks in `codes`. Partial blocks and bit offsets are
 /// handled by the packed-domain caller instead. Every code must fit in
-/// `BITS` bits; callers are responsible for preserving this invariant.
+/// `BITS` bits; callers are responsible for preserving this invariant. Every
+/// destination word is fully overwritten, and its previous contents are
+/// ignored.
 pub(crate) trait WordsPack {
     fn pack_codes<const BITS: u8>(&mut self, codes: &[u8]);
 }
@@ -14,7 +16,7 @@ pub(crate) trait WordsPack {
 #[inline]
 pub(crate) const fn layout_block_len<const BITS: u8>() -> usize {
     assert_valid_width::<BITS>();
-    64 / gcd(64, BITS as usize)
+    WORD_BITS / gcd(WORD_BITS, BITS as usize)
 }
 
 #[inline]

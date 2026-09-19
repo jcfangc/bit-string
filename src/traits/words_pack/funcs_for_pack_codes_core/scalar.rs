@@ -1,42 +1,11 @@
 /// Packs complete layout blocks into complete little-endian words.
 pub(super) fn pack_codes<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
-    if BITS == 8 {
-        pack_bytes(dst, codes);
-        return;
-    }
-    if BITS == 4 {
-        pack_nibbles(dst, codes);
-        return;
-    }
-    if BITS == 2 {
-        pack_pairs(dst, codes);
-        return;
-    }
-    if matches!(BITS, 1 | 3 | 5 | 6 | 7) {
-        pack_groups::<BITS>(dst, codes);
-        return;
-    }
-    let width = usize::from(BITS);
-
-    dst.fill(0);
-
-    let mut word_index = 0;
-    let mut bit_offset = 0;
-    for &code in codes {
-        let code = u64::from(code);
-        dst[word_index] |= code << bit_offset;
-
-        let next_offset = bit_offset + width;
-        if next_offset > 64 {
-            dst[word_index + 1] |= code >> (64 - bit_offset);
-            word_index += 1;
-            bit_offset = next_offset - 64;
-        } else if next_offset == 64 {
-            word_index += 1;
-            bit_offset = 0;
-        } else {
-            bit_offset = next_offset;
-        }
+    match BITS {
+        8 => pack_bytes(dst, codes),
+        4 => pack_nibbles(dst, codes),
+        2 => pack_pairs(dst, codes),
+        1 | 3 | 5 | 6 | 7 => pack_groups::<BITS>(dst, codes),
+        _ => unreachable!("BITS validated by WordsPack core"),
     }
 }
 
@@ -56,7 +25,7 @@ fn pack_nibbles(dst: &mut [u64], codes: &[u8]) {
     for (word, chunk) in dst.iter_mut().zip(codes.chunks_exact(16)) {
         let mut packed = 0u64;
         for (index, &code) in chunk.iter().enumerate() {
-            packed |= u64::from(code & 0x0f) << (index * 4);
+            packed |= u64::from(code) << (index * 4);
         }
         *word = packed;
     }
@@ -69,7 +38,7 @@ fn pack_pairs(dst: &mut [u64], codes: &[u8]) {
     for (word, chunk) in dst.iter_mut().zip(codes.chunks_exact(32)) {
         let mut packed = 0u64;
         for (index, &code) in chunk.iter().enumerate() {
-            packed |= u64::from(code & 0x03) << (index * 2);
+            packed |= u64::from(code) << (index * 2);
         }
         *word = packed;
     }

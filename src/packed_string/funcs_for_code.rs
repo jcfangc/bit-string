@@ -5,6 +5,8 @@ use crate::{BitString, WORD_BITS, word_len};
 
 use super::*;
 
+const CODE_BATCH_LEN: usize = 64;
+
 pub(super) fn pack_codes<C, const BITS: u8, I>(chars: I) -> BitString
 where
     C: PackedChar<BITS>,
@@ -19,7 +21,6 @@ where
     }
 
     let layout_len = layout_block_len::<BITS>();
-    const CODE_BATCH_LEN: usize = 64;
     // 64 is a multiple of every layout block for BITS=1..8.
     let mut batch = [0u8; CODE_BATCH_LEN];
     let mut batch_len = 0;
