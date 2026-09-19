@@ -1,5 +1,3 @@
-use crate::code_mask;
-
 /// Packs complete layout blocks into complete little-endian words.
 pub(super) fn pack_codes<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
     if BITS == 8 {
@@ -14,23 +12,18 @@ pub(super) fn pack_codes<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
         pack_pairs(dst, codes);
         return;
     }
-    if BITS == 6 {
-        pack_six_bits(dst, codes);
-        return;
-    }
-    if matches!(BITS, 1 | 3 | 5 | 7) {
+    if matches!(BITS, 1 | 3 | 5 | 6 | 7) {
         pack_groups::<BITS>(dst, codes);
         return;
     }
     let width = usize::from(BITS);
-    let mask = u64::from(code_mask::<BITS>());
 
     dst.fill(0);
 
     let mut word_index = 0;
     let mut bit_offset = 0;
     for &code in codes {
-        let code = u64::from(code) & mask;
+        let code = u64::from(code);
         dst[word_index] |= code << bit_offset;
 
         let next_offset = bit_offset + width;
@@ -83,24 +76,17 @@ fn pack_pairs(dst: &mut [u64], codes: &[u8]) {
 }
 
 #[inline]
-fn pack_six_bits(dst: &mut [u64], codes: &[u8]) {
-    debug_assert_eq!(codes.len() % 8, 0);
-
+fn pack_groups<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
+    let width = usize::from(BITS);
+    let group_bits = width * 8;
     let mut accumulator = 0u64;
     let mut accumulated_bits = 0;
     let mut word_index = 0;
 
     for group in codes.chunks_exact(8) {
-        let packed_group = u64::from(group[0] & 0x3f)
-            | (u64::from(group[1] & 0x3f) << 6)
-            | (u64::from(group[2] & 0x3f) << 12)
-            | (u64::from(group[3] & 0x3f) << 18)
-            | (u64::from(group[4] & 0x3f) << 24)
-            | (u64::from(group[5] & 0x3f) << 30)
-            | (u64::from(group[6] & 0x3f) << 36)
-            | (u64::from(group[7] & 0x3f) << 42);
-        let next_bits = accumulated_bits + 48;
+        let packed_group = pack_group::<BITS>(group);
 
+        let next_bits = accumulated_bits + group_bits;
         if next_bits < 64 {
             accumulator |= packed_group << accumulated_bits;
             accumulated_bits = next_bits;
@@ -122,37 +108,22 @@ fn pack_six_bits(dst: &mut [u64], codes: &[u8]) {
 }
 
 #[inline]
-fn pack_groups<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
-    let width = usize::from(BITS);
-    let mask = u64::from(code_mask::<BITS>());
-    let group_bits = width * 8;
-    let mut accumulator = 0u64;
-    let mut accumulated_bits = 0;
-    let mut word_index = 0;
-
-    for group in codes.chunks_exact(8) {
-        let mut packed_group = 0u64;
-        for (index, &code) in group.iter().enumerate() {
-            packed_group |= (u64::from(code) & mask) << (index * width);
-        }
-
-        let next_bits = accumulated_bits + group_bits;
-        if next_bits < 64 {
-            accumulator |= packed_group << accumulated_bits;
-            accumulated_bits = next_bits;
-        } else if next_bits == 64 {
-            dst[word_index] = accumulator | (packed_group << accumulated_bits);
-            word_index += 1;
-            accumulator = 0;
-            accumulated_bits = 0;
-        } else {
-            dst[word_index] = accumulator | (packed_group << accumulated_bits);
-            word_index += 1;
-            accumulator = packed_group >> (64 - accumulated_bits);
-            accumulated_bits = next_bits - 64;
-        }
+fn pack_group<const BITS: u8>(group: &[u8]) -> u64 {
+    if BITS == 6 {
+        return u64::from(group[0])
+            | (u64::from(group[1]) << 6)
+            | (u64::from(group[2]) << 12)
+            | (u64::from(group[3]) << 18)
+            | (u64::from(group[4]) << 24)
+            | (u64::from(group[5]) << 30)
+            | (u64::from(group[6]) << 36)
+            | (u64::from(group[7]) << 42);
     }
 
-    debug_assert_eq!(accumulated_bits, 0);
-    debug_assert_eq!(word_index, dst.len());
+    let width = usize::from(BITS);
+    let mut packed = 0u64;
+    for (index, &code) in group.iter().enumerate() {
+        packed |= u64::from(code) << (index * width);
+    }
+    packed
 }

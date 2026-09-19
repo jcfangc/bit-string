@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 
 use crate::traits::{WordsPack, layout_block_len};
-use crate::{BitString, WORD_BITS, code_mask, word_len};
+use crate::{BitString, WORD_BITS, word_len};
 
 use super::*;
 
@@ -10,16 +10,7 @@ where
     C: PackedChar<BITS>,
     I: IntoIterator<Item = C>,
 {
-    pack_codes_in_blocks::<C, BITS, I>(chars)
-}
-
-fn pack_codes_in_blocks<C, const BITS: u8, I>(chars: I) -> BitString
-where
-    C: PackedChar<BITS>,
-    I: IntoIterator<Item = C>,
-{
     let width = usize::from(BITS);
-    let value_mask = u64::from(code_mask::<BITS>());
     let chars = chars.into_iter();
     let (lower_bound, _) = chars.size_hint();
     let mut words = Vec::new();
@@ -27,31 +18,33 @@ where
         words.reserve(word_len(bit_len));
     }
 
-    let layout_block_len = layout_block_len::<BITS>();
-    let mut block = [0u8; 64];
-    let mut block_count = 0;
+    let layout_len = layout_block_len::<BITS>();
+    const CODE_BATCH_LEN: usize = 64;
+    // 64 is a multiple of every layout block for BITS=1..8.
+    let mut batch = [0u8; CODE_BATCH_LEN];
+    let mut batch_len = 0;
 
     for character in chars {
-        block[block_count] = character.code() & value_mask as u8;
-        block_count += 1;
+        batch[batch_len] = character.code();
+        batch_len += 1;
 
-        if block_count == block.len() {
+        if batch_len == CODE_BATCH_LEN {
             let start = words.len();
-            words.resize(start + block.len() * width / WORD_BITS, 0);
-            words[start..].pack_codes::<BITS>(&block);
-            block_count = 0;
+            words.resize(start + CODE_BATCH_LEN * width / WORD_BITS, 0);
+            words[start..].pack_codes::<BITS>(&batch);
+            batch_len = 0;
         }
     }
 
-    let aligned_count = block_count / layout_block_len * layout_block_len;
+    let aligned_count = batch_len / layout_len * layout_len;
     if aligned_count != 0 {
         let start = words.len();
         words.resize(start + aligned_count * width / WORD_BITS, 0);
-        words[start..].pack_codes::<BITS>(&block[..aligned_count]);
+        words[start..].pack_codes::<BITS>(&batch[..aligned_count]);
     }
 
     let mut bit_len = words.len() * WORD_BITS;
-    for &code in &block[aligned_count..block_count] {
+    for &code in &batch[aligned_count..batch_len] {
         append_code::<BITS>(&mut words, &mut bit_len, u64::from(code));
     }
 
