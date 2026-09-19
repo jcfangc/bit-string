@@ -1,6 +1,7 @@
 #[cfg(debug_assertions)]
 use crate::BitString;
 use crate::packed_string::tests_for_support::{Letter, LetterString};
+use crate::traits::layout_block_len;
 use crate::{PackedString, traits::PackedChar};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -55,6 +56,40 @@ fn construction_and_extend_preserve_values_across_word_boundaries() {
         value.extend(suffix.iter().copied());
 
         assert_eq!(value.bits().bit_len(), expected.len() * usize::from(BITS));
+        assert_eq!(
+            value
+                .iter()
+                .map(|code| code.0)
+                .collect::<alloc::vec::Vec<_>>(),
+            expected
+        );
+    }
+
+    check::<1>();
+    check::<2>();
+    check::<3>();
+    check::<4>();
+    check::<5>();
+    check::<6>();
+    check::<7>();
+    check::<8>();
+}
+
+#[test]
+fn construction_preserves_values_across_complete_pack_blocks() {
+    fn check<const BITS: u8>() {
+        let block_len = layout_block_len::<BITS>();
+        let mask = if BITS == 8 {
+            u8::MAX
+        } else {
+            (1u16 << BITS) as u8 - 1
+        };
+        let expected = (0..(block_len * 2 + 3))
+            .map(|index| ((index * 11 + 5) as u8) & mask)
+            .collect::<alloc::vec::Vec<_>>();
+        let input = expected.iter().copied().map(Code);
+        let value = PackedString::<Code, BITS>::from_chars(input);
+
         assert_eq!(
             value
                 .iter()

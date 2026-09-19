@@ -5,6 +5,7 @@ pub(crate) mod words_edit;
 pub(crate) mod words_eq;
 pub(crate) mod words_find;
 pub(crate) mod words_ord;
+pub(crate) mod words_pack;
 pub(crate) mod words_scan;
 
 pub use packed_char::PackedChar;
@@ -14,4 +15,5 @@ pub(crate) use words_edit::*;
 pub(crate) use words_eq::*;
 pub(crate) use words_find::*;
 pub(crate) use words_ord::*;
+pub(crate) use words_pack::*;
 pub(crate) use words_scan::*;
