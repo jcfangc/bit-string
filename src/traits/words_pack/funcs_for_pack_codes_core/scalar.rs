@@ -2,6 +2,11 @@ use crate::code_mask;
 
 /// Packs complete layout blocks into complete little-endian words.
 pub(super) fn pack_codes<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
+    if BITS == 8 {
+        pack_bytes(dst, codes);
+        return;
+    }
+
     let width = usize::from(BITS);
     let mask = u64::from(code_mask::<BITS>());
 
@@ -24,5 +29,14 @@ pub(super) fn pack_codes<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
         } else {
             bit_offset = next_offset;
         }
+    }
+}
+
+#[inline]
+fn pack_bytes(dst: &mut [u64], codes: &[u8]) {
+    debug_assert_eq!(codes.len(), dst.len() * 8);
+
+    for (word, chunk) in dst.iter_mut().zip(codes.chunks_exact(8)) {
+        *word = u64::from_le_bytes(chunk.try_into().expect("chunk has eight bytes"));
     }
 }
