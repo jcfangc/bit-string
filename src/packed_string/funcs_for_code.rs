@@ -10,7 +10,7 @@ where
     C: PackedChar<BITS>,
     I: IntoIterator<Item = C>,
 {
-    if BITS == 2 || BITS == 4 || BITS == 8 {
+    if matches!(BITS, 2 | 3 | 4 | 5 | 7 | 8) {
         return pack_codes_in_blocks::<C, BITS, I>(chars);
     }
 
