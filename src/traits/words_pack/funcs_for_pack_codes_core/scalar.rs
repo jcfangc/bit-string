@@ -14,6 +14,10 @@ pub(super) fn pack_codes<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
         pack_pairs(dst, codes);
         return;
     }
+    if BITS == 6 {
+        pack_six_bits(dst, codes);
+        return;
+    }
     if matches!(BITS, 1 | 3 | 5 | 7) {
         pack_groups::<BITS>(dst, codes);
         return;
@@ -76,6 +80,45 @@ fn pack_pairs(dst: &mut [u64], codes: &[u8]) {
         }
         *word = packed;
     }
+}
+
+#[inline]
+fn pack_six_bits(dst: &mut [u64], codes: &[u8]) {
+    debug_assert_eq!(codes.len() % 8, 0);
+
+    let mut accumulator = 0u64;
+    let mut accumulated_bits = 0;
+    let mut word_index = 0;
+
+    for group in codes.chunks_exact(8) {
+        let packed_group = u64::from(group[0] & 0x3f)
+            | (u64::from(group[1] & 0x3f) << 6)
+            | (u64::from(group[2] & 0x3f) << 12)
+            | (u64::from(group[3] & 0x3f) << 18)
+            | (u64::from(group[4] & 0x3f) << 24)
+            | (u64::from(group[5] & 0x3f) << 30)
+            | (u64::from(group[6] & 0x3f) << 36)
+            | (u64::from(group[7] & 0x3f) << 42);
+        let next_bits = accumulated_bits + 48;
+
+        if next_bits < 64 {
+            accumulator |= packed_group << accumulated_bits;
+            accumulated_bits = next_bits;
+        } else if next_bits == 64 {
+            dst[word_index] = accumulator | (packed_group << accumulated_bits);
+            word_index += 1;
+            accumulator = 0;
+            accumulated_bits = 0;
+        } else {
+            dst[word_index] = accumulator | (packed_group << accumulated_bits);
+            word_index += 1;
+            accumulator = packed_group >> (64 - accumulated_bits);
+            accumulated_bits = next_bits - 64;
+        }
+    }
+
+    debug_assert_eq!(accumulated_bits, 0);
+    debug_assert_eq!(word_index, dst.len());
 }
 
 #[inline]

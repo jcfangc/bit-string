@@ -2,6 +2,7 @@ use crate::{assert_valid_width, word_len};
 
 #[inline]
 pub(crate) const fn layout_block_len<const BITS: u8>() -> usize {
+    assert_valid_width::<BITS>();
     64 / gcd(64, BITS as usize)
 }
 
