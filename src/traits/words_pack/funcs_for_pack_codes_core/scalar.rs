@@ -10,6 +10,10 @@ pub(super) fn pack_codes<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
         pack_nibbles(dst, codes);
         return;
     }
+    if BITS == 2 {
+        pack_pairs(dst, codes);
+        return;
+    }
 
     let width = usize::from(BITS);
     let mask = u64::from(code_mask::<BITS>());
@@ -53,6 +57,19 @@ fn pack_nibbles(dst: &mut [u64], codes: &[u8]) {
         let mut packed = 0u64;
         for (index, &code) in chunk.iter().enumerate() {
             packed |= u64::from(code & 0x0f) << (index * 4);
+        }
+        *word = packed;
+    }
+}
+
+#[inline]
+fn pack_pairs(dst: &mut [u64], codes: &[u8]) {
+    debug_assert_eq!(codes.len(), dst.len() * 32);
+
+    for (word, chunk) in dst.iter_mut().zip(codes.chunks_exact(32)) {
+        let mut packed = 0u64;
+        for (index, &code) in chunk.iter().enumerate() {
+            packed |= u64::from(code & 0x03) << (index * 2);
         }
         *word = packed;
     }
