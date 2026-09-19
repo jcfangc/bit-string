@@ -44,7 +44,7 @@ where
         bit_len = new_bit_len;
     }
 
-    BitString::from_words(&words, bit_len).expect("packed words have an invalid length")
+    BitString::from_owned_words(words, bit_len).expect("packed words have an invalid length")
 }
 
 #[inline]
