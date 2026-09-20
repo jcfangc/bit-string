@@ -1,3 +1,12 @@
+//! AVX2 packing is intentionally implemented only for `BITS=1` and `BITS=4`.
+//!
+//! A `BITS=2` compression prototype and a `BITS=8` byte-copy prototype were
+//! benchmarked against the scalar backend without a stable construction
+//! speedup. Their extra dispatch and kernel complexity therefore was not
+//! retained. Other widths continue to use scalar packing until a new kernel
+//! demonstrates a measured benefit; re-run the construction benchmarks before
+//! revisiting this support matrix.
+
 use super::scalar;
 
 #[cfg(target_arch = "x86")]
