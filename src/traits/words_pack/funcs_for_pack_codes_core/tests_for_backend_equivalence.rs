@@ -100,4 +100,24 @@ mod tests_for_avx2 {
             }
         }
     }
+
+    #[test]
+    fn bits_six_matches_scalar_across_simd_prefix_and_tail() {
+        for code_len in [0, 32, 64, 96, 128] {
+            for input in [
+                vec![0; code_len],
+                vec![0x3f; code_len],
+                codes::<6>(code_len),
+            ] {
+                let expected = run::<6>(&input);
+                let mut actual = vec![u64::MAX; expected.len()];
+
+                // SAFETY: This test is compiled only when AVX2 is enabled,
+                // and the input satisfies the WordsPack contract.
+                unsafe { avx2::pack_codes::<6>(&mut actual, &input) };
+
+                assert_eq!(actual, expected, "code_len={code_len}, input={input:?}");
+            }
+        }
+    }
 }
