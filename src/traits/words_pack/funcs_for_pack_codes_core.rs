@@ -31,7 +31,25 @@ fn dispatch<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
         target_feature = "avx2"
     ))]
     {
-        if matches!(BITS, 1 | 3 | 4 | 5 | 6 | 7) && codes.len() >= 32 {
+        // Conservative thresholds selected from `benches/packed_thresholds.rs`.
+        const AVX2_BITS_1_THRESHOLD: usize = 64;
+        const AVX2_BITS_3_THRESHOLD: usize = 64;
+        const AVX2_BITS_4_THRESHOLD: usize = 64;
+        const AVX2_BITS_5_THRESHOLD: usize = 64;
+        const AVX2_BITS_6_THRESHOLD: usize = 32;
+        const AVX2_BITS_7_THRESHOLD: usize = 64;
+
+        let use_avx2 = match BITS {
+            1 => codes.len() >= AVX2_BITS_1_THRESHOLD,
+            3 => codes.len() >= AVX2_BITS_3_THRESHOLD,
+            4 => codes.len() >= AVX2_BITS_4_THRESHOLD,
+            5 => codes.len() >= AVX2_BITS_5_THRESHOLD,
+            6 => codes.len() >= AVX2_BITS_6_THRESHOLD,
+            7 => codes.len() >= AVX2_BITS_7_THRESHOLD,
+            _ => false,
+        };
+
+        if use_avx2 {
             // SAFETY: This branch is compiled only when AVX2 is enabled.
             unsafe { avx2::pack_codes::<BITS>(dst, codes) };
             return;
