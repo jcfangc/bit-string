@@ -31,7 +31,7 @@ fn dispatch<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
         target_feature = "avx2"
     ))]
     {
-        if BITS == 4 && codes.len() >= 32 {
+        if matches!(BITS, 1 | 4) && codes.len() >= 32 {
             // SAFETY: This branch is compiled only when AVX2 is enabled.
             unsafe { avx2::pack_codes::<BITS>(dst, codes) };
             return;
