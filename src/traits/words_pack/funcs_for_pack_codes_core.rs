@@ -26,10 +26,26 @@ pub(super) fn pack_codes<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
 
 #[inline]
 fn dispatch<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
+    {
+        if BITS == 4 && codes.len() >= 32 {
+            // SAFETY: This branch is compiled only when AVX2 is enabled.
+            unsafe { avx2::pack_codes::<BITS>(dst, codes) };
+            return;
+        }
+    }
+
     scalar::pack_codes::<BITS>(dst, codes);
 }
 
 mod scalar;
+
+#[allow(unused)]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+mod avx2;
 
 #[cfg(test)]
 mod tests_for_backend_equivalence;

@@ -56,3 +56,32 @@ fn assert_width<const BITS: u8>() {
         assert_eq!(actual, expected, "BITS={BITS}, blocks={blocks}");
     }
 }
+
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
+mod tests_for_avx2 {
+    use super::super::avx2;
+    use super::*;
+
+    #[test]
+    fn bits_four_matches_scalar_across_simd_prefix_and_tail() {
+        for code_len in [0, 16, 32, 48, 64, 96, 128] {
+            for input in [
+                vec![0; code_len],
+                vec![0x0f; code_len],
+                codes::<4>(code_len),
+            ] {
+                let expected = run::<4>(&input);
+                let mut actual = vec![u64::MAX; expected.len()];
+
+                // SAFETY: This test is compiled only when AVX2 is enabled,
+                // and the input satisfies the WordsPack contract.
+                unsafe { avx2::pack_codes::<4>(&mut actual, &input) };
+
+                assert_eq!(actual, expected, "code_len={code_len}, input={input:?}");
+            }
+        }
+    }
+}
