@@ -1,5 +1,5 @@
-//! AVX2 packing is intentionally implemented only for `BITS=1`, `BITS=4`, and
-//! `BITS=6`.
+//! AVX2 packing is intentionally implemented only for `BITS=1`, `BITS=3`,
+//! `BITS=4`, and `BITS=6`.
 //!
 //! A `BITS=2` compression prototype and a `BITS=8` byte-copy prototype were
 //! benchmarked against the scalar backend without a stable construction
@@ -32,24 +32,29 @@ use core::arch::x86_64::{
 const CODES_PER_SIMD_BLOCK: usize = 32;
 const WORDS_PER_SIMD_BLOCK: usize = 2;
 
-/// Packs the BITS=1, BITS=4, or BITS=6 SIMD prefix and delegates complete remaining
-/// blocks to scalar.
+/// Packs the BITS=1, BITS=3, BITS=4, or BITS=6 SIMD prefix and delegates
+/// complete remaining blocks to scalar.
 ///
 /// # Safety
 ///
 /// The caller must only invoke this function when AVX2 is available. The
-/// slices must satisfy the `WordsPack` contract, and `BITS` must be 1, 4, or 6.
+/// slices must satisfy the `WordsPack` contract, and `BITS` must be 1, 3, 4, or 6.
 #[target_feature(enable = "avx2")]
 pub(super) unsafe fn pack_codes<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
-    debug_assert!(matches!(BITS, 1 | 4 | 6));
+    debug_assert!(matches!(BITS, 1 | 3 | 4 | 6));
     debug_assert_eq!(codes.len() % layout_block_len::<BITS>(), 0);
     debug_assert_eq!(dst.len(), codes.len() * usize::from(BITS) / 64);
 
-    let simd_code_block_len = if BITS == 1 { 64 } else { CODES_PER_SIMD_BLOCK };
+    let simd_code_block_len = if matches!(BITS, 1 | 3) {
+        64
+    } else {
+        CODES_PER_SIMD_BLOCK
+    };
     let simd_code_len = codes.len() / simd_code_block_len * simd_code_block_len;
     let simd_word_len = simd_code_len * usize::from(BITS) / 64;
     let simd_word_block_len = match BITS {
         1 => 1,
+        3 => 3,
         4 => WORDS_PER_SIMD_BLOCK,
         6 => 3,
         _ => unreachable!(),
@@ -64,6 +69,7 @@ pub(super) unsafe fn pack_codes<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
         unsafe {
             match BITS {
                 1 => pack_64_bits(code_chunk, word_chunk),
+                3 => pack_64_three_bits(code_chunk, word_chunk),
                 4 => pack_32_codes(code_chunk, word_chunk),
                 6 => pack_32_six_bits(code_chunk, word_chunk),
                 _ => unreachable!(),
@@ -122,6 +128,79 @@ unsafe fn pack_32_codes(codes: &[u8], words: &mut [u64]) {
             _mm256_castsi256_si128(compacted),
         );
     }
+}
+
+#[target_feature(enable = "avx2")]
+unsafe fn pack_64_three_bits(codes: &[u8], words: &mut [u64]) {
+    debug_assert_eq!(codes.len(), 64);
+    debug_assert_eq!(words.len(), 3);
+
+    let mut groups = [0u64; 8];
+    // SAFETY: Each half contains exactly 32 initialized codes and has space
+    // for the four 24-bit groups produced by the kernel.
+    unsafe {
+        pack_32_three_bit_groups(&codes[..32], &mut groups[..4]);
+        pack_32_three_bit_groups(&codes[32..], &mut groups[4..]);
+    }
+
+    let mut accumulator = 0u64;
+    let mut accumulated_bits = 0;
+    let mut word_index = 0;
+    for group in groups {
+        let next_bits = accumulated_bits + 24;
+        if next_bits < 64 {
+            accumulator |= group << accumulated_bits;
+            accumulated_bits = next_bits;
+        } else if next_bits == 64 {
+            words[word_index] = accumulator | (group << accumulated_bits);
+            word_index += 1;
+            accumulator = 0;
+            accumulated_bits = 0;
+        } else {
+            words[word_index] = accumulator | (group << accumulated_bits);
+            word_index += 1;
+            accumulator = group >> (64 - accumulated_bits);
+            accumulated_bits = next_bits - 64;
+        }
+    }
+
+    debug_assert_eq!(accumulated_bits, 0);
+    debug_assert_eq!(word_index, 3);
+}
+
+#[target_feature(enable = "avx2")]
+unsafe fn pack_32_three_bit_groups(codes: &[u8], groups: &mut [u64]) {
+    debug_assert_eq!(codes.len(), CODES_PER_SIMD_BLOCK);
+    debug_assert_eq!(groups.len(), 4);
+
+    let pair_weights = _mm256_setr_epi8(
+        1, 8, 1, 8, 1, 8, 1, 8, 1, 8, 1, 8, 1, 8, 1, 8, //
+        1, 8, 1, 8, 1, 8, 1, 8, 1, 8, 1, 8, 1, 8, 1, 8,
+    );
+    let group_weights = _mm256_setr_epi16(
+        1, 64, 1, 64, 1, 64, 1, 64, //
+        1, 64, 1, 64, 1, 64, 1, 64,
+    );
+
+    // SAFETY: `codes` contains exactly 32 initialized bytes.
+    let input = unsafe { _mm256_loadu_si256(codes.as_ptr().cast::<__m256i>()) };
+    let pairs = _mm256_maddubs_epi16(input, pair_weights);
+    let values = _mm256_madd_epi16(pairs, group_weights);
+
+    let even_indices = _mm256_setr_epi32(0, 2, 4, 6, 0, 2, 4, 6);
+    let odd_indices = _mm256_setr_epi32(1, 3, 5, 7, 1, 3, 5, 7);
+    let even = _mm256_cvtepu32_epi64(_mm256_castsi256_si128(_mm256_permutevar8x32_epi32(
+        values,
+        even_indices,
+    )));
+    let odd = _mm256_cvtepu32_epi64(_mm256_castsi256_si128(_mm256_permutevar8x32_epi32(
+        values,
+        odd_indices,
+    )));
+    let packed = _mm256_or_si256(even, _mm256_slli_epi64(odd, 12));
+
+    // SAFETY: `groups` has space for exactly four u64 values.
+    unsafe { _mm256_storeu_si256(groups.as_mut_ptr().cast::<__m256i>(), packed) };
 }
 
 #[target_feature(enable = "avx2")]
