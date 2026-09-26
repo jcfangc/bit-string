@@ -1,5 +1,7 @@
 use core::iter::FusedIterator;
 
+use crate::{WORD_BITS, code_mask};
+
 use super::*;
 
 impl<C, const BITS: u8> PackedString<C, BITS>
@@ -12,6 +14,8 @@ where
             string: self,
             front: 0,
             back: self.char_len(),
+            front_word: 0,
+            front_bit_offset: 0,
         }
     }
 
@@ -29,6 +33,8 @@ where
     string: &'a PackedString<C, BITS>,
     front: usize,
     back: usize,
+    front_word: usize,
+    front_bit_offset: usize,
 }
 
 impl<C, const BITS: u8> Iterator for Iter<'_, C, BITS>
@@ -41,9 +47,25 @@ where
         if self.front == self.back {
             return None;
         }
-        let character = self.string.get(self.front);
+
+        let width = usize::from(BITS);
+        let words = self.string.bits.words();
+        let mut code = words[self.front_word] >> self.front_bit_offset;
+        if self.front_bit_offset + width > WORD_BITS {
+            code |= words[self.front_word + 1] << (WORD_BITS - self.front_bit_offset);
+        }
+
+        let character = C::from_code((code & u64::from(code_mask::<BITS>())) as u8)
+            .expect("PackedChar rejected a code it previously produced");
         self.front += 1;
-        character
+
+        self.front_bit_offset += width;
+        if self.front_bit_offset >= WORD_BITS {
+            self.front_word += 1;
+            self.front_bit_offset -= WORD_BITS;
+        }
+
+        Some(character)
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
