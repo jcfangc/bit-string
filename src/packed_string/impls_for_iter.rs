@@ -14,8 +14,9 @@ where
             string: self,
             front: 0,
             back: self.char_len(),
-            front_word: 0,
-            front_bit_offset: 0,
+            front_pending_bits: 0,
+            front_pending_bit_count: 0,
+            front_next_word_index: 0,
         }
     }
 
@@ -33,8 +34,14 @@ where
     string: &'a PackedString<C, BITS>,
     front: usize,
     back: usize,
-    front_word: usize,
-    front_bit_offset: usize,
+    // Inspired by sux's bit-field iterator: cache unread bits and refill on demand.
+    // Loaded but unconsumed bits; the next code starts at bit 0.
+    front_pending_bits: u64,
+    // Number of buffered, unconsumed low bits; the final word may include tail padding.
+    front_pending_bit_count: usize,
+    // Index of the next backing word not yet loaded into `front_pending_bits`.
+    front_next_word_index: usize,
+    // Invariant: `front * BITS + front_pending_bit_count == front_next_word_index * WORD_BITS`.
 }
 
 impl<C, const BITS: u8> Iterator for Iter<'_, C, BITS>
@@ -50,20 +57,26 @@ where
 
         let width = usize::from(BITS);
         let words = self.string.bits.words();
-        let mut code = words[self.front_word] >> self.front_bit_offset;
-        if self.front_bit_offset + width > WORD_BITS {
-            code |= words[self.front_word + 1] << (WORD_BITS - self.front_bit_offset);
-        }
+        let code = if self.front_pending_bit_count >= width {
+            let code = self.front_pending_bits;
+            self.front_pending_bits >>= width;
+            self.front_pending_bit_count -= width;
+            code
+        } else {
+            let old_fill = self.front_pending_bit_count;
+            let next_word = words[self.front_next_word_index];
+            self.front_next_word_index += 1;
+
+            let code = self.front_pending_bits | (next_word << old_fill);
+            let used_from_next = width - old_fill;
+            self.front_pending_bits = next_word >> used_from_next;
+            self.front_pending_bit_count = WORD_BITS - used_from_next;
+            code
+        };
 
         let character = C::from_code((code & u64::from(code_mask::<BITS>())) as u8)
             .expect("PackedChar rejected a code it previously produced");
         self.front += 1;
-
-        self.front_bit_offset += width;
-        if self.front_bit_offset >= WORD_BITS {
-            self.front_word += 1;
-            self.front_bit_offset -= WORD_BITS;
-        }
 
         Some(character)
     }
