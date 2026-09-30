@@ -14,6 +14,10 @@ where
         debug_assert!(CODE_BATCH_LEN.is_multiple_of(layout_block_len::<BITS>()));
 
         let char_len = self.char_len();
+        if char_len < CODE_BATCH_LEN {
+            return self.iter().collect();
+        }
+
         let bulk_code_len = char_len / CODE_BATCH_LEN * CODE_BATCH_LEN;
         let words = self.bits.words();
         let words_per_batch = CODE_BATCH_LEN * usize::from(BITS) / crate::WORD_BITS;
