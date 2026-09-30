@@ -19,11 +19,6 @@ where
             front_next_word_index: 0,
         }
     }
-
-    /// Collects the decoded characters into a vector.
-    pub fn to_vec(&self) -> alloc::vec::Vec<C> {
-        self.iter().collect()
-    }
 }
 
 #[derive(Clone)]

@@ -6,7 +6,7 @@
 //! the construction benchmarks before changing this support matrix.
 
 use super::scalar;
-use crate::{WORD_BITS, traits::words_pack::layout_block_len};
+use crate::{WORD_BITS, traits::layout_block_len};
 
 #[cfg(target_arch = "x86")]
 use core::arch::x86::{

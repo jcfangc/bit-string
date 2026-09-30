@@ -141,6 +141,10 @@ name = "packed_iteration"
 harness = false
 
 [[bench]]
+name = "packed_conversion"
+harness = false
+
+[[bench]]
 name = "packed_editing"
 harness = false
 

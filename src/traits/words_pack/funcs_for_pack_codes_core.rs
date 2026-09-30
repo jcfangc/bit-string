@@ -1,9 +1,9 @@
-use crate::{assert_valid_width, code_mask, word_len};
+use crate::{assert_valid_width, code_mask, traits::layout_block_len, word_len};
 
 #[inline]
 pub(super) fn pack_codes<const BITS: u8>(dst: &mut [u64], codes: &[u8]) {
     assert_valid_width::<BITS>();
-    let layout_len = super::layout_block_len::<BITS>();
+    let layout_len = layout_block_len::<BITS>();
     let expected_words = word_len(codes.len() * usize::from(BITS));
 
     assert!(
