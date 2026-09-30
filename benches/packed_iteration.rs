@@ -18,6 +18,18 @@ fn iterate_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
+fn collect_packed<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = codes(BITS, len);
+    let value = packed::<BITS>(&input);
+    bencher.bench(|| black_box(&value).iter().collect::<Vec<_>>());
+}
+
+fn to_vec_packed<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = codes(BITS, len);
+    let value = packed::<BITS>(&input);
+    bencher.bench(|| black_box(&value).to_vec());
+}
+
 fn iterate_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     bencher.bench(|| {
@@ -66,6 +78,16 @@ macro_rules! define_case {
                                                                     )]
             fn ours_packed_str(bencher: Bencher) {
                 super::iterate_packed_str::<$bits>(bencher, $len);
+            }
+
+            #[divan::bench(name = concat!("packed_iteration/to_vec/", stringify!($case), "/iter_collect"))]
+            fn iter_collect(bencher: Bencher) {
+                super::collect_packed::<$bits>(bencher, $len);
+            }
+
+            #[divan::bench(name = concat!("packed_iteration/to_vec/", stringify!($case), "/to_vec"))]
+            fn packed_to_vec(bencher: Bencher) {
+                super::to_vec_packed::<$bits>(bencher, $len);
             }
 
             #[divan::bench(

@@ -27,9 +27,24 @@ impl<const BITS: u8> PackedChar<BITS> for Code {
 }
 
 fn assert_front_window<const BITS: u8>(iter: &super::Iter<'_, Code, BITS>, front: usize) {
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
+    let decoded_bit_count = if BITS == 4 {
+        (iter.decoded_code_len - iter.decoded_code_index) * usize::from(BITS)
+    } else {
+        0
+    };
+    #[cfg(not(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    )))]
+    let decoded_bit_count = 0;
+
     assert_eq!(
         iter.front_next_word_index * crate::WORD_BITS,
-        front * usize::from(BITS) + iter.front_pending_bit_count
+        front * usize::from(BITS) + iter.front_pending_bit_count + decoded_bit_count
     );
     assert!(iter.front_pending_bit_count <= crate::WORD_BITS);
 }
@@ -124,6 +139,33 @@ fn rolling_window_handles_word_boundaries_and_mixed_iteration() {
 
             assert_eq!(iter.next(), None);
             assert_eq!(iter.next_back(), None);
+        }
+    }
+
+    check::<1>();
+    check::<2>();
+    check::<3>();
+    check::<4>();
+    check::<5>();
+    check::<6>();
+    check::<7>();
+    check::<8>();
+}
+
+#[test]
+fn to_vec_matches_iteration_across_batch_and_word_tails() {
+    fn check<const BITS: u8>() {
+        let mask = if BITS == 8 {
+            u8::MAX
+        } else {
+            (1u16 << BITS) as u8 - 1
+        };
+        for len in [0, 1, 15, 16, 31, 32, 63, 64, 65, 127, 128, 129, 257] {
+            let expected = (0..len)
+                .map(|index| Code(((index * 29 + 5) as u8) & mask))
+                .collect::<alloc::vec::Vec<_>>();
+            let value = PackedString::<Code, BITS>::from_chars(expected.iter().copied());
+            assert_eq!(value.to_vec(), expected);
         }
     }
 
