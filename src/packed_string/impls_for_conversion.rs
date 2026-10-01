@@ -34,7 +34,25 @@ where
             }));
         }
 
-        result.extend((bulk_code_len..char_len).map(|index| {
+        let layout_block_len = layout_block_len::<BITS>();
+        let remainder_code_len = char_len - bulk_code_len;
+        let unpacked_remainder_code_len = remainder_code_len / layout_block_len * layout_block_len;
+
+        if unpacked_remainder_code_len > 0 {
+            let remainder_word_start = bulk_code_len * usize::from(BITS) / crate::WORD_BITS;
+            let remainder_word_len =
+                unpacked_remainder_code_len * usize::from(BITS) / crate::WORD_BITS;
+            let remainder_word_end = remainder_word_start + remainder_word_len;
+            words[remainder_word_start..remainder_word_end]
+                .unpack_codes::<BITS>(&mut decoded[..unpacked_remainder_code_len]);
+
+            result.extend(decoded[..unpacked_remainder_code_len].iter().map(|&code| {
+                C::from_code(code).expect("PackedChar rejected a code it previously produced")
+            }));
+        }
+
+        let tail_start = bulk_code_len + unpacked_remainder_code_len;
+        result.extend((tail_start..char_len).map(|index| {
             self.get(index)
                 .expect("packed character index is within the string")
         }));
