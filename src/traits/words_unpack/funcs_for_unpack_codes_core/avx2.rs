@@ -1,5 +1,6 @@
 //! AVX2 kernels are retained for BITS=1, BITS=2, BITS=4, BITS=6, and BITS=8.
-//! BITS=3, BITS=5, and BITS=7 remain scalar pending width-specific wins.
+//! BITS=3, BITS=5, and BITS=7 intentionally remain scalar: a tested generic
+//! AVX2 gather regressed bulk conversion. Re-benchmark before adding kernels.
 
 use super::scalar;
 
@@ -45,7 +46,7 @@ const BITS_8_WORDS_PER_BLOCK: usize = 8;
 #[target_feature(enable = "avx2")]
 pub(super) unsafe fn unpack_codes<const BITS: u8>(words: &[u64], codes: &mut [u8]) {
     if BITS == 6 {
-        // BITS=6 has a 32-code AVX2 block, two codes per 64-code batch.
+        // BITS=6 has a 32-code AVX2 block, two blocks per 64-code batch.
         let simd_code_len = codes.len() / BITS_6_CODES_PER_BLOCK * BITS_6_CODES_PER_BLOCK;
         let simd_word_len = simd_code_len / BITS_6_CODES_PER_BLOCK * BITS_6_WORDS_PER_BLOCK;
         for (word_block, code_block) in words[..simd_word_len]

@@ -25,18 +25,24 @@ fn dispatch<const BITS: u8>(words: &[u64], codes: &mut [u8]) {
         target_feature = "avx2"
     ))]
     {
+        // Thresholds match complete AVX2 kernel blocks. BITS=6 uses its
+        // 32-code block; the other retained kernels process 64 codes.
         const AVX2_BITS_1_THRESHOLD: usize = 64;
         const AVX2_BITS_2_THRESHOLD: usize = 64;
         const AVX2_BITS_4_THRESHOLD: usize = 64;
         const AVX2_BITS_6_THRESHOLD: usize = 32;
         const AVX2_BITS_8_THRESHOLD: usize = 64;
 
-        if (BITS == 1 && codes.len() >= AVX2_BITS_1_THRESHOLD)
-            || (BITS == 2 && codes.len() >= AVX2_BITS_2_THRESHOLD)
-            || (BITS == 4 && codes.len() >= AVX2_BITS_4_THRESHOLD)
-            || (BITS == 6 && codes.len() >= AVX2_BITS_6_THRESHOLD)
-            || (BITS == 8 && codes.len() >= AVX2_BITS_8_THRESHOLD)
-        {
+        let use_avx2 = match BITS {
+            1 => codes.len() >= AVX2_BITS_1_THRESHOLD,
+            2 => codes.len() >= AVX2_BITS_2_THRESHOLD,
+            4 => codes.len() >= AVX2_BITS_4_THRESHOLD,
+            6 => codes.len() >= AVX2_BITS_6_THRESHOLD,
+            8 => codes.len() >= AVX2_BITS_8_THRESHOLD,
+            _ => false,
+        };
+
+        if use_avx2 {
             // SAFETY: This branch is compiled only when AVX2 is enabled, and
             // the core has validated the complete-block input/output contract.
             unsafe { avx2::unpack_codes::<BITS>(words, codes) };
