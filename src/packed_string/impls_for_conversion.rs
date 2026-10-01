@@ -34,9 +34,9 @@ where
             }));
         }
 
-        let layout_block_len = layout_block_len::<BITS>();
+        let layout_len = layout_block_len::<BITS>();
         let remainder_code_len = char_len - bulk_code_len;
-        let unpacked_remainder_code_len = remainder_code_len / layout_block_len * layout_block_len;
+        let unpacked_remainder_code_len = remainder_code_len / layout_len * layout_len;
 
         if unpacked_remainder_code_len > 0 {
             let remainder_word_start = bulk_code_len * usize::from(BITS) / crate::WORD_BITS;
