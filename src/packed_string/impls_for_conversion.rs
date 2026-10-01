@@ -1,4 +1,4 @@
-use crate::traits::{WordsUnpack, layout_block_len};
+use crate::traits::{WordsUnpack, layout_block_len, prefer_bulk_unpack};
 
 use super::*;
 
@@ -10,6 +10,10 @@ where
     pub fn to_vec(&self) -> alloc::vec::Vec<C> {
         // 64 codes is a multiple of every layout block for BITS=1..=8.
         const CODE_BATCH_LEN: usize = 64;
+
+        if !prefer_bulk_unpack::<BITS>() {
+            return self.iter().collect();
+        }
 
         debug_assert!(CODE_BATCH_LEN.is_multiple_of(layout_block_len::<BITS>()));
 
