@@ -73,34 +73,34 @@ mod boundaries {
 
     define_width_boundaries!(bits_1, 1;
         len_16: 16, len_31: 31, len_32: 32, len_63: 63, len_64: 64,
-        len_65: 65, len_95: 95, len_127: 127, len_128: 128, len_129: 129,
+        len_65: 65, len_95: 95, len_96: 96, len_127: 127, len_128: 128, len_129: 129,
     );
     define_width_boundaries!(bits_2, 2;
         len_16: 16, len_31: 31, len_32: 32, len_63: 63, len_64: 64,
-        len_65: 65, len_95: 95, len_127: 127, len_128: 128, len_129: 129,
+        len_65: 65, len_95: 95, len_96: 96, len_127: 127, len_128: 128, len_129: 129,
     );
     define_width_boundaries!(bits_3, 3;
         len_16: 16, len_31: 31, len_32: 32, len_63: 63, len_64: 64,
-        len_65: 65, len_95: 95, len_127: 127, len_128: 128, len_129: 129,
+        len_65: 65, len_95: 95, len_96: 96, len_127: 127, len_128: 128, len_129: 129,
     );
     define_width_boundaries!(bits_4, 4;
         len_16: 16, len_31: 31, len_32: 32, len_63: 63, len_64: 64,
-        len_65: 65, len_95: 95, len_127: 127, len_128: 128, len_129: 129,
+        len_65: 65, len_95: 95, len_96: 96, len_127: 127, len_128: 128, len_129: 129,
     );
     define_width_boundaries!(bits_5, 5;
         len_16: 16, len_31: 31, len_32: 32, len_63: 63, len_64: 64,
-        len_65: 65, len_95: 95, len_127: 127, len_128: 128, len_129: 129,
+        len_65: 65, len_95: 95, len_96: 96, len_127: 127, len_128: 128, len_129: 129,
     );
     define_width_boundaries!(bits_6, 6;
         len_16: 16, len_31: 31, len_32: 32, len_63: 63, len_64: 64,
-        len_65: 65, len_95: 95, len_127: 127, len_128: 128, len_129: 129,
+        len_65: 65, len_95: 95, len_96: 96, len_127: 127, len_128: 128, len_129: 129,
     );
     define_width_boundaries!(bits_7, 7;
         len_16: 16, len_31: 31, len_32: 32, len_63: 63, len_64: 64,
-        len_65: 65, len_95: 95, len_127: 127, len_128: 128, len_129: 129,
+        len_65: 65, len_95: 95, len_96: 96, len_127: 127, len_128: 128, len_129: 129,
     );
     define_width_boundaries!(bits_8, 8;
         len_16: 16, len_31: 31, len_32: 32, len_63: 63, len_64: 64,
-        len_65: 65, len_95: 95, len_127: 127, len_128: 128, len_129: 129,
+        len_65: 65, len_95: 95, len_96: 96, len_127: 127, len_128: 128, len_129: 129,
     );
 }

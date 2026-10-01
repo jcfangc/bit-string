@@ -25,9 +25,18 @@ fn dispatch<const BITS: u8>(words: &[u64], codes: &mut [u8]) {
         target_feature = "avx2"
     ))]
     {
+        const AVX2_BITS_1_THRESHOLD: usize = 64;
+        const AVX2_BITS_2_THRESHOLD: usize = 64;
         const AVX2_BITS_4_THRESHOLD: usize = 64;
+        const AVX2_BITS_6_THRESHOLD: usize = 32;
+        const AVX2_BITS_8_THRESHOLD: usize = 64;
 
-        if BITS == 4 && codes.len() >= AVX2_BITS_4_THRESHOLD {
+        if (BITS == 1 && codes.len() >= AVX2_BITS_1_THRESHOLD)
+            || (BITS == 2 && codes.len() >= AVX2_BITS_2_THRESHOLD)
+            || (BITS == 4 && codes.len() >= AVX2_BITS_4_THRESHOLD)
+            || (BITS == 6 && codes.len() >= AVX2_BITS_6_THRESHOLD)
+            || (BITS == 8 && codes.len() >= AVX2_BITS_8_THRESHOLD)
+        {
             // SAFETY: This branch is compiled only when AVX2 is enabled, and
             // the core has validated the complete-block input/output contract.
             unsafe { avx2::unpack_codes::<BITS>(words, codes) };
