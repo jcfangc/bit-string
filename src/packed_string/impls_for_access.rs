@@ -1,5 +1,5 @@
 use super::*;
-use crate::extract_code;
+use crate::extract_code_unchecked;
 
 impl<C, const BITS: u8> PackedString<C, BITS>
 where
@@ -31,10 +31,12 @@ where
         if index >= self.char_len() {
             return None;
         }
-        Some(
-            C::from_code(self.code_at(index))
-                .expect("PackedChar rejected a code it previously produced"),
-        )
+        // SAFETY: `index < char_len()` implies
+        // `(index + 1) * BITS <= self.bits.bit_len()`, so this character's
+        // complete range lies in the owned packed bit range. Its first word,
+        // and the next word if it crosses a boundary, are therefore present.
+        let code = unsafe { extract_code_unchecked::<BITS>(self.bits.words(), 0, index) };
+        Some(C::from_code(code).expect("PackedChar rejected a code it previously produced"))
     }
 
     #[inline]
@@ -45,11 +47,6 @@ where
     #[inline]
     pub fn last(&self) -> Option<C> {
         self.char_len().checked_sub(1).and_then(|i| self.get(i))
-    }
-
-    #[inline]
-    fn code_at(&self, index: usize) -> u8 {
-        extract_code::<BITS>(self.bits.words(), 0, index)
     }
 }
 
