@@ -41,7 +41,7 @@ const fn avx2_threshold<const BITS: u8>() -> Option<usize> {
     }
 }
 
-pub(crate) const fn prefer_bulk_unpack<const BITS: u8>() -> bool {
+pub(crate) const fn has_accelerated_bulk_unpack<const BITS: u8>() -> bool {
     #[cfg(all(
         any(target_arch = "x86", target_arch = "x86_64"),
         target_feature = "avx2"

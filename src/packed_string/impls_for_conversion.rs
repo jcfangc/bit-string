@@ -1,4 +1,4 @@
-use crate::traits::{WordsUnpack, layout_block_len, prefer_bulk_unpack};
+use crate::traits::{WordsUnpack, has_accelerated_bulk_unpack, layout_block_len};
 
 use super::*;
 
@@ -11,7 +11,7 @@ where
         // 64 codes is a multiple of every layout block for BITS=1..=8.
         const CODE_BATCH_LEN: usize = 64;
 
-        if !prefer_bulk_unpack::<BITS>() {
+        if !has_accelerated_bulk_unpack::<BITS>() {
             return self.iter().collect();
         }
 

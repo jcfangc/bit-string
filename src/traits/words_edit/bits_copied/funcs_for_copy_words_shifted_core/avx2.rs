@@ -1,3 +1,5 @@
+//! AVX2 backend for copying shifted 64-bit windows.
+
 use crate::WORD_BITS;
 
 #[cfg(target_arch = "x86")]
@@ -19,6 +21,8 @@ pub(super) unsafe fn copy_words_shifted(dst: &mut [u64], src: &[u64], len: usize
     let count_hi = unsafe { _mm_set1_epi64x((WORD_BITS - shift) as i64) };
     let mut i = 0;
     while i + 4 <= len {
+        // The loads overlap by one word: lane j combines src[i + j] with
+        // src[i + j + 1], producing four consecutive shifted windows.
         // SAFETY: `src` pointers are valid for `len + 1` words (caller guarantee); `_mm256_loadu_si256` uses unaligned loads so alignment is not required.
         let w0 = unsafe { _mm256_loadu_si256(src.as_ptr().add(i).cast::<__m256i>()) };
         // SAFETY: Same as above.
