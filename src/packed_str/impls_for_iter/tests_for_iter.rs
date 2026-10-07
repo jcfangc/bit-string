@@ -21,7 +21,7 @@ fn assert_front_window<const BITS: u8>(iter: &super::Iter<'_, Code, BITS>, front
     assert!(iter.front_cursor.pending_bit_count <= WORD_BITS);
 }
 
-fn check_mixed_iteration<const BITS: u8>() {
+fn check_mixed_iteration<const BITS: u8>(word_unaligned: bool) {
     let width = usize::from(BITS);
     let mask = if BITS == 8 {
         u8::MAX
@@ -45,18 +45,29 @@ fn check_mixed_iteration<const BITS: u8>() {
         let expected = (0..len)
             .map(|index| Code(((index * 17 + 3) as u8) & mask))
             .collect::<alloc::vec::Vec<_>>();
-        let mut source = alloc::vec::Vec::with_capacity(len + 1);
-        source.push(Code(0));
+        let mut source = alloc::vec::Vec::with_capacity(len + usize::from(word_unaligned));
+        if word_unaligned {
+            source.push(Code(0));
+        }
         source.extend_from_slice(&expected);
         let owner = PackedString::<Code, BITS>::from_chars(source);
-        let view: PackedStr<'_, Code, BITS> = owner.as_packed_str().slice_from(1);
+        let packed_str = owner.as_packed_str();
+        let view: PackedStr<'_, Code, BITS> = if word_unaligned {
+            packed_str.slice_from(1)
+        } else {
+            packed_str
+        };
         let mut iter = view.iter();
         let mut front = 0;
         let mut back = len;
 
-        if len > 0 {
+        if !word_unaligned || len > 0 {
             assert_eq!(view.bits.start() % width, 0);
-            assert_ne!(view.bits.start() % WORD_BITS, 0);
+            if word_unaligned {
+                assert_ne!(view.bits.start() % WORD_BITS, 0);
+            } else {
+                assert_eq!(view.bits.start(), 0);
+            }
             assert_front_window(&iter, front);
         }
 
@@ -78,13 +89,18 @@ fn check_mixed_iteration<const BITS: u8>() {
 }
 
 #[test]
-fn rolling_window_handles_offset_views_and_mixed_iteration() {
-    check_mixed_iteration::<1>();
-    check_mixed_iteration::<2>();
-    check_mixed_iteration::<3>();
-    check_mixed_iteration::<4>();
-    check_mixed_iteration::<5>();
-    check_mixed_iteration::<6>();
-    check_mixed_iteration::<7>();
-    check_mixed_iteration::<8>();
+fn rolling_window_handles_aligned_and_offset_views_with_mixed_iteration() {
+    fn check_width<const BITS: u8>() {
+        check_mixed_iteration::<BITS>(false);
+        check_mixed_iteration::<BITS>(true);
+    }
+
+    check_width::<1>();
+    check_width::<2>();
+    check_width::<3>();
+    check_width::<4>();
+    check_width::<5>();
+    check_width::<6>();
+    check_width::<7>();
+    check_width::<8>();
 }

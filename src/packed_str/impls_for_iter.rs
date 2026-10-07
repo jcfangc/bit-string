@@ -49,7 +49,6 @@ struct FrontCursor {
     // equals `next_word_index * WORD_BITS`.
 }
 
-#[allow(dead_code)]
 pub struct Iter<'ps, C, const BITS: u8>
 where
     C: PackedChar<BITS>,
