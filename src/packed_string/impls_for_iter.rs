@@ -59,7 +59,12 @@ where
             code
         } else {
             let old_fill = self.front_pending_bit_count;
-            let next_word = words[self.front_next_word_index];
+            // SAFETY: This refill branch requires `old_fill < width`, and
+            // `front < back`. The cursor invariant gives
+            // `front_next_word_index * WORD_BITS = front * BITS + old_fill`,
+            // which is less than `(front + 1) * BITS <= back * BITS <=
+            // words.len() * WORD_BITS`; therefore this word index is in bounds.
+            let next_word = unsafe { *words.get_unchecked(self.front_next_word_index) };
             self.front_next_word_index += 1;
 
             let code = self.front_pending_bits | (next_word << old_fill);
