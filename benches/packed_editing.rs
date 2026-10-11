@@ -118,6 +118,35 @@ fn push_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
+fn push_existing_word_vec(bencher: Bencher, code: u8) {
+    bencher
+        .with_inputs(|| {
+            let mut value = vec![0u8];
+            value.reserve(1);
+            value
+        })
+        .bench_refs(|value| {
+            value.push(code);
+            black_box(&*value);
+            black_box(value.len())
+        });
+}
+
+fn push_word_growth_vec(bencher: Bencher, code: u8) {
+    let input = vec![0u8; 65];
+    bencher
+        .with_inputs(|| {
+            let mut value = input.clone();
+            value.truncate(64);
+            value
+        })
+        .bench_refs(|value| {
+            value.push(code);
+            black_box(&*value);
+            black_box(value.len())
+        });
+}
+
 fn push_amortized_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len - 1);
     bencher
@@ -322,6 +351,30 @@ define_push_shape_case!(push_shape_bits_5, 5);
 define_push_shape_case!(push_shape_bits_6, 6);
 define_push_shape_case!(push_shape_bits_7, 7);
 define_push_shape_case!(push_shape_bits_8, 8);
+
+mod push_vec_bits_8 {
+    use super::*;
+
+    #[divan::bench(name = "packed_editing/push_existing_word_zero/push_shape_bits_8/vec_u8")]
+    fn existing_word_zero(bencher: Bencher) {
+        crate::push_existing_word_vec(bencher, 0);
+    }
+
+    #[divan::bench(name = "packed_editing/push_existing_word_nonzero/push_shape_bits_8/vec_u8")]
+    fn existing_word_nonzero(bencher: Bencher) {
+        crate::push_existing_word_vec(bencher, u8::MAX);
+    }
+
+    #[divan::bench(name = "packed_editing/push_word_growth_zero/push_shape_bits_8/vec_u8")]
+    fn word_growth_zero(bencher: Bencher) {
+        crate::push_word_growth_vec(bencher, 0);
+    }
+
+    #[divan::bench(name = "packed_editing/push_word_growth_nonzero/push_shape_bits_8/vec_u8")]
+    fn word_growth_nonzero(bencher: Bencher) {
+        crate::push_word_growth_vec(bencher, u8::MAX);
+    }
+}
 
 define_cross_word_case!(cross_word_bits_3, 3);
 define_cross_word_case!(cross_word_bits_5, 5);

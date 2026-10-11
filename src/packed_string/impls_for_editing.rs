@@ -6,8 +6,12 @@ where
 {
     /// Appends the character's code directly to the payload.
     pub fn push(&mut self, character: C) {
-        self.bits
-            .push_bits(u64::from(character.code()), usize::from(BITS));
+        let code = character.code();
+        if BITS == 8 {
+            self.bits.push_byte(code);
+        } else {
+            self.bits.push_bits(u64::from(code), usize::from(BITS));
+        }
     }
 
     pub fn pop(&mut self) -> Option<C> {

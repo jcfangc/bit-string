@@ -5,6 +5,26 @@ use crate::{WORD_BITS, low_mask};
 use super::*;
 
 impl BitString {
+    /// Appends one byte to a byte-aligned bit string.
+    #[inline]
+    pub(crate) fn push_byte(&mut self, value: u8) {
+        debug_assert_eq!(self.bit_len % 8, 0);
+
+        let new_bit_len = self
+            .bit_len
+            .checked_add(8)
+            .expect("bit string length overflow");
+        let word_index = self.bit_len / WORD_BITS;
+        let bit_offset = self.bit_len % WORD_BITS;
+
+        if word_index == self.words.len() {
+            self.words.push(0);
+        }
+
+        self.words[word_index] |= u64::from(value) << bit_offset;
+        self.bit_len = new_bit_len;
+    }
+
     /// Reserves backing storage for an additional number of bits.
     #[inline]
     pub(crate) fn reserve_bits(&mut self, additional_bits: usize) {
