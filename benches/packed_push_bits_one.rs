@@ -58,7 +58,8 @@ fn push_batch(bencher: Bencher, len: usize, pattern: Pattern, reserve: bool) {
             None => PackedString::new(),
         })
         .bench_refs(|value| {
-            for &code in &codes {
+            let codes = black_box(codes.as_slice());
+            for &code in codes {
                 value.push(Code(code));
             }
             black_box(&*value);
