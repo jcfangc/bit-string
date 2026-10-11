@@ -149,6 +149,10 @@ name = "packed_editing"
 harness = false
 
 [[bench]]
+name = "packed_push_bits_one"
+harness = false
+
+[[bench]]
 name = "packed_competitors"
 harness = false
 
