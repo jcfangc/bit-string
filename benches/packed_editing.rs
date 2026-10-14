@@ -297,6 +297,34 @@ macro_rules! define_case {
 
 crate::for_each_packed_bench_case!(define_case);
 
+// Adjacent lengths exercise backing-word growth/shrink and partial tails.
+macro_rules! define_edit_boundary_case {
+    ($case:ident, $bits:literal) => {
+        mod $case {
+            use super::*;
+
+            #[divan::bench(args = [63, 64, 65, 127, 128, 129])]
+            fn insert_middle(bencher: Bencher, len: usize) {
+                crate::insert_middle_packed::<$bits>(bencher, len);
+            }
+
+            #[divan::bench(args = [63, 64, 65, 127, 128, 129])]
+            fn remove_middle(bencher: Bencher, len: usize) {
+                crate::remove_middle_packed::<$bits>(bencher, len);
+            }
+        }
+    };
+}
+
+define_edit_boundary_case!(edit_boundary_bits_1, 1);
+define_edit_boundary_case!(edit_boundary_bits_2, 2);
+define_edit_boundary_case!(edit_boundary_bits_3, 3);
+define_edit_boundary_case!(edit_boundary_bits_4, 4);
+define_edit_boundary_case!(edit_boundary_bits_5, 5);
+define_edit_boundary_case!(edit_boundary_bits_6, 6);
+define_edit_boundary_case!(edit_boundary_bits_7, 7);
+define_edit_boundary_case!(edit_boundary_bits_8, 8);
+
 macro_rules! define_push_shape_case {
     ($case:ident, $bits:literal) => {
         mod $case {
