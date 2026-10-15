@@ -5,8 +5,8 @@ use compressed_intvec::fixed::UFixedVec;
 use divan::{Bencher, black_box};
 use grit_bitvec::{TypedBitElem, TypedBitVec};
 use support::{
-    aligned_index, aligned_index_for, codes, cross_word_index, cross_word_index_for, indices,
-    unaligned_index, unaligned_index_for,
+    Code, aligned_index, aligned_index_for, codes, cross_word_index, cross_word_index_for, indices,
+    packed, unaligned_index, unaligned_index_for,
 };
 use sux::bits::BitFieldVec;
 use value_traits::slices::{SliceByValue, SliceByValueMut};
@@ -309,6 +309,89 @@ where
         });
 }
 
+// Batch timings include every insertion and any capacity growth it triggers.
+// Keep the batch no larger than the initial length: truncating a cloned packed
+// input then retains enough capacity even with BitString's lazy shrink policy.
+const INSERT_BATCH_LEN: usize = 256;
+
+fn insert_reserved_packed<const BITS: u8>(bencher: Bencher, len: usize) {
+    insert_sequence_packed::<BITS>(bencher, len, 1, true);
+}
+
+fn insert_repeated_packed<const BITS: u8>(bencher: Bencher, len: usize) {
+    insert_sequence_packed::<BITS>(bencher, len, len.min(INSERT_BATCH_LEN), false);
+}
+
+fn insert_repeated_reserved_packed<const BITS: u8>(bencher: Bencher, len: usize) {
+    insert_sequence_packed::<BITS>(bencher, len, len.min(INSERT_BATCH_LEN), true);
+}
+
+fn insert_sequence_packed<const BITS: u8>(
+    bencher: Bencher,
+    len: usize,
+    count: usize,
+    reserve: bool,
+) {
+    let input = packed::<BITS>(&codes(BITS, len + if reserve { count } else { 0 }));
+    let index = unaligned_index::<BITS>(len);
+    bencher
+        .with_inputs(|| {
+            let mut value = input.clone();
+            // Clone before truncating: cloning the shorter value would discard
+            // the spare allocation. Setup is excluded from the timed region.
+            value.truncate(len);
+            value
+        })
+        .bench_local_refs(|value| {
+            // A fixed insertion point keeps shifting the original suffix plus
+            // the characters inserted earlier in this batch.
+            for _ in 0..count {
+                value.insert(index, Code(0));
+            }
+            black_box(&*value);
+            black_box(value.char_len())
+        });
+}
+
+fn insert_reserved_grit<T: TypedBitElem<Base = u8> + 'static>(bencher: Bencher, len: usize) {
+    insert_sequence_grit::<T>(bencher, len, 1, true);
+}
+
+fn insert_repeated_grit<T: TypedBitElem<Base = u8> + 'static>(bencher: Bencher, len: usize) {
+    insert_sequence_grit::<T>(bencher, len, len.min(INSERT_BATCH_LEN), false);
+}
+
+fn insert_repeated_reserved_grit<T: TypedBitElem<Base = u8> + 'static>(
+    bencher: Bencher,
+    len: usize,
+) {
+    insert_sequence_grit::<T>(bencher, len, len.min(INSERT_BATCH_LEN), true);
+}
+
+fn insert_sequence_grit<T: TypedBitElem<Base = u8> + 'static>(
+    bencher: Bencher,
+    len: usize,
+    count: usize,
+    reserve: bool,
+) {
+    let width = grit_width::<T>();
+    let input = codes(width, len);
+    let index = unaligned_index_for(usize::from(width), len);
+    bencher
+        .with_inputs(|| {
+            let mut value = TypedBitVec::<T>::with_capacity(len + if reserve { count } else { 0 });
+            value.append_iter(input.iter().copied()).unwrap();
+            value
+        })
+        .bench_local_refs(|value| {
+            for _ in 0..count {
+                value.insert(index, 0).unwrap();
+            }
+            black_box(&*value);
+            black_box(value.len())
+        });
+}
+
 fn remove_grit<T>(bencher: Bencher, len: usize)
 where
     T: TypedBitElem<Base = u8> + 'static,
@@ -376,6 +459,9 @@ macro_rules! define_packed_case {
             benchmark!("editing/pop", pop_fixed, "compressed_intvec");
             benchmark!("editing/extend_bulk_25pct", extend_fixed, "compressed_intvec");
             benchmark!("editing/insert_position/unaligned", insert_fixed, "compressed_intvec");
+            benchmark!("editing/insert_reserved/unaligned", insert_reserved_packed, "ours_packed_string");
+            benchmark!("editing/insert_repeated/unaligned", insert_repeated_packed, "ours_packed_string");
+            benchmark!("editing/insert_repeated_reserved/unaligned", insert_repeated_reserved_packed, "ours_packed_string");
             benchmark!("editing/remove_position/word_boundary_or_fallback", remove_fixed, "compressed_intvec");
 
             benchmark!("construction/from_chars", construct_sux, "sux");
@@ -422,6 +508,9 @@ macro_rules! define_grit_case {
             benchmark!("editing/push_boundary_probe", push_grit);
             benchmark!("editing/pop", pop_grit);
             benchmark!("editing/insert_position/unaligned", insert_grit);
+            benchmark!("editing/insert_reserved/unaligned", insert_reserved_grit);
+            benchmark!("editing/insert_repeated/unaligned", insert_repeated_grit);
+            benchmark!("editing/insert_repeated_reserved/unaligned", insert_repeated_reserved_grit);
             benchmark!("editing/remove_position/word_boundary_or_fallback", remove_grit);
             benchmark!("editing/extend_bulk_25pct", append_grit);
         }

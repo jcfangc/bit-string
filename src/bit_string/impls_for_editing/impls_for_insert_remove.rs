@@ -33,7 +33,7 @@ impl BitString {
         let prefix_mask = crate::low_mask(index % WORD_BITS);
         let prefix = self.words[first_word] & prefix_mask;
         // Clear the boundary prefix before shifting so it cannot enter the gap.
-        // The word-level shift runs high to low, preserving overlapping input.
+        // The word-level shift preserves overlapping input.
         self.words[first_word] &= !prefix_mask;
         self.words[first_word..].shl_assign(new_len - first_word * WORD_BITS, width);
         self.words[first_word] |= prefix;

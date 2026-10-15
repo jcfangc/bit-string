@@ -99,6 +99,40 @@ fn avx2_matches_scalar() {
     assert_backend_matches_scalar(avx2::words);
 }
 
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
+#[test]
+fn avx2_matches_scalar_across_vector_boundaries() {
+    for len in [0, 1, 3, 4, 5, 15, 16, 17, 18, 31, 32, 33, 63, 64, 65] {
+        let mut state = 0x9e37_79b9_7f4a_7c15u64;
+        let src: Vec<_> = (0..len)
+            .map(|_| {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                state
+            })
+            .collect();
+        for amount in [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 17, 31, 63, 64, 65, 127, 128, 129, 191, 256, 4096,
+        ] {
+            let expected = run_backend_owned(scalar::words, &src, amount);
+            assert_eq!(
+                run_backend_owned(avx2::words, &src, amount),
+                expected,
+                "owned: len={len}, amount={amount}"
+            );
+            assert_eq!(
+                run_backend_in_place(avx2::words, &src, amount),
+                expected,
+                "in-place: len={len}, amount={amount}"
+            );
+        }
+    }
+}
+
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
 #[test]
 fn neon_matches_scalar() {
