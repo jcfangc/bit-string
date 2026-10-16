@@ -161,6 +161,10 @@ name = "bit_ops_shl_assign"
 harness = false
 
 [[bench]]
+name = "bit_ops_shr_assign"
+harness = false
+
+[[bench]]
 name = "hash"
 harness = false
 

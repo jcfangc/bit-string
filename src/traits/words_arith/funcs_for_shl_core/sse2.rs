@@ -39,6 +39,8 @@ pub(super) unsafe fn words(dst: *mut u64, src: *const u64, word_len: usize, amou
         return;
     }
 
+    // A tested in-place carry stream did not improve SSE2-only throughput.
+    // Keep the overlapping-load kernel.
     let bulk_start = word_shift + usize::from(bit_shift != 0);
     let mut end = word_len;
 

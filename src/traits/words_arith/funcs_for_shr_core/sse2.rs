@@ -39,6 +39,8 @@ pub(super) unsafe fn words(dst: *mut u64, src: *const u64, word_len: usize, amou
         return;
     }
 
+    // Tested reverse-carry and forward-lookahead streams regressed SSE2-only
+    // throughput. Keep the overlapping-load kernel.
     let bulk_end = word_len - word_shift - usize::from(bit_shift != 0);
     let mut start = 0usize;
 

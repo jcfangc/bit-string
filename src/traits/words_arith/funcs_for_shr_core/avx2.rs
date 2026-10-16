@@ -39,6 +39,28 @@ pub(super) unsafe fn words(dst: *mut u64, src: *const u64, word_len: usize, amou
         return;
     }
 
+    // In-place forward right shift with one-word lookahead.
+    if dst.cast_const() == src && word_shift == 0 && bit_shift != 0 {
+        // SAFETY: word_len > 0 here, and 1 <= bit_shift < 64. At word i,
+        // current is old[i]. cursor < last guarantees that old[i + 1] exists
+        // and is unmodified by earlier writes, which only touch lower words.
+        // Read it before writing old[i] >> bit_shift | old[i + 1] << (64 - bit_shift).
+        // The last word has no following carry and is shifted on its own.
+        unsafe {
+            let last = dst.add(word_len - 1);
+            let mut cursor = dst;
+            let mut current = cursor.read();
+            while cursor < last {
+                let next = cursor.add(1).read();
+                cursor.write((current >> bit_shift) | (next << (WORD_BITS - bit_shift)));
+                current = next;
+                cursor = cursor.add(1);
+            }
+            cursor.write(current >> bit_shift);
+        }
+        return;
+    }
+
     let bulk_end = word_len - word_shift - usize::from(bit_shift != 0);
     let mut start = 0usize;
 

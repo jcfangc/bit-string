@@ -88,6 +88,7 @@ fn assert_backend_matches_scalar(backend: Backend) {
 #[test]
 fn sse2_matches_scalar() {
     assert_backend_matches_scalar(sse2::words);
+    assert_backend_matches_scalar_across_vector_boundaries(sse2::words);
 }
 
 #[cfg(all(
@@ -97,14 +98,17 @@ fn sse2_matches_scalar() {
 #[test]
 fn avx2_matches_scalar() {
     assert_backend_matches_scalar(avx2::words);
+    assert_backend_matches_scalar_across_vector_boundaries(avx2::words);
 }
 
-#[cfg(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "avx2"
-))]
+#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
 #[test]
-fn avx2_matches_scalar_across_vector_boundaries() {
+fn neon_matches_scalar() {
+    assert_backend_matches_scalar(neon::words);
+    assert_backend_matches_scalar_across_vector_boundaries(neon::words);
+}
+
+fn assert_backend_matches_scalar_across_vector_boundaries(backend: Backend) {
     for len in [0, 1, 3, 4, 5, 15, 16, 17, 18, 31, 32, 33, 63, 64, 65] {
         let mut state = 0x9e37_79b9_7f4a_7c15u64;
         let src: Vec<_> = (0..len)
@@ -120,21 +124,15 @@ fn avx2_matches_scalar_across_vector_boundaries() {
         ] {
             let expected = run_backend_owned(scalar::words, &src, amount);
             assert_eq!(
-                run_backend_owned(avx2::words, &src, amount),
+                run_backend_owned(backend, &src, amount),
                 expected,
                 "owned: len={len}, amount={amount}"
             );
             assert_eq!(
-                run_backend_in_place(avx2::words, &src, amount),
+                run_backend_in_place(backend, &src, amount),
                 expected,
                 "in-place: len={len}, amount={amount}"
             );
         }
     }
-}
-
-#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-#[test]
-fn neon_matches_scalar() {
-    assert_backend_matches_scalar(neon::words);
 }
