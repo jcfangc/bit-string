@@ -31,7 +31,8 @@ where
 
     for shift in 0..WORD_BITS {
         let mut i = 0;
-        while i + LANES <= word_limit {
+        let words_needed = LANES + usize::from(shift != 0);
+        while i + LANES <= word_limit && i + words_needed <= haystack.len() {
             if i * WORD_BITS + shift > last_start {
                 break;
             }

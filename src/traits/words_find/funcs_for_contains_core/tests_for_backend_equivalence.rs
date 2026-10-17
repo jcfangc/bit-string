@@ -7,6 +7,90 @@ use proptest::prelude::*;
 
 use crate::BitString;
 
+#[test]
+fn find_any_handles_candidates_at_the_end_of_the_backing_slice() {
+    // Exercise the SIMD threshold with no guard word after the slice. Shifted
+    // vector windows need one extra source word, so their final lane must use
+    // the scalar tail when that word is not present.
+    for word_len in 1..=5 {
+        let haystack = alloc::vec![0u64; word_len];
+        assert_eq!(
+            super::find_any_candidate(&haystack, word_len * crate::WORD_BITS, &[1], 1, &mut |_| {
+                true
+            },),
+            None,
+            "word_len={word_len}"
+        );
+    }
+}
+
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
+#[test]
+fn avx2_shifted_window_does_not_read_past_four_word_slice() {
+    let haystack = [0u64; 4];
+    // SAFETY: this test is compiled only when AVX2 is enabled for the target.
+    assert_eq!(
+        unsafe {
+            super::avx2::find_any(
+                &haystack,
+                1,
+                1,
+                haystack.len() * crate::WORD_BITS - 1,
+                haystack.len(),
+                &mut |_| true,
+            )
+        },
+        None
+    );
+}
+
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "sse4.1",
+    not(target_feature = "avx2")
+))]
+#[test]
+fn sse41_shifted_window_does_not_read_past_two_word_slice() {
+    let haystack = [0u64; 2];
+    // SAFETY: this test is compiled only when SSE4.1 is enabled for the target.
+    assert_eq!(
+        unsafe {
+            super::sse41::find_any(
+                &haystack,
+                1,
+                1,
+                haystack.len() * crate::WORD_BITS - 1,
+                haystack.len(),
+                &mut |_| true,
+            )
+        },
+        None
+    );
+}
+
+#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+#[test]
+fn neon_shift_zero_does_not_read_past_odd_word_slice() {
+    let haystack = [0u64; 3];
+    // SAFETY: NEON is enabled for all supported AArch64 targets.
+    assert_eq!(
+        unsafe {
+            super::neon::find_any(
+                &haystack,
+                1,
+                1,
+                haystack.len() * crate::WORD_BITS - 1,
+                haystack.len(),
+                &mut |_| true,
+            )
+        },
+        None
+    );
+}
+
 fn config() -> ProptestConfig {
     ProptestConfig {
         cases: 512,
