@@ -3,14 +3,14 @@ use crate::WORD_BITS;
 
 #[cfg(target_arch = "x86")]
 use core::arch::x86::{
-    __m128i, _mm_cvtsi64_si128, _mm_loadu_si128, _mm_or_si128, _mm_sll_epi64, _mm_srl_epi64,
-    _mm_storeu_si128,
+    __m128i, _mm_castpd_si128, _mm_castsi128_pd, _mm_cvtsi64_si128, _mm_loadu_si128, _mm_or_si128,
+    _mm_shuffle_pd, _mm_sll_epi64, _mm_srl_epi64, _mm_storeu_si128,
 };
 
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::{
-    __m128i, _mm_cvtsi64_si128, _mm_loadu_si128, _mm_or_si128, _mm_sll_epi64, _mm_srl_epi64,
-    _mm_storeu_si128,
+    __m128i, _mm_castpd_si128, _mm_castsi128_pd, _mm_cvtsi64_si128, _mm_loadu_si128, _mm_or_si128,
+    _mm_shuffle_pd, _mm_sll_epi64, _mm_srl_epi64, _mm_storeu_si128,
 };
 
 const LANES: usize = 2;
@@ -35,6 +35,58 @@ pub(super) unsafe fn words(dst: *mut u64, src: *const u64, word_len: usize, amou
             // - `dst_index < word_len`.
             // - Pointer validity is guaranteed by the caller.
             unsafe { dst.add(dst_index).write(0) };
+        }
+        return;
+    }
+
+    if dst.cast_const() == src && word_shift == 0 && bit_shift != 0 && word_len >= LANES {
+        // SAFETY: current holds the original words [start, start + 1].
+        // Each next vector is loaded before either current word is overwritten;
+        // retaining next preserves that invariant when start advances by two.
+        // The bulk bound leaves room for both vectors inside 0..word_len.
+        // At loop exit, two or three initialized words remain. The optional
+        // last word is read before the final vector store and is shifted once.
+        // Exact overlap and 1 <= bit_shift < 64 make every shift valid.
+        unsafe {
+            let right_count = _mm_cvtsi64_si128(bit_shift as i64);
+            let left_count = _mm_cvtsi64_si128((WORD_BITS - bit_shift) as i64);
+            let mut start = 0;
+            let mut current = _mm_loadu_si128(src.cast::<__m128i>());
+            while word_len - start >= 2 * LANES {
+                let next = _mm_loadu_si128(src.add(start + LANES).cast::<__m128i>());
+                // Bit casts do not convert values. SHUFPD immediate 1 selects
+                // [current.high, next.low], the neighbors of both current words.
+                let neighbor = _mm_castpd_si128(_mm_shuffle_pd::<1>(
+                    _mm_castsi128_pd(current),
+                    _mm_castsi128_pd(next),
+                ));
+                let out = _mm_or_si128(
+                    _mm_srl_epi64(current, right_count),
+                    _mm_sll_epi64(neighbor, left_count),
+                );
+                _mm_storeu_si128(dst.add(start).cast::<__m128i>(), out);
+                current = next;
+                start += LANES;
+            }
+            // One cached vector remains, optionally followed by one word.
+            let has_tail = word_len - start > LANES;
+            let tail = if has_tail {
+                src.add(start + LANES).read()
+            } else {
+                0
+            };
+            let neighbor = _mm_castpd_si128(_mm_shuffle_pd::<1>(
+                _mm_castsi128_pd(current),
+                _mm_castsi128_pd(_mm_cvtsi64_si128(tail as i64)),
+            ));
+            let out = _mm_or_si128(
+                _mm_srl_epi64(current, right_count),
+                _mm_sll_epi64(neighbor, left_count),
+            );
+            _mm_storeu_si128(dst.add(start).cast::<__m128i>(), out);
+            if has_tail {
+                dst.add(start + LANES).write(tail >> bit_shift);
+            }
         }
         return;
     }

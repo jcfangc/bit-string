@@ -109,7 +109,7 @@ fn neon_matches_scalar() {
 }
 
 fn assert_backend_matches_scalar_across_vector_boundaries(backend: Backend) {
-    for len in [0, 1, 3, 4, 5, 15, 16, 17, 18, 31, 32, 33, 63, 64, 65] {
+    for len in [0, 1, 2, 3, 4, 5, 15, 16, 17, 18, 31, 32, 33, 63, 64, 65] {
         let mut state = 0x9e37_79b9_7f4a_7c15u64;
         let src: Vec<_> = (0..len)
             .map(|_| {
