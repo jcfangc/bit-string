@@ -95,3 +95,31 @@ fn extend_batches_do_not_depend_on_size_hint_lower_bound() {
     assert_extend_with_zero_size_hint::<7>();
     assert_extend_with_zero_size_hint::<8>();
 }
+
+#[test]
+fn extend_panic_keeps_only_completed_batches() {
+    extern crate std;
+
+    let mut value = super::super::PackedString::<Code<5>, 5>::new();
+    let mut index = 0;
+    let iter = core::iter::from_fn(|| {
+        if index == 70 {
+            panic!("test iterator panic");
+        }
+
+        let code = Code::<5>((index as u8) & crate::code_mask::<5>());
+        index += 1;
+        Some(code)
+    });
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| value.extend(iter)));
+    assert!(result.is_err());
+    assert_eq!(index, 70);
+    assert_eq!(value.char_len(), 64);
+    assert_eq!(
+        value.iter().collect::<alloc::vec::Vec<_>>(),
+        (0..64)
+            .map(|index| Code::<5>((index as u8) & crate::code_mask::<5>()))
+            .collect::<alloc::vec::Vec<_>>()
+    );
+}

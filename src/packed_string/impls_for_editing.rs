@@ -48,15 +48,26 @@ where
     fn extend<I: IntoIterator<Item = C>>(&mut self, iter: I) {
         let iter = iter.into_iter();
         let width = usize::from(BITS);
-        let (lower_bound, _) = iter.size_hint();
+        let (lower_bound, upper_bound) = iter.size_hint();
+
         if let Some(additional_bits) = lower_bound.checked_mul(width) {
             self.bits.reserve_bits(additional_bits);
+        }
+
+        // Avoid batch setup when the iterator can yield fewer than one batch.
+        if matches!(upper_bound, Some(upper_bound) if upper_bound < CODE_BATCH_LEN) {
+            for character in iter {
+                self.push(character);
+            }
+            return;
         }
 
         let mut packed_words = [0u64; CODE_BATCH_LEN / 8];
         let bits = &mut self.bits;
         // Keep scratch space bounded; collecting the whole iterator first would
         // require a temporary PackedString for the complete suffix.
+        // If iteration panics, completed batches remain appended and the partial
+        // batch is discarded during unwinding.
         let (tail_codes, tail_len) = for_each_aligned_code_batch::<C, BITS, _, _>(iter, |codes| {
             let packed_bit_len = codes.len() * width;
             let packed_word_len = packed_bit_len / crate::WORD_BITS;
