@@ -93,6 +93,52 @@ fn aligned_rfind<const BITS: u8>(
     })
 }
 
+fn direct_rfind<const BITS: u8>(
+    haystack: &PackedString<support::Code, BITS>,
+    needle: &PackedString<support::Code, BITS>,
+) -> Option<usize> {
+    let haystack = haystack.as_packed_str().slice_from(1);
+    let needle = needle.as_packed_str();
+    let needle_len = needle.char_len();
+    if needle_len > haystack.char_len() {
+        return None;
+    }
+
+    (0..=haystack.char_len() - needle_len)
+        .rev()
+        .find(|&candidate| haystack.matches_at(candidate, needle))
+}
+
+fn dual_anchor_rfind<const BITS: u8>(
+    haystack: &PackedString<support::Code, BITS>,
+    needle: &PackedString<support::Code, BITS>,
+) -> Option<usize> {
+    let haystack = haystack.as_packed_str().slice_from(1);
+    let needle = needle.as_packed_str();
+    let needle_len = needle.char_len();
+    if needle_len > haystack.char_len() {
+        return None;
+    }
+
+    let anchor_len = needle_len.min(64 / usize::from(BITS));
+    if anchor_len == needle_len {
+        return (0..=haystack.char_len() - needle_len)
+            .rev()
+            .find(|&candidate| haystack.matches_at(candidate, needle));
+    }
+
+    let suffix_start = needle_len - anchor_len;
+    let prefix = needle.slice(interval(0, anchor_len));
+    let suffix = needle.slice(interval(suffix_start, anchor_len));
+    (0..=haystack.char_len() - needle_len)
+        .rev()
+        .find(|&candidate| {
+            haystack.matches_at(candidate, prefix)
+                && haystack.matches_at(candidate + suffix_start, suffix)
+                && haystack.matches_at(candidate, needle)
+        })
+}
+
 fn run<
     const BITS: u8,
     const HAYSTACK_LEN: usize,
@@ -112,6 +158,8 @@ fn run<
             .rfind(needle.as_packed_str()),
         1 => aligned_rfind(&haystack, &needle, false),
         2 => aligned_rfind(&haystack, &needle, true),
+        3 => direct_rfind(&haystack, &needle),
+        4 => dual_anchor_rfind(&haystack, &needle),
         _ => unreachable!(),
     };
     assert_eq!(actual, expected);
@@ -124,6 +172,8 @@ fn run<
                 .rfind(needle.as_packed_str()),
             1 => aligned_rfind(&haystack, &needle, false),
             2 => aligned_rfind(&haystack, &needle, true),
+            3 => direct_rfind(&haystack, &needle),
+            4 => dual_anchor_rfind(&haystack, &needle),
             _ => unreachable!(),
         })
     });
@@ -146,6 +196,16 @@ macro_rules! define_case {
             #[divan::bench(name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/aligned_suffix"))]
             fn aligned_suffix(bencher: divan::Bencher) {
                 crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 2);
+            }
+
+            #[divan::bench(name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/direct_matches_at"))]
+            fn direct_matches_at(bencher: divan::Bencher) {
+                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 3);
+            }
+
+            #[divan::bench(name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/dual_anchor"))]
+            fn dual_anchor(bencher: divan::Bencher) {
+                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 4);
             }
         }
     };
