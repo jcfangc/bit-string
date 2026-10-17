@@ -51,7 +51,7 @@ where
             self.bits.reserve_bits(additional_bits);
         }
         for character in iter {
-            self.bits.push_bits(u64::from(character.code()), width);
+            self.push(character);
         }
     }
 }
