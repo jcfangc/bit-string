@@ -95,16 +95,6 @@ where
     }
 
     pub fn rfind(&self, needle: Self) -> Option<usize> {
-        if BITS == 8 {
-            // The bit-level candidate scan examines every bit offset even
-            // though byte-packed strings only have a candidate every 8 bits.
-            // Native benchmarks across 1K/64K/1M haystacks and short/long
-            // needles consistently favored this character-level reverse scan.
-            return (0..=self.char_len().saturating_sub(needle.char_len()))
-                .rev()
-                .find(|&index| self.matches_at(index, needle));
-        }
-
         search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::Last)
     }
 

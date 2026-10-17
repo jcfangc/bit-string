@@ -1,29 +1,46 @@
-// BITS=8 is intentionally omitted: its candidate-scan A/B was measured before
-// selecting the character-level fallback, so the production method and naive
-// reference are now the same algorithm. BITS=7 keeps the live comparison.
+// Compare the current bit-level WordsFind path with character-aligned reverse
+// scans using a prefix or suffix anchor before full match verification.
 
 use bit_string::PackedString;
 use divan::{Bencher, black_box};
+use int_intervals::UsizeCO;
 
 #[path = "packed_support/mod.rs"]
 mod support;
+
+fn interval(start: usize, len: usize) -> UsizeCO {
+    UsizeCO::checked_from_start_len(start, len).unwrap()
+}
+
+fn max_code<const BITS: u8>() -> u8 {
+    if BITS == 8 {
+        u8::MAX
+    } else {
+        ((1u16 << BITS) - 1) as u8
+    }
+}
 
 fn build_case<
     const BITS: u8,
     const HAYSTACK_LEN: usize,
     const NEEDLE_LEN: usize,
     const POSITION: u8,
+    const PROFILE: u8,
 >() -> (
     PackedString<support::Code, BITS>,
     PackedString<support::Code, BITS>,
     Option<usize>,
 ) {
-    let max_code = if BITS == 8 {
-        u8::MAX
-    } else {
-        ((1u16 << BITS) - 1) as u8
-    };
-    let needle_codes = vec![max_code; NEEDLE_LEN];
+    let anchor_len = NEEDLE_LEN.min(64 / usize::from(BITS));
+    let mut needle_codes = vec![0; NEEDLE_LEN];
+    match PROFILE {
+        // The prefix is common (zero); only the suffix anchor is selective.
+        0 => needle_codes[NEEDLE_LEN - anchor_len..].fill(max_code::<BITS>()),
+        // The prefix anchor is selective; the suffix is common (zero).
+        1 => needle_codes[..anchor_len].fill(max_code::<BITS>()),
+        _ => unreachable!(),
+    }
+
     let start = match POSITION {
         0 => 0,
         1 => (HAYSTACK_LEN - NEEDLE_LEN) / 2,
@@ -36,142 +53,219 @@ fn build_case<
         haystack_codes[start..start + NEEDLE_LEN].copy_from_slice(&needle_codes);
     }
 
+    let mut source_codes = Vec::with_capacity(HAYSTACK_LEN + 1);
+    source_codes.push(max_code::<BITS>());
+    source_codes.extend(haystack_codes);
+
     (
-        support::packed::<BITS>(&haystack_codes),
+        support::packed::<BITS>(&source_codes),
         support::packed::<BITS>(&needle_codes),
         (POSITION != 3).then_some(start),
     )
 }
 
-fn naive_rfind<const BITS: u8>(
+fn aligned_rfind<const BITS: u8>(
     haystack: &PackedString<support::Code, BITS>,
     needle: &PackedString<support::Code, BITS>,
+    use_suffix: bool,
 ) -> Option<usize> {
-    (0..=haystack.char_len().saturating_sub(needle.char_len()))
-        .rev()
-        .find(|&index| haystack.matches_at(index, needle))
+    // Start at character 1 so both widths exercise a character-aligned,
+    // word-unaligned PackedStr view (bit offsets 7 and 8 respectively).
+    let haystack = haystack.as_packed_str().slice_from(1);
+    let needle = needle.as_packed_str();
+    let needle_len = needle.char_len();
+    if needle_len > haystack.char_len() {
+        return None;
+    }
+
+    let anchor_len = needle_len.min(64 / usize::from(BITS));
+    let anchor_start = if use_suffix {
+        needle_len - anchor_len
+    } else {
+        0
+    };
+    let anchor = needle.slice(interval(anchor_start, anchor_len));
+    let latest_start = haystack.char_len() - needle_len;
+
+    (0..=latest_start).rev().find(|&candidate| {
+        let anchor_matches = haystack.matches_at(candidate + anchor_start, anchor);
+        anchor_matches && (anchor_len == needle_len || haystack.matches_at(candidate, needle))
+    })
 }
 
-fn benchmark<
+fn run<
     const BITS: u8,
     const HAYSTACK_LEN: usize,
     const NEEDLE_LEN: usize,
     const POSITION: u8,
+    const PROFILE: u8,
 >(
     bencher: Bencher,
-    use_library_rfind: bool,
+    method: u8,
 ) {
-    let (haystack, needle, expected) = build_case::<BITS, HAYSTACK_LEN, NEEDLE_LEN, POSITION>();
-    assert_eq!(haystack.rfind(&needle), expected);
-    assert_eq!(naive_rfind(&haystack, &needle), expected);
+    let (haystack, needle, expected) =
+        build_case::<BITS, HAYSTACK_LEN, NEEDLE_LEN, POSITION, PROFILE>();
+    let actual = match method {
+        0 => haystack
+            .as_packed_str()
+            .slice_from(1)
+            .rfind(needle.as_packed_str()),
+        1 => aligned_rfind(&haystack, &needle, false),
+        2 => aligned_rfind(&haystack, &needle, true),
+        _ => unreachable!(),
+    };
+    assert_eq!(actual, expected);
 
     bencher.bench(|| {
-        black_box(if use_library_rfind {
-            haystack.rfind(&needle)
-        } else {
-            naive_rfind(&haystack, &needle)
+        black_box(match method {
+            0 => haystack
+                .as_packed_str()
+                .slice_from(1)
+                .rfind(needle.as_packed_str()),
+            1 => aligned_rfind(&haystack, &needle, false),
+            2 => aligned_rfind(&haystack, &needle, true),
+            _ => unreachable!(),
         })
     });
 }
 
 macro_rules! define_case {
-    ($name:ident, $bits:literal, $haystack_len:literal, $needle_len:literal, $position:literal, $width:literal, $where_:expr) => {
-        mod $name {
-            #[divan::bench(name = concat!("packed_rfind_strategy/", $width, "/", $where_, "/library_rfind"))]
-            fn library_rfind(bencher: divan::Bencher) {
-                crate::benchmark::<$bits, $haystack_len, $needle_len, $position>(bencher, true);
+    ($module:ident, $bits:literal, $haystack_len:literal, $needle_len:literal,
+     $position:literal, $profile:literal, $label_prefix:literal, $label_suffix:literal) => {
+        mod $module {
+            #[divan::bench(name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/words_find_prefix"))]
+            fn words_find_prefix(bencher: divan::Bencher) {
+                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 0);
             }
 
-            #[divan::bench(name = concat!("packed_rfind_strategy/", $width, "/", $where_, "/naive_reference"))]
-            fn naive_reference(bencher: divan::Bencher) {
-                crate::benchmark::<$bits, $haystack_len, $needle_len, $position>(bencher, false);
+            #[divan::bench(name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/aligned_prefix"))]
+            fn aligned_prefix(bencher: divan::Bencher) {
+                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 1);
+            }
+
+            #[divan::bench(name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/aligned_suffix"))]
+            fn aligned_suffix(bencher: divan::Bencher) {
+                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 2);
             }
         }
     };
 }
 
-macro_rules! define_width_cases {
-    ($module:ident, $bits:literal, $haystack_len:literal, $length:literal, $width:literal) => {
-        mod $module {
-            define_case!(
-                short_head,
-                $bits,
-                $haystack_len,
-                8,
-                0,
-                $width,
-                concat!($length, "/short/head")
-            );
+macro_rules! define_matrix {
+    ($prefix:ident, $bits:literal, $len:literal, $len_name:literal) => {
+        mod $prefix {
+            // At eight codes the <=64-bit anchor is the entire short needle,
+            // so prefix/suffix selectivity profiles are indistinguishable.
+            define_case!(short_head, $bits, $len, 8, 0, 0, $len_name, "/short/head");
             define_case!(
                 short_middle,
                 $bits,
-                $haystack_len,
+                $len,
                 8,
                 1,
-                $width,
-                concat!($length, "/short/middle")
+                0,
+                $len_name,
+                "/short/middle"
             );
-            define_case!(
-                short_tail,
-                $bits,
-                $haystack_len,
-                8,
-                2,
-                $width,
-                concat!($length, "/short/tail")
-            );
+            define_case!(short_tail, $bits, $len, 8, 2, 0, $len_name, "/short/tail");
             define_case!(
                 short_absent,
                 $bits,
-                $haystack_len,
+                $len,
                 8,
                 3,
-                $width,
-                concat!($length, "/short/absent")
+                0,
+                $len_name,
+                "/short/absent"
             );
             define_case!(
-                long_head,
+                long_profile_0_head,
                 $bits,
-                $haystack_len,
+                $len,
                 24,
                 0,
-                $width,
-                concat!($length, "/long/head")
+                0,
+                $len_name,
+                "/long/prefix_common/head"
             );
             define_case!(
-                long_middle,
+                long_profile_0_middle,
                 $bits,
-                $haystack_len,
+                $len,
                 24,
                 1,
-                $width,
-                concat!($length, "/long/middle")
+                0,
+                $len_name,
+                "/long/prefix_common/middle"
             );
             define_case!(
-                long_tail,
+                long_profile_0_tail,
                 $bits,
-                $haystack_len,
+                $len,
                 24,
                 2,
-                $width,
-                concat!($length, "/long/tail")
+                0,
+                $len_name,
+                "/long/prefix_common/tail"
             );
             define_case!(
-                long_absent,
+                long_profile_0_absent,
                 $bits,
-                $haystack_len,
+                $len,
                 24,
                 3,
-                $width,
-                concat!($length, "/long/absent")
+                0,
+                $len_name,
+                "/long/prefix_common/absent"
+            );
+            define_case!(
+                long_profile_1_head,
+                $bits,
+                $len,
+                24,
+                0,
+                1,
+                $len_name,
+                "/long/prefix_rare/head"
+            );
+            define_case!(
+                long_profile_1_middle,
+                $bits,
+                $len,
+                24,
+                1,
+                1,
+                $len_name,
+                "/long/prefix_rare/middle"
+            );
+            define_case!(
+                long_profile_1_tail,
+                $bits,
+                $len,
+                24,
+                2,
+                1,
+                $len_name,
+                "/long/prefix_rare/tail"
+            );
+            define_case!(
+                long_profile_1_absent,
+                $bits,
+                $len,
+                24,
+                3,
+                1,
+                $len_name,
+                "/long/prefix_rare/absent"
             );
         }
     };
 }
 
-define_width_cases!(bits_7_len_1024, 7, 1_024, "len_1024", "bits_7");
-define_width_cases!(bits_7_len_65536, 7, 65_536, "len_65536", "bits_7");
-define_width_cases!(bits_7_len_1048576, 7, 1_048_576, "len_1048576", "bits_7");
+define_matrix!(bits_7_len_65536, 7, 65_536, "bits_7/len_65536");
+define_matrix!(bits_7_len_1048576, 7, 1_048_576, "bits_7/len_1048576");
+define_matrix!(bits_8_len_65536, 8, 65_536, "bits_8/len_65536");
+define_matrix!(bits_8_len_1048576, 8, 1_048_576, "bits_8/len_1048576");
 
 fn main() {
     divan::main();
