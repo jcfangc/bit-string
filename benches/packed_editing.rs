@@ -221,10 +221,37 @@ fn remove_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
 }
 
 fn extend_packed<const BITS: u8>(bencher: Bencher, len: usize) {
-    let input = packed::<BITS>(&codes(BITS, len));
+    extend_packed_at::<BITS>(bencher, len, len);
+}
+
+fn extend_packed_unaligned<const BITS: u8>(bencher: Bencher, len: usize) {
+    extend_packed_at::<BITS>(bencher, len, len + 1);
+}
+
+fn extend_packed_at<const BITS: u8>(bencher: Bencher, len: usize, prefix_len: usize) {
+    let input = packed::<BITS>(&codes(BITS, prefix_len));
     let extension = codes(BITS, len / 4);
     bencher.with_inputs(|| input.clone()).bench_refs(|value| {
         value.extend(extension.iter().copied().map(Code));
+        black_box(&*value);
+        black_box(value.char_len())
+    });
+}
+
+fn extend_from_chars_concat<const BITS: u8>(bencher: Bencher, len: usize) {
+    extend_from_chars_concat_at::<BITS>(bencher, len, len);
+}
+
+fn extend_from_chars_concat_unaligned<const BITS: u8>(bencher: Bencher, len: usize) {
+    extend_from_chars_concat_at::<BITS>(bencher, len, len + 1);
+}
+
+fn extend_from_chars_concat_at<const BITS: u8>(bencher: Bencher, len: usize, prefix_len: usize) {
+    let input = packed::<BITS>(&codes(BITS, prefix_len));
+    let extension = codes(BITS, len / 4);
+    bencher.with_inputs(|| input.clone()).bench_refs(|value| {
+        let suffix = packed::<BITS>(&extension);
+        value.push_packed_string(&suffix);
         black_box(&*value);
         black_box(value.char_len())
     });
@@ -291,6 +318,18 @@ macro_rules! define_case {
             pair!("insert_position/unaligned", insert_middle_packed, insert_middle_vec);
             pair!("remove_position/word_boundary_or_fallback", remove_middle_packed, remove_middle_vec);
             pair!("extend_bulk_25pct", extend_packed, extend_vec);
+            #[divan::bench(name = concat!("packed_editing/extend_bulk_25pct_unaligned/", stringify!($case), "/ours_packed_string"))]
+            fn extend_bulk_25pct_unaligned(bencher: Bencher) {
+                crate::extend_packed_unaligned::<$bits>(bencher, $len);
+            }
+            #[divan::bench(name = concat!("packed_editing/extend_from_chars_concat/", stringify!($case), "/ours_packed_string"))]
+            fn extend_from_chars_concat(bencher: Bencher) {
+                crate::extend_from_chars_concat::<$bits>(bencher, $len);
+            }
+            #[divan::bench(name = concat!("packed_editing/extend_from_chars_concat_unaligned/", stringify!($case), "/ours_packed_string"))]
+            fn extend_from_chars_concat_unaligned(bencher: Bencher) {
+                crate::extend_from_chars_concat_unaligned::<$bits>(bencher, $len);
+            }
         }
     };
 }

@@ -5,7 +5,7 @@ use crate::{BitString, WORD_BITS, word_len};
 
 use super::*;
 
-const CODE_BATCH_LEN: usize = 64;
+pub(super) const CODE_BATCH_LEN: usize = 64;
 
 pub(super) fn pack_codes<C, const BITS: u8, I>(chars: I) -> BitString
 where
@@ -20,8 +20,34 @@ where
         words.reserve(word_len(bit_len));
     }
 
+    let (tail_codes, tail_len) = for_each_aligned_code_batch::<C, BITS, _, _>(chars, |codes| {
+        let start = words.len();
+        words.resize(start + codes.len() * width / WORD_BITS, 0);
+        words[start..].pack_codes::<BITS>(codes);
+    });
+    let mut bit_len = words.len() * WORD_BITS;
+    for &code in &tail_codes[..tail_len] {
+        append_code::<BITS>(&mut words, &mut bit_len, u64::from(code));
+    }
+
+    BitString::from_owned_words(words, bit_len).expect("packed words have an invalid length")
+}
+
+/// Passes full code batches and final complete layout blocks to `consume`.
+/// Returns any remaining codes that cannot form a word-aligned layout block.
+///
+/// Construction and extension share this batching so extension can pack a
+/// bounded batch at a time instead of materializing the entire input first.
+pub(super) fn for_each_aligned_code_batch<C, const BITS: u8, I, F>(
+    chars: I,
+    mut consume: F,
+) -> ([u8; CODE_BATCH_LEN], usize)
+where
+    C: PackedChar<BITS>,
+    I: IntoIterator<Item = C>,
+    F: FnMut(&[u8]),
+{
     let layout_len = layout_block_len::<BITS>();
-    // 64 is a multiple of every layout block for BITS=1..8.
     let mut batch = [0u8; CODE_BATCH_LEN];
     let mut batch_len = 0;
 
@@ -30,26 +56,19 @@ where
         batch_len += 1;
 
         if batch_len == CODE_BATCH_LEN {
-            let start = words.len();
-            words.resize(start + CODE_BATCH_LEN * width / WORD_BITS, 0);
-            words[start..].pack_codes::<BITS>(&batch);
+            consume(&batch);
             batch_len = 0;
         }
     }
 
     let aligned_count = batch_len / layout_len * layout_len;
     if aligned_count != 0 {
-        let start = words.len();
-        words.resize(start + aligned_count * width / WORD_BITS, 0);
-        words[start..].pack_codes::<BITS>(&batch[..aligned_count]);
+        consume(&batch[..aligned_count]);
     }
 
-    let mut bit_len = words.len() * WORD_BITS;
-    for &code in &batch[aligned_count..batch_len] {
-        append_code::<BITS>(&mut words, &mut bit_len, u64::from(code));
-    }
-
-    BitString::from_owned_words(words, bit_len).expect("packed words have an invalid length")
+    let tail_len = batch_len - aligned_count;
+    batch.copy_within(aligned_count..batch_len, 0);
+    (batch, tail_len)
 }
 
 #[inline]

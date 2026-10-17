@@ -1,4 +1,6 @@
+use super::funcs_for_code::{CODE_BATCH_LEN, for_each_aligned_code_batch};
 use super::*;
+use crate::traits::WordsPack;
 
 impl<C, const BITS: u8> PackedString<C, BITS>
 where
@@ -50,8 +52,24 @@ where
         if let Some(additional_bits) = lower_bound.checked_mul(width) {
             self.bits.reserve_bits(additional_bits);
         }
-        for character in iter {
-            self.push(character);
+
+        let mut packed_words = [0u64; CODE_BATCH_LEN / 8];
+        let bits = &mut self.bits;
+        // Keep scratch space bounded; collecting the whole iterator first would
+        // require a temporary PackedString for the complete suffix.
+        let (tail_codes, tail_len) = for_each_aligned_code_batch::<C, BITS, _, _>(iter, |codes| {
+            let packed_bit_len = codes.len() * width;
+            let packed_word_len = packed_bit_len / crate::WORD_BITS;
+            packed_words[..packed_word_len].pack_codes::<BITS>(codes);
+            bits.push_packed_words(&packed_words[..packed_word_len], packed_bit_len);
+        });
+
+        for &code in &tail_codes[..tail_len] {
+            if BITS == 8 {
+                self.bits.push_byte(code);
+            } else {
+                self.bits.push_bits(u64::from(code), width);
+            }
         }
     }
 }
