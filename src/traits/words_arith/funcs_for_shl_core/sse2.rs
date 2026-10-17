@@ -39,8 +39,11 @@ pub(super) unsafe fn words(dst: *mut u64, src: *const u64, word_len: usize, amou
         return;
     }
 
-    // A tested in-place carry stream did not improve SSE2-only throughput.
-    // Keep the overlapping-load kernel.
+    // With rustc 1.98.1 and an SSE2-only target, a tested forward carry stream
+    // saved loads but added register copies and lane shuffles; large-input
+    // throughput was flat or worse. Saving overlapping loads does not imply
+    // fewer main-memory reads; load count alone did not predict this result.
+    // Keep this kernel unless a separately benchmarked SSE2 candidate wins.
     let bulk_start = word_shift + usize::from(bit_shift != 0);
     let mut end = word_len;
 

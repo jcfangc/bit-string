@@ -39,8 +39,11 @@ pub(super) unsafe fn words(dst: *mut u64, src: *const u64, word_len: usize, amou
         return;
     }
 
-    // Tested reverse-carry and forward-lookahead streams regressed SSE2-only
-    // throughput. Keep the overlapping-load kernel.
+    // With rustc 1.98.1 and an SSE2-only target, tested reverse-carry and scalar
+    // forward-lookahead streams regressed. The latter compiled to one scalar
+    // SHRD per word, losing this kernel's two-word SIMD parallelism. This is a
+    // codegen result for those prototypes, not a limitation of SSE2 itself.
+    // Keep this kernel unless a separately benchmarked vector candidate wins.
     let bulk_end = word_len - word_shift - usize::from(bit_shift != 0);
     let mut start = 0usize;
 
