@@ -7,6 +7,8 @@
 // 2. Within each data profile, average valid haystack-length, needle-length,
 //    and result-position cells equally; do not weight profiles by row count.
 // 3. Average the available data-profile means equally for each BITS.
+// The mirrored high-repeat early/late mismatch cases are equally weighted
+// within one high-repeat profile; they use the same haystack and seed.
 // Missing cells are conditional omissions: a seed is retained only when its
 // observed rfind result matches the requested position. In particular, short
 // random needles over small code alphabets may not support absent/head/middle
@@ -64,6 +66,26 @@ fn biased_codes<const BITS: u8>(len: usize, mut state: u64, common_code: u8) -> 
         .collect()
 }
 
+fn biased_codes_without_max<const BITS: u8>(
+    len: usize,
+    mut state: u64,
+    common_code: u8,
+) -> Vec<u8> {
+    let max_code = max_code::<BITS>();
+    (0..len)
+        .map(|_| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            if state & 7 == 0 {
+                (state as u8) % max_code
+            } else {
+                common_code
+            }
+        })
+        .collect()
+}
+
 // Keep a stable, independent input sample for each seed. Divan runs each seed
 // as a separate argument so input-to-input variation can be analyzed apart
 // from repeated timing samples.
@@ -105,10 +127,14 @@ fn build_case<
     let common_code = 0;
     let mut haystack_codes = if PROFILE == 2 {
         random_codes::<BITS>(HAYSTACK_LEN, seed ^ 0x5eed_7a11_1234_5678)
+    } else if PROFILE >= 3 {
+        // Reserve the maximum code for the mismatch. This makes both mirrored
+        // high-repeat needles absent from the same seeded haystack.
+        biased_codes_without_max::<BITS>(HAYSTACK_LEN, seed ^ 0x5eed_7a11_1234_5678, common_code)
     } else {
         biased_codes::<BITS>(HAYSTACK_LEN, seed ^ 0x5eed_7a11_1234_5678, common_code)
     };
-    let mut needle_codes = if PROFILE == 3 {
+    let mut needle_codes = if PROFILE >= 3 {
         vec![0; NEEDLE_LEN]
     } else {
         random_codes::<BITS>(NEEDLE_LEN, seed ^ 0xd1ce_ba5e_8765_4321)
@@ -144,13 +170,22 @@ fn build_case<
                 }
             }
         }
-        // A high-repeat haystack with a seeded late mismatch creates many
-        // long-prefix candidates without a full match.
+        // Place a late mismatch in the suffix-only region, outside the prefix
+        // anchor, so only the suffix anchor rejects it.
         3 => {
-            let suffix_len = NEEDLE_LEN - anchor_len;
-            let mismatch_index = anchor_len + (seed as usize % suffix_len);
-            let mismatch_code = 1 + ((seed >> 8) as u8 % max_code::<BITS>());
-            needle_codes[mismatch_index] = mismatch_code;
+            let suffix_start = NEEDLE_LEN - anchor_len;
+            let exclusive_len = anchor_len.min(suffix_start);
+            let mismatch_offset = seed as usize % exclusive_len;
+            let suffix_only_start = anchor_len.max(suffix_start);
+            needle_codes[suffix_only_start + mismatch_offset] = max_code::<BITS>();
+        }
+        // Mirror the late mismatch around the needle midpoint, in the
+        // prefix-only region, so only the prefix anchor rejects it.
+        4 => {
+            let suffix_start = NEEDLE_LEN - anchor_len;
+            let exclusive_len = anchor_len.min(suffix_start);
+            let mismatch_offset = seed as usize % exclusive_len;
+            needle_codes[exclusive_len - 1 - mismatch_offset] = max_code::<BITS>();
         }
         _ => unreachable!(),
     }
@@ -520,14 +555,24 @@ macro_rules! define_matrix {
                 "/long/random/absent"
             );
             define_case!(
-                long_high_repeat_absent,
+                long_high_repeat_late_mismatch_absent,
                 $bits,
                 $len,
                 24,
                 3,
                 3,
                 $len_name,
-                "/long/high_repeat/absent"
+                "/long/high_repeat_late_mismatch/absent"
+            );
+            define_case!(
+                long_high_repeat_early_mismatch_absent,
+                $bits,
+                $len,
+                24,
+                3,
+                4,
+                $len_name,
+                "/long/high_repeat_early_mismatch/absent"
             );
         }
     };
@@ -537,14 +582,24 @@ macro_rules! define_high_repeat_matrix {
     ($prefix:ident, $bits:literal, $len:literal, $len_name:literal) => {
         mod $prefix {
             define_case!(
-                long_high_repeat_absent,
+                long_high_repeat_late_mismatch_absent,
                 $bits,
                 $len,
                 24,
                 3,
                 3,
                 $len_name,
-                "/long/high_repeat/absent"
+                "/long/high_repeat_late_mismatch/absent"
+            );
+            define_case!(
+                long_high_repeat_early_mismatch_absent,
+                $bits,
+                $len,
+                24,
+                3,
+                4,
+                $len_name,
+                "/long/high_repeat_early_mismatch/absent"
             );
         }
     };

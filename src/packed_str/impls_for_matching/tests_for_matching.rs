@@ -181,7 +181,7 @@ fn check_long_multivalue_needles<const BITS: u8>() {
         ((1u16 << BITS) - 1) as u8
     };
 
-    for needle_bit_len in [63usize, 64, 65, 127, 128, 129] {
+    for needle_bit_len in [63usize, 64, 65, 127, 128, 129, 183, 191, 193] {
         let needle_len = needle_bit_len.div_ceil(usize::from(BITS));
         let needle_codes =
             deterministic_codes::<BITS>(needle_len, 0xa076_1d64_78bd_642f ^ needle_bit_len as u64);
