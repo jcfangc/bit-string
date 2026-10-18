@@ -1,5 +1,27 @@
+//! Matching operations on packed, character-aligned views.
+//!
+//! Search strategies A–E were compared with paired seeds and equally weighted
+//! workload classes, including mirrored early/late mismatches, for 64K and 1M
+//! character haystacks. The selected strategy depends on operation, bit width,
+//! and compile-time target features; each public search method documents its
+//! measured dispatch. These are workload-specific results, not universal
+//! rankings. Re-benchmark if workloads, compiler, or target features change.
+//! `contains` remains on its existing any-candidate path.
+
 use super::*;
 use crate::traits::WordsFind;
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
+use int_intervals::UsizeCO;
+
+// Keep unmeasured mid-length needles on direct scanning; the measured long profile starts at 24.
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "avx2"
+))]
+const DUAL_ANCHOR_MIN_NEEDLE_LEN: usize = 24;
 
 #[derive(Clone, Copy)]
 enum SearchDirection {
@@ -90,7 +112,78 @@ where
         search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::Any).is_some()
     }
 
+    /// Finds the first character-aligned occurrence of `needle`.
+    ///
+    /// Paired mirrored A–E measurements select WordsFind (A) for BITS=1–7 on
+    /// AVX2 targets and BITS=1–6 on baseline targets. AVX2 BITS=8 uses dual
+    /// anchors (E) for needles of at least 24 characters; shorter needles use
+    /// direct matching. Baseline BITS=7–8 use direct matching (D).
     pub fn find(&self, needle: Self) -> Option<usize> {
+        // The mirrored, paired A–E matrix selected WordsFind for BITS=1..=7
+        // on AVX2 targets and for BITS=1..=6 on baseline targets. For BITS=8,
+        // AVX2 favored dual anchors; baseline favored direct character scans.
+        if BITS <= 6 {
+            return search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::First);
+        }
+
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "avx2"
+        ))]
+        {
+            if BITS == 7 {
+                return search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::First);
+            }
+            if BITS == 8 {
+                return self.find_dual_anchor(needle);
+            }
+        }
+
+        self.find_direct(needle)
+    }
+
+    fn find_direct(&self, needle: Self) -> Option<usize> {
+        let needle_len = needle.char_len();
+        let haystack_len = self.char_len();
+        if needle_len > haystack_len {
+            return None;
+        }
+
+        (0..=haystack_len - needle_len).find(|&index| self.matches_at(index, needle))
+    }
+
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
+    fn find_dual_anchor(&self, needle: Self) -> Option<usize> {
+        let needle_len = needle.char_len();
+        let haystack_len = self.char_len();
+        if needle_len > haystack_len {
+            return None;
+        }
+
+        if needle_len < DUAL_ANCHOR_MIN_NEEDLE_LEN {
+            return self.find_direct(needle);
+        }
+
+        let anchor_len = needle_len.min(64 / usize::from(BITS));
+
+        let suffix_start = needle_len - anchor_len;
+        let prefix = needle.slice(UsizeCO::checked_from_start_len(0, anchor_len).unwrap());
+        let suffix =
+            needle.slice(UsizeCO::checked_from_start_len(suffix_start, anchor_len).unwrap());
+        (0..=haystack_len - needle_len).find(|&index| {
+            self.matches_at(index, prefix)
+                && self.matches_at(index + suffix_start, suffix)
+                && self.matches_at(index, needle)
+        })
+    }
+
+    /// Runs the pre-dispatch word-search implementation for strategy benchmarks.
+    #[cfg(feature = "benchmark-internals")]
+    #[doc(hidden)]
+    pub fn find_words_find_for_benchmark(&self, needle: Self) -> Option<usize> {
         search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::First)
     }
 
