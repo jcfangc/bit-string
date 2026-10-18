@@ -60,20 +60,26 @@ fn build_case<
         // The prefix anchor is selective; the suffix is common (zero).
         1 => needle_codes[..anchor_len].fill(max_code::<BITS>()),
         // Random data exercises a broad code distribution. For the absent
-        // case, keep the generated needle absent from the haystack.
+        // case, try a bounded number of generated needles and skip the case
+        // if this finite code domain does not provide an absent value.
         2 => {
             if POSITION == 3 {
-                while haystack_codes
-                    .windows(NEEDLE_LEN)
-                    .any(|window| window == needle_codes)
-                {
-                    needle_codes[0] = needle_codes[0].wrapping_add(1) & max_code::<BITS>();
+                let mut seed = 0xd1ce_ba5e_8765_4321_u64;
+                for _ in 0..64 {
+                    if !haystack_codes
+                        .windows(NEEDLE_LEN)
+                        .any(|window| window == needle_codes)
+                    {
+                        break;
+                    }
+                    seed = seed.wrapping_add(0x9e37_79b9_7f4a_7c15);
+                    needle_codes = random_codes::<BITS>(NEEDLE_LEN, seed);
                 }
             }
         }
         // A repeated zero haystack with a late needle mismatch creates many
         // long-prefix candidates without a full match.
-        3 => needle_codes[anchor_len + 2] = 1,
+        3 => needle_codes[(anchor_len + 2).min(NEEDLE_LEN - 1)] = 1,
         _ => unreachable!(),
     }
 
@@ -189,6 +195,20 @@ fn run<
 ) {
     let (haystack, needle, expected) =
         build_case::<BITS, HAYSTACK_LEN, NEEDLE_LEN, POSITION, PROFILE>();
+    if PROFILE == 2 && POSITION == 3 && expected.is_some() {
+        return;
+    }
+    if PROFILE == 2 && POSITION < 3 {
+        let intended_start = match POSITION {
+            0 => 0,
+            1 => (HAYSTACK_LEN - NEEDLE_LEN) / 2,
+            2 => HAYSTACK_LEN - NEEDLE_LEN,
+            _ => unreachable!(),
+        };
+        if expected != Some(intended_start) {
+            return;
+        }
+    }
     let actual = match method {
         0 => haystack
             .as_packed_str()
@@ -387,16 +407,6 @@ macro_rules! define_matrix {
                 "/short/random/tail"
             );
             define_case!(
-                short_random_absent,
-                $bits,
-                $len,
-                8,
-                3,
-                2,
-                $len_name,
-                "/short/random/absent"
-            );
-            define_case!(
                 long_random_head,
                 $bits,
                 $len,
@@ -450,10 +460,214 @@ macro_rules! define_matrix {
     };
 }
 
+macro_rules! define_high_repeat_matrix {
+    ($prefix:ident, $bits:literal, $len:literal, $len_name:literal) => {
+        mod $prefix {
+            define_case!(
+                long_high_repeat_absent,
+                $bits,
+                $len,
+                24,
+                3,
+                3,
+                $len_name,
+                "/long/high_repeat/absent"
+            );
+        }
+    };
+}
+
+// BITS=1/2 have an anchor spanning the entire 24-code needle, so they cannot
+// exercise a late mismatch beyond the anchor. Keep this case for widths where
+// the long needle extends past its 64-bit anchor.
+define_high_repeat_matrix!(bits_3_high_repeat_65536, 3, 65_536, "bits_3/len_65536");
+define_high_repeat_matrix!(
+    bits_3_high_repeat_1048576,
+    3,
+    1_048_576,
+    "bits_3/len_1048576"
+);
+define_high_repeat_matrix!(bits_4_high_repeat_65536, 4, 65_536, "bits_4/len_65536");
+define_high_repeat_matrix!(
+    bits_4_high_repeat_1048576,
+    4,
+    1_048_576,
+    "bits_4/len_1048576"
+);
+define_high_repeat_matrix!(bits_5_high_repeat_65536, 5, 65_536, "bits_5/len_65536");
+define_high_repeat_matrix!(
+    bits_5_high_repeat_1048576,
+    5,
+    1_048_576,
+    "bits_5/len_1048576"
+);
+define_high_repeat_matrix!(bits_6_high_repeat_65536, 6, 65_536, "bits_6/len_65536");
+define_high_repeat_matrix!(
+    bits_6_high_repeat_1048576,
+    6,
+    1_048_576,
+    "bits_6/len_1048576"
+);
+
+macro_rules! define_short_random_absent_case {
+    ($prefix:ident, $bits:literal, $len:literal, $len_name:literal) => {
+        mod $prefix {
+            define_case!(
+                short_random_absent,
+                $bits,
+                $len,
+                8,
+                3,
+                2,
+                $len_name,
+                "/short/random/absent"
+            );
+        }
+    };
+}
+
+// For BITS=1, an 8-code needle has only 256 possible values; a 65K random
+// haystack is overwhelmingly likely to contain all of them. For BITS=2, the
+// 1M haystack similarly covers almost all 8-code patterns. Those absent cases
+// are omitted because they cannot be constructed reliably from random data.
+define_short_random_absent_case!(bits_2_short_absent_65536, 2, 65_536, "bits_2/len_65536");
+define_short_random_absent_case!(bits_3_short_absent_65536, 3, 65_536, "bits_3/len_65536");
+define_short_random_absent_case!(
+    bits_3_short_absent_1048576,
+    3,
+    1_048_576,
+    "bits_3/len_1048576"
+);
+define_short_random_absent_case!(bits_4_short_absent_65536, 4, 65_536, "bits_4/len_65536");
+define_short_random_absent_case!(
+    bits_4_short_absent_1048576,
+    4,
+    1_048_576,
+    "bits_4/len_1048576"
+);
+define_short_random_absent_case!(bits_5_short_absent_65536, 5, 65_536, "bits_5/len_65536");
+define_short_random_absent_case!(
+    bits_5_short_absent_1048576,
+    5,
+    1_048_576,
+    "bits_5/len_1048576"
+);
+define_short_random_absent_case!(bits_6_short_absent_65536, 6, 65_536, "bits_6/len_65536");
+define_short_random_absent_case!(
+    bits_6_short_absent_1048576,
+    6,
+    1_048_576,
+    "bits_6/len_1048576"
+);
+define_short_random_absent_case!(bits_7_short_absent_65536, 7, 65_536, "bits_7/len_65536");
+define_short_random_absent_case!(
+    bits_7_short_absent_1048576,
+    7,
+    1_048_576,
+    "bits_7/len_1048576"
+);
+define_short_random_absent_case!(bits_8_short_absent_65536, 8, 65_536, "bits_8/len_65536");
+define_short_random_absent_case!(
+    bits_8_short_absent_1048576,
+    8,
+    1_048_576,
+    "bits_8/len_1048576"
+);
+
 define_matrix!(bits_7_len_65536, 7, 65_536, "bits_7/len_65536");
 define_matrix!(bits_7_len_1048576, 7, 1_048_576, "bits_7/len_1048576");
 define_matrix!(bits_8_len_65536, 8, 65_536, "bits_8/len_65536");
 define_matrix!(bits_8_len_1048576, 8, 1_048_576, "bits_8/len_1048576");
+
+macro_rules! define_extended_boundary_matrix {
+    ($prefix:ident, $bits:literal, $len:literal, $len_name:literal) => {
+        mod $prefix {
+            define_case!(
+                short_random_head,
+                $bits,
+                $len,
+                8,
+                0,
+                2,
+                $len_name,
+                "/short/random/head"
+            );
+            define_case!(
+                short_random_middle,
+                $bits,
+                $len,
+                8,
+                1,
+                2,
+                $len_name,
+                "/short/random/middle"
+            );
+            define_case!(
+                short_random_tail,
+                $bits,
+                $len,
+                8,
+                2,
+                2,
+                $len_name,
+                "/short/random/tail"
+            );
+            define_case!(
+                long_random_head,
+                $bits,
+                $len,
+                24,
+                0,
+                2,
+                $len_name,
+                "/long/random/head"
+            );
+            define_case!(
+                long_random_middle,
+                $bits,
+                $len,
+                24,
+                1,
+                2,
+                $len_name,
+                "/long/random/middle"
+            );
+            define_case!(
+                long_random_tail,
+                $bits,
+                $len,
+                24,
+                2,
+                2,
+                $len_name,
+                "/long/random/tail"
+            );
+            define_case!(
+                long_random_absent,
+                $bits,
+                $len,
+                24,
+                3,
+                2,
+                $len_name,
+                "/long/random/absent"
+            );
+        }
+    };
+}
+
+define_extended_boundary_matrix!(bits_1_len_65536, 1, 65_536, "bits_1/len_65536");
+define_extended_boundary_matrix!(bits_1_len_1048576, 1, 1_048_576, "bits_1/len_1048576");
+define_extended_boundary_matrix!(bits_2_len_65536, 2, 65_536, "bits_2/len_65536");
+define_extended_boundary_matrix!(bits_2_len_1048576, 2, 1_048_576, "bits_2/len_1048576");
+define_extended_boundary_matrix!(bits_3_len_65536, 3, 65_536, "bits_3/len_65536");
+define_extended_boundary_matrix!(bits_3_len_1048576, 3, 1_048_576, "bits_3/len_1048576");
+define_extended_boundary_matrix!(bits_4_len_65536, 4, 65_536, "bits_4/len_65536");
+define_extended_boundary_matrix!(bits_4_len_1048576, 4, 1_048_576, "bits_4/len_1048576");
+define_extended_boundary_matrix!(bits_5_len_65536, 5, 65_536, "bits_5/len_65536");
+define_extended_boundary_matrix!(bits_5_len_1048576, 5, 1_048_576, "bits_5/len_1048576");
+define_extended_boundary_matrix!(bits_6_len_65536, 6, 65_536, "bits_6/len_65536");
+define_extended_boundary_matrix!(bits_6_len_1048576, 6, 1_048_576, "bits_6/len_1048576");
 
 fn main() {
     divan::main();
