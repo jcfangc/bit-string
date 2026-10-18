@@ -20,6 +20,18 @@ fn max_code<const BITS: u8>() -> u8 {
     }
 }
 
+fn random_codes<const BITS: u8>(len: usize, mut state: u64) -> Vec<u8> {
+    let mask = max_code::<BITS>();
+    (0..len)
+        .map(|_| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state as u8 & mask
+        })
+        .collect()
+}
+
 fn build_case<
     const BITS: u8,
     const HAYSTACK_LEN: usize,
@@ -32,12 +44,36 @@ fn build_case<
     Option<usize>,
 ) {
     let anchor_len = NEEDLE_LEN.min(64 / usize::from(BITS));
-    let mut needle_codes = vec![0; NEEDLE_LEN];
+    let mut haystack_codes = if PROFILE == 2 {
+        random_codes::<BITS>(HAYSTACK_LEN, 0x5eed_7a11_1234_5678)
+    } else {
+        vec![0; HAYSTACK_LEN]
+    };
+    let mut needle_codes = if PROFILE == 2 {
+        random_codes::<BITS>(NEEDLE_LEN, 0xd1ce_ba5e_8765_4321)
+    } else {
+        vec![0; NEEDLE_LEN]
+    };
     match PROFILE {
         // The prefix is common (zero); only the suffix anchor is selective.
         0 => needle_codes[NEEDLE_LEN - anchor_len..].fill(max_code::<BITS>()),
         // The prefix anchor is selective; the suffix is common (zero).
         1 => needle_codes[..anchor_len].fill(max_code::<BITS>()),
+        // Random data exercises a broad code distribution. For the absent
+        // case, keep the generated needle absent from the haystack.
+        2 => {
+            if POSITION == 3 {
+                while haystack_codes
+                    .windows(NEEDLE_LEN)
+                    .any(|window| window == needle_codes)
+                {
+                    needle_codes[0] = needle_codes[0].wrapping_add(1) & max_code::<BITS>();
+                }
+            }
+        }
+        // A repeated zero haystack with a late needle mismatch creates many
+        // long-prefix candidates without a full match.
+        3 => needle_codes[anchor_len + 2] = 1,
         _ => unreachable!(),
     }
 
@@ -48,10 +84,12 @@ fn build_case<
         3 => HAYSTACK_LEN,
         _ => unreachable!(),
     };
-    let mut haystack_codes = vec![0; HAYSTACK_LEN];
     if POSITION != 3 {
         haystack_codes[start..start + NEEDLE_LEN].copy_from_slice(&needle_codes);
     }
+    let expected = haystack_codes
+        .windows(NEEDLE_LEN)
+        .rposition(|window| window == needle_codes);
 
     let mut source_codes = Vec::with_capacity(HAYSTACK_LEN + 1);
     source_codes.push(max_code::<BITS>());
@@ -60,7 +98,7 @@ fn build_case<
     (
         support::packed::<BITS>(&source_codes),
         support::packed::<BITS>(&needle_codes),
-        (POSITION != 3).then_some(start),
+        expected,
     )
 }
 
@@ -317,6 +355,96 @@ macro_rules! define_matrix {
                 1,
                 $len_name,
                 "/long/prefix_rare/absent"
+            );
+            define_case!(
+                short_random_head,
+                $bits,
+                $len,
+                8,
+                0,
+                2,
+                $len_name,
+                "/short/random/head"
+            );
+            define_case!(
+                short_random_middle,
+                $bits,
+                $len,
+                8,
+                1,
+                2,
+                $len_name,
+                "/short/random/middle"
+            );
+            define_case!(
+                short_random_tail,
+                $bits,
+                $len,
+                8,
+                2,
+                2,
+                $len_name,
+                "/short/random/tail"
+            );
+            define_case!(
+                short_random_absent,
+                $bits,
+                $len,
+                8,
+                3,
+                2,
+                $len_name,
+                "/short/random/absent"
+            );
+            define_case!(
+                long_random_head,
+                $bits,
+                $len,
+                24,
+                0,
+                2,
+                $len_name,
+                "/long/random/head"
+            );
+            define_case!(
+                long_random_middle,
+                $bits,
+                $len,
+                24,
+                1,
+                2,
+                $len_name,
+                "/long/random/middle"
+            );
+            define_case!(
+                long_random_tail,
+                $bits,
+                $len,
+                24,
+                2,
+                2,
+                $len_name,
+                "/long/random/tail"
+            );
+            define_case!(
+                long_random_absent,
+                $bits,
+                $len,
+                24,
+                3,
+                2,
+                $len_name,
+                "/long/random/absent"
+            );
+            define_case!(
+                long_high_repeat_absent,
+                $bits,
+                $len,
+                24,
+                3,
+                3,
+                $len_name,
+                "/long/high_repeat/absent"
             );
         }
     };
