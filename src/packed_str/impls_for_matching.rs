@@ -95,6 +95,32 @@ where
     }
 
     pub fn rfind(&self, needle: Self) -> Option<usize> {
+        // The native (`-C target-cpu=native`) matrix used 64K/1M haystacks and
+        // 16 paired input seeds. Its equal-weight workload score favored
+        // WordsFind for BITS=1..=5. Direct character scanning reduced that
+        // score by 7.9% for BITS=6 and about 33% for BITS=7/8 versus WordsFind.
+        // For BITS=7/8 it was statistically tied with suffix-anchor scanning,
+        // so use the simpler direct scan. Re-benchmark if target or workload
+        // assumptions change.
+        if BITS <= 5 {
+            return search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::Last);
+        }
+
+        let needle_len = needle.char_len();
+        let haystack_len = self.char_len();
+        if needle_len > haystack_len {
+            return None;
+        }
+
+        (0..=haystack_len - needle_len)
+            .rev()
+            .find(|&index| self.matches_at(index, needle))
+    }
+
+    /// Runs the pre-dispatch word-search implementation for strategy benchmarks.
+    #[cfg(feature = "benchmark-internals")]
+    #[doc(hidden)]
+    pub fn rfind_words_find_for_benchmark(&self, needle: Self) -> Option<usize> {
         search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::Last)
     }
 

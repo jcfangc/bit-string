@@ -1,5 +1,21 @@
 // Compare the current bit-level WordsFind path with character-aligned reverse
 // scans using a prefix or suffix anchor before full match verification.
+// Run with `cargo bench --features benchmark-internals --bench packed_rfind_strategy`.
+//
+// Workload-score policy for reports based on this matrix:
+// 1. Use the mean timing over the independent seed arguments within a cell.
+// 2. Within each data profile, average valid haystack-length, needle-length,
+//    and result-position cells equally; do not weight profiles by row count.
+// 3. Average the available data-profile means equally for each BITS.
+// Missing cells are conditional omissions: a seed is retained only when its
+// observed rfind result matches the requested position. In particular, short
+// random needles over small code alphabets may not support absent/head/middle
+// outcomes, and prefix-selectivity profiles are indistinguishable when the
+// <=64-bit anchor spans the whole needle. Reports must list these omissions.
+// The two haystack lengths are equally weighted workload classes; times remain
+// absolute operation latency and are not normalized by character count.
+// For confidence intervals, first aggregate paired strategy timings by seed
+// using the policy above, then bootstrap seed IDs (not Divan timer samples).
 
 use bit_string::PackedString;
 use divan::{Bencher, black_box};
@@ -32,39 +48,90 @@ fn random_codes<const BITS: u8>(len: usize, mut state: u64) -> Vec<u8> {
         .collect()
 }
 
+fn biased_codes<const BITS: u8>(len: usize, mut state: u64, common_code: u8) -> Vec<u8> {
+    let mask = max_code::<BITS>();
+    (0..len)
+        .map(|_| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            if state & 7 == 0 {
+                state as u8 & mask
+            } else {
+                common_code
+            }
+        })
+        .collect()
+}
+
+// Keep a stable, independent input sample for each seed. Divan runs each seed
+// as a separate argument so input-to-input variation can be analyzed apart
+// from repeated timing samples.
+const INPUT_SEEDS: [u64; 16] = [
+    0x243f_6a88_85a3_08d3,
+    0x1319_8a2e_0370_7344,
+    0xa409_3822_299f_31d0,
+    0x082e_fa98_ec4e_6c89,
+    0x4528_21e6_38d0_1377,
+    0xbe54_66cf_34e9_0c6c,
+    0xc0ac_29b7_c97c_50dd,
+    0x3f84_d5b5_b547_0917,
+    0x9216_d5d9_8979_fb1b,
+    0xd131_0ba6_98df_b5ac,
+    0x2ffd_72db_d01a_dfb7,
+    0xb8e1_afed_6a26_7e96,
+    0xba7c_9045_f12c_7f99,
+    0x24a1_9947_b391_6cf7,
+    0x0801_f2e2_858e_fc16,
+    0x6369_20d8_7157_4e69,
+];
+
 fn build_case<
     const BITS: u8,
     const HAYSTACK_LEN: usize,
     const NEEDLE_LEN: usize,
     const POSITION: u8,
     const PROFILE: u8,
->() -> (
+>(
+    seed: u64,
+) -> (
     PackedString<support::Code, BITS>,
     PackedString<support::Code, BITS>,
     Option<usize>,
 ) {
     let anchor_len = NEEDLE_LEN.min(64 / usize::from(BITS));
+    // Both prefix-selectivity profiles use the same zero-dominant haystack;
+    // they differ only in whether the needle's first anchor is common or rare.
+    let common_code = 0;
     let mut haystack_codes = if PROFILE == 2 {
-        random_codes::<BITS>(HAYSTACK_LEN, 0x5eed_7a11_1234_5678)
+        random_codes::<BITS>(HAYSTACK_LEN, seed ^ 0x5eed_7a11_1234_5678)
     } else {
-        vec![0; HAYSTACK_LEN]
+        biased_codes::<BITS>(HAYSTACK_LEN, seed ^ 0x5eed_7a11_1234_5678, common_code)
     };
-    let mut needle_codes = if PROFILE == 2 {
-        random_codes::<BITS>(NEEDLE_LEN, 0xd1ce_ba5e_8765_4321)
-    } else {
+    let mut needle_codes = if PROFILE == 3 {
         vec![0; NEEDLE_LEN]
+    } else {
+        random_codes::<BITS>(NEEDLE_LEN, seed ^ 0xd1ce_ba5e_8765_4321)
     };
+    let rare_suffix_len = (NEEDLE_LEN - anchor_len).min(4);
     match PROFILE {
-        // The prefix is common (zero); only the suffix anchor is selective.
-        0 => needle_codes[NEEDLE_LEN - anchor_len..].fill(max_code::<BITS>()),
-        // The prefix anchor is selective; the suffix is common (zero).
-        1 => needle_codes[..anchor_len].fill(max_code::<BITS>()),
+        // Keep the prefix anchor common (zero) and place rare values in the
+        // non-overlapping suffix so both anchors remain distinguishable.
+        0 => {
+            needle_codes[..anchor_len].fill(0);
+            needle_codes[NEEDLE_LEN - rare_suffix_len..].fill(max_code::<BITS>());
+        }
+        // Keep the suffix anchor common (zero) and place rare values before it.
+        1 => {
+            needle_codes[NEEDLE_LEN - anchor_len..].fill(0);
+            needle_codes[..rare_suffix_len].fill(max_code::<BITS>());
+        }
         // Random data exercises a broad code distribution. For the absent
         // case, try a bounded number of generated needles and skip the case
         // if this finite code domain does not provide an absent value.
         2 => {
             if POSITION == 3 {
-                let mut seed = 0xd1ce_ba5e_8765_4321_u64;
+                let mut needle_seed = seed ^ 0xd1ce_ba5e_8765_4321_u64;
                 for _ in 0..64 {
                     if !haystack_codes
                         .windows(NEEDLE_LEN)
@@ -72,14 +139,19 @@ fn build_case<
                     {
                         break;
                     }
-                    seed = seed.wrapping_add(0x9e37_79b9_7f4a_7c15);
-                    needle_codes = random_codes::<BITS>(NEEDLE_LEN, seed);
+                    needle_seed = needle_seed.wrapping_add(0x9e37_79b9_7f4a_7c15);
+                    needle_codes = random_codes::<BITS>(NEEDLE_LEN, needle_seed);
                 }
             }
         }
-        // A repeated zero haystack with a late needle mismatch creates many
+        // A high-repeat haystack with a seeded late mismatch creates many
         // long-prefix candidates without a full match.
-        3 => needle_codes[(anchor_len + 2).min(NEEDLE_LEN - 1)] = 1,
+        3 => {
+            let suffix_len = NEEDLE_LEN - anchor_len;
+            let mismatch_index = anchor_len + (seed as usize % suffix_len);
+            let mismatch_code = 1 + ((seed >> 8) as u8 % max_code::<BITS>());
+            needle_codes[mismatch_index] = mismatch_code;
+        }
         _ => unreachable!(),
     }
 
@@ -192,28 +264,29 @@ fn run<
 >(
     bencher: Bencher,
     method: u8,
+    seed_index: usize,
 ) {
+    let seed = INPUT_SEEDS[seed_index];
     let (haystack, needle, expected) =
-        build_case::<BITS, HAYSTACK_LEN, NEEDLE_LEN, POSITION, PROFILE>();
-    if PROFILE == 2 && POSITION == 3 && expected.is_some() {
+        build_case::<BITS, HAYSTACK_LEN, NEEDLE_LEN, POSITION, PROFILE>(seed);
+    let intended_match = match POSITION {
+        0 => Some(0),
+        1 => Some((HAYSTACK_LEN - NEEDLE_LEN) / 2),
+        2 => Some(HAYSTACK_LEN - NEEDLE_LEN),
+        3 => None,
+        _ => unreachable!(),
+    };
+    // Random finite alphabets can make some requested outcomes unavailable.
+    // Omit that input seed identically for all strategies rather than relabel it.
+    if expected != intended_match {
         return;
     }
-    if PROFILE == 2 && POSITION < 3 {
-        let intended_start = match POSITION {
-            0 => 0,
-            1 => (HAYSTACK_LEN - NEEDLE_LEN) / 2,
-            2 => HAYSTACK_LEN - NEEDLE_LEN,
-            _ => unreachable!(),
-        };
-        if expected != Some(intended_start) {
-            return;
-        }
-    }
+
     let actual = match method {
         0 => haystack
             .as_packed_str()
             .slice_from(1)
-            .rfind(needle.as_packed_str()),
+            .rfind_words_find_for_benchmark(needle.as_packed_str()),
         1 => aligned_rfind(&haystack, &needle, false),
         2 => aligned_rfind(&haystack, &needle, true),
         3 => direct_rfind(&haystack, &needle),
@@ -227,7 +300,7 @@ fn run<
             0 => haystack
                 .as_packed_str()
                 .slice_from(1)
-                .rfind(needle.as_packed_str()),
+                .rfind_words_find_for_benchmark(needle.as_packed_str()),
             1 => aligned_rfind(&haystack, &needle, false),
             2 => aligned_rfind(&haystack, &needle, true),
             3 => direct_rfind(&haystack, &needle),
@@ -241,29 +314,29 @@ macro_rules! define_case {
     ($module:ident, $bits:literal, $haystack_len:literal, $needle_len:literal,
      $position:literal, $profile:literal, $label_prefix:literal, $label_suffix:literal) => {
         mod $module {
-            #[divan::bench(name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/words_find_prefix"))]
-            fn words_find_prefix(bencher: divan::Bencher) {
-                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 0);
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/words_find_prefix"))]
+            fn words_find_prefix(bencher: divan::Bencher, seed_index: usize) {
+                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 0, seed_index);
             }
 
-            #[divan::bench(name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/aligned_prefix"))]
-            fn aligned_prefix(bencher: divan::Bencher) {
-                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 1);
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/aligned_prefix"))]
+            fn aligned_prefix(bencher: divan::Bencher, seed_index: usize) {
+                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 1, seed_index);
             }
 
-            #[divan::bench(name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/aligned_suffix"))]
-            fn aligned_suffix(bencher: divan::Bencher) {
-                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 2);
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/aligned_suffix"))]
+            fn aligned_suffix(bencher: divan::Bencher, seed_index: usize) {
+                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 2, seed_index);
             }
 
-            #[divan::bench(name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/direct_matches_at"))]
-            fn direct_matches_at(bencher: divan::Bencher) {
-                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 3);
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/direct_matches_at"))]
+            fn direct_matches_at(bencher: divan::Bencher, seed_index: usize) {
+                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 3, seed_index);
             }
 
-            #[divan::bench(name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/dual_anchor"))]
-            fn dual_anchor(bencher: divan::Bencher) {
-                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 4);
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], name = concat!("packed_rfind_strategy/", $label_prefix, $label_suffix, "/dual_anchor"))]
+            fn dual_anchor(bencher: divan::Bencher, seed_index: usize) {
+                crate::run::<$bits, $haystack_len, $needle_len, $position, $profile>(bencher, 4, seed_index);
             }
         }
     };
@@ -656,6 +729,93 @@ macro_rules! define_extended_boundary_matrix {
     };
 }
 
+macro_rules! define_prefix_profile_matrix {
+    ($prefix:ident, $bits:literal, $len:literal, $len_name:literal) => {
+        mod $prefix {
+            define_case!(
+                head_common,
+                $bits,
+                $len,
+                24,
+                0,
+                0,
+                $len_name,
+                "/long/prefix_common/head"
+            );
+            define_case!(
+                middle_common,
+                $bits,
+                $len,
+                24,
+                1,
+                0,
+                $len_name,
+                "/long/prefix_common/middle"
+            );
+            define_case!(
+                tail_common,
+                $bits,
+                $len,
+                24,
+                2,
+                0,
+                $len_name,
+                "/long/prefix_common/tail"
+            );
+            define_case!(
+                absent_common,
+                $bits,
+                $len,
+                24,
+                3,
+                0,
+                $len_name,
+                "/long/prefix_common/absent"
+            );
+            define_case!(
+                head_rare,
+                $bits,
+                $len,
+                24,
+                0,
+                1,
+                $len_name,
+                "/long/prefix_rare/head"
+            );
+            define_case!(
+                middle_rare,
+                $bits,
+                $len,
+                24,
+                1,
+                1,
+                $len_name,
+                "/long/prefix_rare/middle"
+            );
+            define_case!(
+                tail_rare,
+                $bits,
+                $len,
+                24,
+                2,
+                1,
+                $len_name,
+                "/long/prefix_rare/tail"
+            );
+            define_case!(
+                absent_rare,
+                $bits,
+                $len,
+                24,
+                3,
+                1,
+                $len_name,
+                "/long/prefix_rare/absent"
+            );
+        }
+    };
+}
+
 define_extended_boundary_matrix!(bits_1_len_65536, 1, 65_536, "bits_1/len_65536");
 define_extended_boundary_matrix!(bits_1_len_1048576, 1, 1_048_576, "bits_1/len_1048576");
 define_extended_boundary_matrix!(bits_2_len_65536, 2, 65_536, "bits_2/len_65536");
@@ -668,6 +828,17 @@ define_extended_boundary_matrix!(bits_5_len_65536, 5, 65_536, "bits_5/len_65536"
 define_extended_boundary_matrix!(bits_5_len_1048576, 5, 1_048_576, "bits_5/len_1048576");
 define_extended_boundary_matrix!(bits_6_len_65536, 6, 65_536, "bits_6/len_65536");
 define_extended_boundary_matrix!(bits_6_len_1048576, 6, 1_048_576, "bits_6/len_1048576");
+
+// Prefix-common/rare are distinct only when the 64-bit anchor is shorter than
+// the needle. For an 8-code needle this distinction disappears at BITS=1/2.
+define_prefix_profile_matrix!(bits_3_prefix_65536, 3, 65_536, "bits_3/len_65536");
+define_prefix_profile_matrix!(bits_3_prefix_1048576, 3, 1_048_576, "bits_3/len_1048576");
+define_prefix_profile_matrix!(bits_4_prefix_65536, 4, 65_536, "bits_4/len_65536");
+define_prefix_profile_matrix!(bits_4_prefix_1048576, 4, 1_048_576, "bits_4/len_1048576");
+define_prefix_profile_matrix!(bits_5_prefix_65536, 5, 65_536, "bits_5/len_65536");
+define_prefix_profile_matrix!(bits_5_prefix_1048576, 5, 1_048_576, "bits_5/len_1048576");
+define_prefix_profile_matrix!(bits_6_prefix_65536, 6, 65_536, "bits_6/len_65536");
+define_prefix_profile_matrix!(bits_6_prefix_1048576, 6, 1_048_576, "bits_6/len_1048576");
 
 fn main() {
     divan::main();
