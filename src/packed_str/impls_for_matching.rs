@@ -187,18 +187,42 @@ where
         search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::First)
     }
 
+    /// Finds the last character-aligned occurrence of `needle`.
+    ///
+    /// Paired mirrored A–E measurements select WordsFind (A) for BITS=1–6 on
+    /// AVX2 targets and BITS=1–3 on baseline targets. AVX2 BITS=7 uses direct
+    /// matching (D), while BITS=8 uses dual anchors (E) for needles of at least
+    /// 24 characters; shorter needles use direct matching. Baseline BITS=4–8
+    /// use direct matching (D).
     pub fn rfind(&self, needle: Self) -> Option<usize> {
-        // The native (`-C target-cpu=native`) matrix used 64K/1M haystacks and
-        // 16 paired input seeds. Its equal-weight workload score favored
-        // WordsFind for BITS=1..=5. Direct character scanning reduced that
-        // score by 7.9% for BITS=6 and about 33% for BITS=7/8 versus WordsFind.
-        // For BITS=7/8 it was statistically tied with suffix-anchor scanning,
-        // so use the simpler direct scan. Re-benchmark if target or workload
-        // assumptions change.
-        if BITS <= 5 {
+        // The mirrored, paired A–E matrix selected WordsFind through BITS=6
+        // on AVX2 targets and through BITS=3 on baseline targets. AVX2 uses
+        // direct reverse scanning for BITS=7 and dual anchors for BITS=8.
+        #[cfg(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "avx2"
+        ))]
+        {
+            if BITS <= 6 {
+                return search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::Last);
+            }
+            if BITS == 8 {
+                return self.rfind_dual_anchor(needle);
+            }
+        }
+
+        #[cfg(not(all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            target_feature = "avx2"
+        )))]
+        if BITS <= 3 {
             return search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::Last);
         }
 
+        self.rfind_direct(needle)
+    }
+
+    fn rfind_direct(&self, needle: Self) -> Option<usize> {
         let needle_len = needle.char_len();
         let haystack_len = self.char_len();
         if needle_len > haystack_len {
@@ -208,6 +232,34 @@ where
         (0..=haystack_len - needle_len)
             .rev()
             .find(|&index| self.matches_at(index, needle))
+    }
+
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
+    fn rfind_dual_anchor(&self, needle: Self) -> Option<usize> {
+        let needle_len = needle.char_len();
+        let haystack_len = self.char_len();
+        if needle_len > haystack_len {
+            return None;
+        }
+
+        if needle_len < DUAL_ANCHOR_MIN_NEEDLE_LEN {
+            return self.rfind_direct(needle);
+        }
+
+        let anchor_len = needle_len.min(64 / usize::from(BITS));
+
+        let suffix_start = needle_len - anchor_len;
+        let prefix = needle.slice(UsizeCO::checked_from_start_len(0, anchor_len).unwrap());
+        let suffix =
+            needle.slice(UsizeCO::checked_from_start_len(suffix_start, anchor_len).unwrap());
+        (0..=haystack_len - needle_len).rev().find(|&index| {
+            self.matches_at(index, prefix)
+                && self.matches_at(index + suffix_start, suffix)
+                && self.matches_at(index, needle)
+        })
     }
 
     /// Runs the pre-dispatch word-search implementation for strategy benchmarks.
