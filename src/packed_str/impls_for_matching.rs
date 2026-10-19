@@ -86,6 +86,61 @@ fn search_aligned<const BITS: u8>(
     Some((candidate - bit_offset) / width)
 }
 
+#[cfg(feature = "benchmark-internals")]
+fn search_aligned_tiled<const BITS: u8>(
+    haystack: BitStr<'_>,
+    needle: BitStr<'_>,
+    block_words: usize,
+) -> bool {
+    let width = usize::from(BITS);
+    debug_assert_eq!(haystack.start() % width, 0);
+    debug_assert_eq!(haystack.bit_len() % width, 0);
+    debug_assert_eq!(needle.bit_len() % width, 0);
+    assert!(block_words > 0);
+
+    if needle.bit_len() == 0 {
+        return true;
+    }
+    if needle.bit_len() > haystack.bit_len() {
+        return false;
+    }
+
+    let bit_offset = haystack.start() % crate::WORD_BITS;
+    let first_word = haystack.start() / crate::WORD_BITS;
+    let words = &haystack.source().words()[first_word..];
+    let needle_first_word = [needle.get_chunk(0)];
+    let last_start = bit_offset + haystack.bit_len() - needle.bit_len();
+    let candidate_count = last_start + 1;
+    let block_bit_len = block_words * crate::WORD_BITS;
+
+    for block_start in (0..candidate_count).step_by(block_bit_len) {
+        let block_candidate_count = (candidate_count - block_start).min(block_bit_len);
+        let block_haystack_bit_len = block_candidate_count + needle.bit_len() - 1;
+        let mut verify = |candidate: usize| {
+            let Some(view_bit_index) = (block_start + candidate).checked_sub(bit_offset) else {
+                return false;
+            };
+            view_bit_index.is_multiple_of(width)
+                && view_bit_index + needle.bit_len() <= haystack.bit_len()
+                && haystack.matches_at_str(view_bit_index, needle)
+        };
+
+        if words[block_start / crate::WORD_BITS..]
+            .find_any_candidate(
+                block_haystack_bit_len,
+                &needle_first_word,
+                needle.bit_len(),
+                &mut verify,
+            )
+            .is_some()
+        {
+            return true;
+        }
+    }
+
+    false
+}
+
 impl<C, const BITS: u8> PackedStr<'_, C, BITS>
 where
     C: PackedChar<BITS>,
@@ -185,6 +240,13 @@ where
     #[doc(hidden)]
     pub fn find_words_find_for_benchmark(&self, needle: Self) -> Option<usize> {
         search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::First)
+    }
+
+    /// Runs the any-candidate search in bounded word tiles for strategy benchmarks.
+    #[cfg(feature = "benchmark-internals")]
+    #[doc(hidden)]
+    pub fn contains_tiled_for_benchmark(&self, needle: Self, block_words: usize) -> bool {
+        search_aligned_tiled::<BITS>(self.bits, needle.bits, block_words)
     }
 
     /// Finds the last character-aligned occurrence of `needle`.

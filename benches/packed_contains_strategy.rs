@@ -3,13 +3,16 @@
 //! Run with `cargo bench --features benchmark-internals --bench packed_contains_strategy`.
 //! Each scenario aggregates the same 16 input seeds inside each timed iteration.
 //! Scenario IDs 0..=3 put one match at the head while varying the backing-view
-//! bit phase; 4 and 5 put one match in the middle and at the tail; 6 is absent;
-//! 7 contains repeated matches beginning one quarter into the view; 8 is a high-repeat absent case. All use a 64K
-//! character view and a 48-character needle. Compare A (current Any), F
-//! (WordsFind First), P (production find().is_some()), D (direct character
-//! scan), and E (two anchors followed by full verification). Run native and
-//! baseline builds separately; P intentionally follows each build's production
-//! `find` dispatch, while the other strategies stay fixed.
+//! bit phase; 4 and 5 put one match in the middle and at the tail; 6 is random
+//! absent; 7 contains repeated matches beginning one quarter into the view;
+//! 8..=10 are seeded high-repeat absent cases with a mismatch near the front,
+//! middle, and end. All use a 64K character view and a 48-character needle.
+//! Compare A (current Any), F (WordsFind First), P (production
+//! `find().is_some()`), D (direct character scan), E (two anchors followed by
+//! full verification), and G (Any search in bounded word tiles). G is measured
+//! with 4, 16, 64, and 256-word tiles. Run native and baseline builds
+//! separately; P intentionally follows each build's production `find`
+//! dispatch, while the other strategies stay fixed.
 
 use bit_string::PackedString;
 use divan::{Bencher, black_box};
@@ -79,9 +82,15 @@ fn phase_prefix_len<const BITS: u8>(phase_quartile: usize) -> usize {
 
 fn make_case<const BITS: u8>(scenario: usize, seed: u64) -> Case<BITS> {
     let mut haystack_codes = random_codes::<BITS>(HAYSTACK_LEN, seed ^ 0x5eed_7a11_1234_5678);
-    let needle_codes = if scenario == 8 {
+    let needle_codes = if (8..=10).contains(&scenario) {
         let mut codes = vec![0; NEEDLE_LEN];
-        codes[NEEDLE_LEN / 2] = max_code::<BITS>();
+        let mismatch_index = match scenario {
+            8 => 1,
+            9 => NEEDLE_LEN / 2,
+            10 => NEEDLE_LEN - 2,
+            _ => unreachable!(),
+        };
+        codes[mismatch_index] = max_code::<BITS>();
         codes
     } else {
         random_codes::<BITS>(NEEDLE_LEN, seed ^ 0xd1ce_ba5e_8765_4321)
@@ -96,13 +105,22 @@ fn make_case<const BITS: u8>(scenario: usize, seed: u64) -> Case<BITS> {
         0..=3 => Some(0),
         4 => Some((HAYSTACK_LEN - NEEDLE_LEN) / 2),
         5 => Some(HAYSTACK_LEN - NEEDLE_LEN),
-        6 | 8 => None,
+        6 | 8..=10 => None,
         7 => None,
         _ => unreachable!(),
     };
 
-    if scenario == 8 {
+    if (8..=10).contains(&scenario) {
+        // Keep the haystack zero-dominant while varying it by seed. The
+        // maximum code appears every 11..=23 characters, so every 48-character
+        // window contains multiple mismatches and cannot equal the needle's
+        // single-mismatch pattern, including for BITS=1.
         haystack_codes.fill(0);
+        let stride = 11 + (seed as usize % 13);
+        let offset = (seed.rotate_left(17) as usize) % stride;
+        for index in (offset..HAYSTACK_LEN).step_by(stride) {
+            haystack_codes[index] = max_code::<BITS>();
+        }
     } else if let Some(start) = hit_start {
         haystack_codes[start..start + NEEDLE_LEN].copy_from_slice(&needle_codes);
     } else if scenario == 7 {
@@ -134,7 +152,7 @@ fn make_case<const BITS: u8>(scenario: usize, seed: u64) -> Case<BITS> {
         };
     }
 
-    let expected = scenario != 6 && scenario != 8;
+    let expected = scenario != 6 && !(8..=10).contains(&scenario);
     let owner = PackedString::<support::Code, BITS>::from_chars(
         core::iter::repeat_n(support::Code(max_code::<BITS>()), view_prefix_len)
             .chain(haystack_codes.into_iter().map(support::Code)),
@@ -169,6 +187,12 @@ fn run<const BITS: u8>(bencher: Bencher, scenario: usize, strategy: usize) {
         assert_eq!(haystack.find(needle).is_some(), case.expected);
         assert_eq!(direct_contains(haystack, needle), case.expected);
         assert_eq!(dual_anchor_contains(haystack, needle), case.expected);
+        for block_words in [4, 16, 64, 256] {
+            assert_eq!(
+                haystack.contains_tiled_for_benchmark(needle, block_words),
+                case.expected
+            );
+        }
     }
 
     bencher.bench(|| {
@@ -186,6 +210,9 @@ fn run<const BITS: u8>(bencher: Bencher, scenario: usize, strategy: usize) {
                 2 => haystack.find(needle).is_some(),
                 3 => direct_contains(haystack, needle),
                 4 => dual_anchor_contains(haystack, needle),
+                5..=8 => {
+                    haystack.contains_tiled_for_benchmark(needle, [4, 16, 64, 256][strategy - 5])
+                }
                 _ => unreachable!(),
             };
             found |= black_box(result);
@@ -236,29 +263,49 @@ macro_rules! define_width_benchmarks {
         mod $tag {
             use super::*;
 
-            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/A_current_any"))]
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/A_current_any"))]
             fn current_any(bencher: Bencher, scenario: usize) {
                 run::<$bits>(bencher, scenario, 0);
             }
 
-            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/F_words_find_first"))]
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/F_words_find_first"))]
             fn words_find_first(bencher: Bencher, scenario: usize) {
                 run::<$bits>(bencher, scenario, 1);
             }
 
-            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/P_production_find"))]
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/P_production_find"))]
             fn production_find(bencher: Bencher, scenario: usize) {
                 run::<$bits>(bencher, scenario, 2);
             }
 
-            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/D_direct"))]
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/D_direct"))]
             fn direct(bencher: Bencher, scenario: usize) {
                 run::<$bits>(bencher, scenario, 3);
             }
 
-            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/E_dual_anchor"))]
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/E_dual_anchor"))]
             fn dual_anchor(bencher: Bencher, scenario: usize) {
                 run::<$bits>(bencher, scenario, 4);
+            }
+
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/G_tile_4_words"))]
+            fn tile_4_words(bencher: Bencher, scenario: usize) {
+                run::<$bits>(bencher, scenario, 5);
+            }
+
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/G_tile_16_words"))]
+            fn tile_16_words(bencher: Bencher, scenario: usize) {
+                run::<$bits>(bencher, scenario, 6);
+            }
+
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/G_tile_64_words"))]
+            fn tile_64_words(bencher: Bencher, scenario: usize) {
+                run::<$bits>(bencher, scenario, 7);
+            }
+
+            #[divan::bench(args = [0usize, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], name = concat!("packed_contains_strategy/bits_", stringify!($bits), "/G_tile_256_words"))]
+            fn tile_256_words(bencher: Bencher, scenario: usize) {
+                run::<$bits>(bencher, scenario, 8);
             }
         }
     };
