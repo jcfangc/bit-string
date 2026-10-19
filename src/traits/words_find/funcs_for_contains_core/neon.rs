@@ -25,7 +25,7 @@ where
 
     for shift in 0..WORD_BITS {
         let mut i = 0;
-        while i < word_limit {
+        while i + LANES <= word_limit {
             if i * WORD_BITS + shift > last_start {
                 break;
             }

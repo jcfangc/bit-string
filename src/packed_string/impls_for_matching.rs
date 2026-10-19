@@ -23,19 +23,15 @@ where
     }
 
     pub fn contains(&self, needle: &Self) -> bool {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .any(|index| self.matches_at(index, needle))
+        self.as_packed_str().contains(needle.as_packed_str())
     }
 
     pub fn find(&self, needle: &Self) -> Option<usize> {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .find(|&index| self.matches_at(index, needle))
+        self.as_packed_str().find(needle.as_packed_str())
     }
 
     pub fn rfind(&self, needle: &Self) -> Option<usize> {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .rev()
-            .find(|&index| self.matches_at(index, needle))
+        self.as_packed_str().rfind(needle.as_packed_str())
     }
 
     pub fn strip_prefix(&self, prefix: &Self) -> Option<Self> {
