@@ -18,7 +18,7 @@ version = "0.6.0"
 
 [features]
 characterization = []
-# Exposes frozen strategy references to the packed-rfind benchmark only.
+# Exposes frozen strategy references to the packed find and rfind benchmarks.
 benchmark-internals = []
 
 [workspace.dependencies]
