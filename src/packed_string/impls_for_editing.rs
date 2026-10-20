@@ -1,4 +1,4 @@
-use super::funcs_for_code::{CODE_BATCH_LEN, for_each_aligned_code_batch};
+use super::funcs_for_code::{PACK_CODE_BATCH_LEN, for_each_aligned_code_batch};
 use super::*;
 use crate::traits::WordsPack;
 
@@ -55,14 +55,14 @@ where
         }
 
         // Avoid batch setup when the iterator can yield fewer than one batch.
-        if matches!(upper_bound, Some(upper_bound) if upper_bound < CODE_BATCH_LEN) {
+        if matches!(upper_bound, Some(upper_bound) if upper_bound < PACK_CODE_BATCH_LEN) {
             for character in iter {
                 self.push(character);
             }
             return;
         }
 
-        let mut packed_words = [0u64; CODE_BATCH_LEN / 8];
+        let mut packed_words = [0u64; PACK_CODE_BATCH_LEN / 8];
         let bits = &mut self.bits;
         // Keep scratch space bounded; collecting the whole iterator first would
         // require a temporary PackedString for the complete suffix.

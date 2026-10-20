@@ -5,7 +5,9 @@ use crate::{BitString, WORD_BITS, word_len};
 
 use super::*;
 
-pub(super) const CODE_BATCH_LEN: usize = 64;
+// Encoding batch size shared by construction and extension. A batch contains
+// complete layout blocks for BITS=1..=8; tune independently of decoding batches.
+pub(super) const PACK_CODE_BATCH_LEN: usize = 64;
 
 pub(super) fn pack_codes<C, const BITS: u8, I>(chars: I) -> BitString
 where
@@ -41,21 +43,21 @@ where
 pub(super) fn for_each_aligned_code_batch<C, const BITS: u8, I, F>(
     chars: I,
     mut consume: F,
-) -> ([u8; CODE_BATCH_LEN], usize)
+) -> ([u8; PACK_CODE_BATCH_LEN], usize)
 where
     C: PackedChar<BITS>,
     I: IntoIterator<Item = C>,
     F: FnMut(&[u8]),
 {
     let layout_len = layout_block_len::<BITS>();
-    let mut batch = [0u8; CODE_BATCH_LEN];
+    let mut batch = [0u8; PACK_CODE_BATCH_LEN];
     let mut batch_len = 0;
 
     for character in chars {
         batch[batch_len] = character.code();
         batch_len += 1;
 
-        if batch_len == CODE_BATCH_LEN {
+        if batch_len == PACK_CODE_BATCH_LEN {
             consume(&batch);
             batch_len = 0;
         }
