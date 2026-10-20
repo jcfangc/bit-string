@@ -1,4 +1,6 @@
+use super::funcs_for_code::{PACK_CODE_BATCH_LEN, for_each_aligned_code_batch};
 use super::*;
+use crate::traits::WordsPack;
 
 impl<C, const BITS: u8> PackedString<C, BITS>
 where
@@ -7,12 +9,10 @@ where
     /// Appends the character's code directly to the payload.
     pub fn push(&mut self, character: C) {
         let code = character.code();
-        self.bits
-            .bit_len()
-            .checked_add(usize::from(BITS))
-            .expect("packed string length overflow");
-        for shift in 0..BITS {
-            self.bits.push((code >> shift) & 1 != 0);
+        if BITS == 8 {
+            self.bits.push_byte(code);
+        } else {
+            self.bits.push_bits(u64::from(code), usize::from(BITS));
         }
     }
 
@@ -46,8 +46,41 @@ where
     C: PackedChar<BITS>,
 {
     fn extend<I: IntoIterator<Item = C>>(&mut self, iter: I) {
-        for character in iter {
-            self.push(character);
+        let iter = iter.into_iter();
+        let width = usize::from(BITS);
+        let (lower_bound, upper_bound) = iter.size_hint();
+
+        if let Some(additional_bits) = lower_bound.checked_mul(width) {
+            self.bits.reserve_bits(additional_bits);
+        }
+
+        // Avoid batch setup when the iterator can yield fewer than one batch.
+        if matches!(upper_bound, Some(upper_bound) if upper_bound < PACK_CODE_BATCH_LEN) {
+            for character in iter {
+                self.push(character);
+            }
+            return;
+        }
+
+        let mut packed_words = [0u64; PACK_CODE_BATCH_LEN / 8];
+        let bits = &mut self.bits;
+        // Keep scratch space bounded; collecting the whole iterator first would
+        // require a temporary PackedString for the complete suffix.
+        // If iteration panics, completed batches remain appended and the partial
+        // batch is discarded during unwinding.
+        let (tail_codes, tail_len) = for_each_aligned_code_batch::<C, BITS, _, _>(iter, |codes| {
+            let packed_bit_len = codes.len() * width;
+            let packed_word_len = packed_bit_len / crate::WORD_BITS;
+            packed_words[..packed_word_len].pack_codes::<BITS>(codes);
+            bits.push_packed_words(&packed_words[..packed_word_len], packed_bit_len);
+        });
+
+        for &code in &tail_codes[..tail_len] {
+            if BITS == 8 {
+                self.bits.push_byte(code);
+            } else {
+                self.bits.push_bits(u64::from(code), width);
+            }
         }
     }
 }

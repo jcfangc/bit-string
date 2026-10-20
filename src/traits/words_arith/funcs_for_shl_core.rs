@@ -33,8 +33,8 @@ pub(super) fn assign(bits: &mut [u64], bit_len: usize, amount: usize) {
     // - `ptr` is valid for reads and writes of `word_len` u64 values.
     // - `dst == src` is explicitly allowed by `dispatch`.
     // - `dispatch` writes every slot in `0..word_len` exactly once.
-    // - The implementation writes from high word to low word, so in-place left shift
-    //   does not overwrite source words before they are read.
+    // - Backends preserve overlapping input by descending writes or by saving
+    //   each word's outgoing carry before overwriting that word.
     unsafe {
         dispatch(ptr, ptr.cast_const(), word_len, amount);
     }

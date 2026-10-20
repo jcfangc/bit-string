@@ -1,4 +1,5 @@
 use super::*;
+use crate::packed_string::funcs_for_code::pack_codes;
 
 impl<C, const BITS: u8> PackedString<C, BITS>
 where
@@ -18,9 +19,7 @@ where
     where
         I: IntoIterator<Item = C>,
     {
-        let mut result = Self::new();
-        result.extend(chars);
-        result
+        Self::from_valid_bits(pack_codes::<C, BITS, I>(chars))
     }
 }
 

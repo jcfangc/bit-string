@@ -39,6 +39,32 @@ pub(super) unsafe fn words(dst: *mut u64, src: *const u64, word_len: usize, amou
         return;
     }
 
+    // In-place carry stream, inspired by grit-bitvec's insert.
+    // A sub-word shift needs only the current old word and its preceding carry.
+    // Save that carry before overwriting the word, so low-to-high is safe.
+    if dst.cast_const() == src && word_shift == 0 && bit_shift != 0 {
+        // SAFETY: dst spans word_len initialized words; end is one-past that
+        // same allocation. The cursor advances only while it is below end.
+        // Exact overlap means each old word is read before it is overwritten;
+        // its outgoing carry is retained before advancing to the next word.
+        // At word i, carry is old[i - 1] >> (64 - bit_shift), or zero for i=0.
+        // Thus the write produces exactly the shifted word without rereading
+        // overwritten input. This branch guarantees 1 <= bit_shift < 64.
+        unsafe {
+            let end = dst.add(word_len);
+            let mut cursor = dst;
+            let mut carry = 0;
+            while cursor < end {
+                let old = cursor.read();
+                let next_carry = old >> (WORD_BITS - bit_shift);
+                cursor.write((old << bit_shift) | carry);
+                cursor = cursor.add(1);
+                carry = next_carry;
+            }
+        }
+        return;
+    }
+
     let bulk_start = word_shift + usize::from(bit_shift != 0);
     let mut end = word_len;
 

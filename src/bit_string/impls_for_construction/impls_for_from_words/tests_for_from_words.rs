@@ -1,4 +1,5 @@
 use alloc::string::ToString;
+use alloc::vec;
 
 use crate::BitString;
 
@@ -10,6 +11,14 @@ fn constructs_empty_from_empty_words() {
     assert!(bits.is_empty());
     assert_eq!(bits.count_ones(), 0);
     assert_eq!(bits.to_string(), "");
+}
+
+#[test]
+fn constructs_from_owned_words() {
+    let bits = BitString::from_owned_words(vec![0b1011], 4).unwrap();
+
+    assert_eq!(bits.bit_len(), 4);
+    assert_eq!(bits.to_string(), "1101");
 }
 
 #[test]
@@ -29,6 +38,14 @@ fn masks_unused_high_bits_in_last_word() {
     assert_eq!(bits.to_string(), "111");
     assert_eq!(bits.count_ones(), 3);
     assert!(bits.is_all_ones());
+}
+
+#[test]
+fn masks_unused_high_bits_in_owned_last_word() {
+    let bits = BitString::from_owned_words(vec![u64::MAX], 3).unwrap();
+
+    assert_eq!(bits.words(), &[0b111]);
+    assert_eq!(bits.count_ones(), 3);
 }
 
 #[test]
@@ -56,6 +73,8 @@ fn constructs_across_multiple_words() {
 fn rejects_too_few_words() {
     assert!(BitString::from_words(&[], 1).is_none());
     assert!(BitString::from_words(&[0], 65).is_none());
+    assert!(BitString::from_owned_words(vec![], 1).is_none());
+    assert!(BitString::from_owned_words(vec![0], 65).is_none());
 }
 
 #[test]
@@ -63,4 +82,7 @@ fn rejects_too_many_words() {
     assert!(BitString::from_words(&[0], 0).is_none());
     assert!(BitString::from_words(&[0, 0], 64).is_none());
     assert!(BitString::from_words(&[0, 0, 0], 65).is_none());
+    assert!(BitString::from_owned_words(vec![0], 0).is_none());
+    assert!(BitString::from_owned_words(vec![0, 0], 64).is_none());
+    assert!(BitString::from_owned_words(vec![0, 0, 0], 65).is_none());
 }

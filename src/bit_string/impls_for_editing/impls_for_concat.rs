@@ -49,6 +49,26 @@ impl BitString {
         self.bit_len = new_len;
     }
 
+    /// Appends a word-aligned packed block whose final word may be partial.
+    pub(crate) fn push_packed_words(&mut self, rhs_words: &[u64], rhs_bit_len: usize) {
+        if rhs_bit_len == 0 {
+            return;
+        }
+
+        assert_eq!(rhs_words.len(), word_len(rhs_bit_len));
+
+        let old_bit_len = self.bit_len;
+        let new_bit_len = old_bit_len
+            .checked_add(rhs_bit_len)
+            .expect("bit string length overflow");
+        self.words.resize(word_len(new_bit_len), 0);
+        rhs_words
+            .copy_bits(0, rhs_bit_len)
+            .paste_to(&mut self.words, old_bit_len);
+        self.bit_len = new_bit_len;
+        self.words.mask_unused_bits(new_bit_len);
+    }
+
     /// Inserts the bits of `rhs` at `index`, shifting the tail right.
     ///
     /// `index` is clamped to `[0, self.bit_len()]` — an out-of-bounds index

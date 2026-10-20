@@ -21,6 +21,7 @@ where
 mod funcs_for_code;
 mod impls_for_access;
 mod impls_for_construction;
+mod impls_for_conversion;
 mod impls_for_editing;
 mod impls_for_eq;
 mod impls_for_fmt;

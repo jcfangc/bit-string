@@ -74,3 +74,25 @@ fn pushing_true_increments_count_ones() {
     assert_eq!(bits.count_zeros(), 1);
     assert_eq!(bits.to_string(), "10111");
 }
+
+#[test]
+fn push_byte_appends_at_byte_aligned_offsets() {
+    for prefix_len in [0, 8, 56, 64] {
+        for value in [0, 0xa5, u8::MAX] {
+            let mut bits = BitString::ones(prefix_len);
+
+            bits.push_byte(value);
+
+            assert_eq!(bits.bit_len(), prefix_len + 8);
+            for index in 0..prefix_len {
+                assert_eq!(bits.get(index), Some(true));
+            }
+            for offset in 0..8 {
+                assert_eq!(
+                    bits.get(prefix_len + offset),
+                    Some(value & (1 << offset) != 0)
+                );
+            }
+        }
+    }
+}
