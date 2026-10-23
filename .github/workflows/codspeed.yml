@@ -21,3 +21,4 @@ jobs:
       run_command: |
         cargo codspeed run -m simulation ours_packed
         cargo codspeed run -m simulation 'ours_(str(_str|_string|_unaligned)?|string(_str|_string)?)$'
+        cargo codspeed run -m simulation search_options/contains/
