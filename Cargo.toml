@@ -167,6 +167,21 @@ name = "bit_search_hints"
 harness = false
 
 [[bench]]
+name = "packed_find_strategy"
+harness = false
+required-features = ["benchmark-internals"]
+
+[[bench]]
+name = "packed_rfind_strategy"
+harness = false
+required-features = ["benchmark-internals"]
+
+[[bench]]
+name = "packed_contains_strategy"
+harness = false
+required-features = ["benchmark-internals"]
+
+[[bench]]
 name = "bit_ops_shl_assign"
 harness = false
 

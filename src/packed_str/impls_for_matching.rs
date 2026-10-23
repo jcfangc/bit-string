@@ -181,6 +181,13 @@ where
         search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::First)
     }
 
+    /// Runs the frozen reverse word-search strategy for offline benchmarks.
+    #[cfg(feature = "benchmark-internals")]
+    #[doc(hidden)]
+    pub fn rfind_words_find_for_benchmark(&self, needle: Self) -> Option<usize> {
+        search_aligned::<BITS>(self.bits, needle.bits, SearchDirection::Last)
+    }
+
     /// Runs the shift-outer WordsFind strategy in bounded word tiles.
     #[cfg(feature = "benchmark-internals")]
     #[doc(hidden)]
