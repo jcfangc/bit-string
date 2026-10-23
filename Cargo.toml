@@ -14,7 +14,7 @@ exclude = ["/benches", "/src/**/tests_for_*", "/tests", ".github/"]
 members = ["derive"]
 
 [workspace.package]
-version = "0.6.1"
+version = "0.7.0"
 
 [features]
 characterization = []
@@ -22,7 +22,7 @@ characterization = []
 benchmark-internals = []
 
 [workspace.dependencies]
-bit-string-derive = { version = "0.6", path = "derive" }
+bit-string-derive = { version = "0.7", path = "derive" }
 
 [dependencies]
 bit-string-derive.workspace = true
