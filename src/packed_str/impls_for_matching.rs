@@ -9,16 +9,13 @@
 //! reflect the benchmarked workloads and target configuration, not universal
 //! rankings. Re-measure if either changes.
 //!
-//! `FindOptions` hints currently do not alter this default dispatch. `contains`
-//! retains its own direct character-aligned scan while its strategy is studied
-//! separately.
+//! `FindOptions` hints currently do not alter this default dispatch. For
+//! `contains_with`, `LocationHint` can choose which end is scanned first, and
+//! `AnchorHint::Suffix` checks a short suffix before full verification. Prefix
+//! hints use the existing forward verification order.
 
 use super::*;
 use crate::traits::WordsFind;
-#[cfg(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "avx2"
-))]
 use int_intervals::UsizeCO;
 
 #[cfg(all(
@@ -107,9 +104,50 @@ where
     }
 
     /// Returns whether `needle` occurs in this view using the supplied hints.
-    pub fn contains_with(&self, needle: Self, _options: ContainsOptions) -> bool {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .any(|index| self.matches_at(index, needle))
+    pub fn contains_with(&self, needle: Self, options: ContainsOptions) -> bool {
+        let needle_len = needle.char_len();
+        let haystack_len = self.char_len();
+        if needle_len == 0 {
+            return true;
+        }
+        if needle_len > haystack_len {
+            return false;
+        }
+
+        let last_start = haystack_len - needle_len;
+        if options.anchor() != crate::AnchorHint::Suffix
+            && options.location() != crate::LocationHint::NearEnd
+        {
+            return (0..=last_start).any(|index| self.matches_at(index, needle));
+        }
+
+        let suffix_anchor = if options.anchor() == crate::AnchorHint::Suffix {
+            let anchor_len = needle_len.min(crate::WORD_BITS / usize::from(BITS));
+            let anchor_start = needle_len - anchor_len;
+            let interval = UsizeCO::checked_from_start_len(anchor_start, anchor_len).unwrap();
+            Some((anchor_start, needle.slice(interval)))
+        } else {
+            None
+        };
+
+        let matches_at = |index| {
+            if let Some((anchor_start, anchor)) = suffix_anchor {
+                if !self.matches_at(index + anchor_start, anchor) {
+                    return false;
+                }
+                if anchor_start == 0 {
+                    return true;
+                }
+            }
+            self.matches_at(index, needle)
+        };
+
+        match options.location() {
+            crate::LocationHint::NearEnd => (0..=last_start).rev().any(matches_at),
+            crate::LocationHint::Unknown | crate::LocationHint::NearStart => {
+                (0..=last_start).any(matches_at)
+            }
+        }
     }
 
     /// Returns the first matching character index using the supplied hints.

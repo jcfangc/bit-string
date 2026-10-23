@@ -1,10 +1,12 @@
-//! Paired measurements for packed `contains_with` hints.
+//! Paired measurements for packed `contains_with` hints and the direct-search
+//! reference.
 //!
 //! Run with `cargo bench --bench search_options_hints`. Each benchmark compares
-//! one deterministic haystack/needle pair per seed. Fixture construction and
-//! oracle checks happen outside the timed closure. Case IDs are head hit,
-//! tail hit, absent with a selective prefix, and absent with a selective
-//! suffix. For hit cases, the correct and incorrect profiles differ only in
+//! one deterministic haystack/needle pair per seed using default options, a
+//! correct hint, an incorrect hint, or the direct reference. Fixture
+//! construction and oracle checks happen outside the timed closure. Case IDs
+//! are head hit, tail hit, absent with a selective prefix, and absent with a
+//! selective suffix. For hit cases, the correct and incorrect profiles differ only in
 //! expected location; for absent cases they differ only in expected anchor.
 
 use bit_string::{AnchorHint, ContainsOptions, LocationHint, PackedString};
@@ -69,19 +71,17 @@ fn make_case<const BITS: u8>(case_id: usize, seed: u64) -> Case<BITS> {
             haystack_codes[start..start + NEEDLE_LEN].copy_from_slice(&needle_codes);
         }
         2 | 3 => {
-            // A seeded zero-dominant input makes the intended rare anchor
-            // absent: the maximum code is sparse, never a full anchor run.
-            haystack_codes.fill(0);
-            let stride = anchor_len + 3;
-            let offset = (seed as usize) % stride;
-            for index in (offset..HAYSTACK_LEN).step_by(stride) {
-                haystack_codes[index] = max_code::<BITS>();
-            }
-            needle_codes.fill(0);
+            // A seeded constant haystack makes this a high-repeat absent case.
+            // The needle shares either the long prefix or long suffix, then
+            // differs at the opposite endpoint anchor.
+            let common_code = (seed as u8) & max_code::<BITS>();
+            let rare_code = common_code.wrapping_add(1) & max_code::<BITS>();
+            haystack_codes.fill(common_code);
+            needle_codes.fill(common_code);
             if case_id == 2 {
-                needle_codes[..anchor_len].fill(max_code::<BITS>());
+                needle_codes[..anchor_len].fill(rare_code);
             } else {
-                needle_codes[NEEDLE_LEN - anchor_len..].fill(max_code::<BITS>());
+                needle_codes[NEEDLE_LEN - anchor_len..].fill(rare_code);
             }
         }
         _ => unreachable!(),
@@ -146,6 +146,16 @@ fn options(case_id: usize, mode: usize) -> ContainsOptions {
         .with_location(location)
 }
 
+fn direct_reference<const BITS: u8>(
+    haystack: &PackedString<support::Code, BITS>,
+    needle: &PackedString<support::Code, BITS>,
+) -> bool {
+    let needle_len = needle.char_len();
+    let haystack_len = haystack.char_len();
+    needle_len <= haystack_len
+        && (0..=haystack_len - needle_len).any(|index| haystack.matches_at(index, needle))
+}
+
 fn run<const BITS: u8>(bencher: Bencher, case_id: usize, seed_index: usize, mode: usize) {
     let case = make_case::<BITS>(case_id, SEEDS[seed_index]);
     let expected = case
@@ -153,6 +163,7 @@ fn run<const BITS: u8>(bencher: Bencher, case_id: usize, seed_index: usize, mode
         .windows(case.needle_codes.len())
         .any(|window| window == case.needle_codes);
     assert_eq!(case.expected, expected);
+    assert_eq!(direct_reference(&case.haystack, &case.needle), expected);
     for candidate_mode in 0..=2 {
         assert_eq!(
             case.haystack
@@ -160,9 +171,15 @@ fn run<const BITS: u8>(bencher: Bencher, case_id: usize, seed_index: usize, mode
             expected,
         );
     }
-    let options = options(case_id, mode);
+    let options = (mode <= 2).then(|| options(case_id, mode));
     bencher.bench(|| {
-        black_box(&case.haystack).contains_with(black_box(&case.needle), black_box(options))
+        let haystack = black_box(&case.haystack);
+        let needle = black_box(&case.needle);
+        match mode {
+            0..=2 => haystack.contains_with(needle, black_box(options.unwrap())),
+            3 => direct_reference(haystack, needle),
+            _ => unreachable!(),
+        }
     });
 }
 
@@ -198,6 +215,14 @@ macro_rules! define_width {
                         )]
                         fn wrong_hint(bencher: Bencher, seed_index: usize) {
                             run::<$bits>(bencher, $case_id, seed_index, 2);
+                        }
+
+                        #[divan::bench(
+                            args = [0usize, 1, 2, 3],
+                            name = concat!("search_options/contains/bits_", stringify!($bits), "/", $label, "/direct_reference")
+                        )]
+                        fn direct_reference(bencher: Bencher, seed_index: usize) {
+                            run::<$bits>(bencher, $case_id, seed_index, 3);
                         }
                     }
                 };

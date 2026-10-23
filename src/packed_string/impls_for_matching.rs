@@ -24,9 +24,18 @@ where
     }
 
     /// Returns whether `needle` occurs in this string using the supplied hints.
-    pub fn contains_with(&self, needle: &Self, _options: ContainsOptions) -> bool {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .any(|index| self.matches_at(index, needle))
+    pub fn contains_with(&self, needle: &Self, options: ContainsOptions) -> bool {
+        if options.anchor() != crate::AnchorHint::Suffix
+            && options.location() != crate::LocationHint::NearEnd
+        {
+            let needle_len = needle.char_len();
+            let haystack_len = self.char_len();
+            return needle_len <= haystack_len
+                && (0..=haystack_len - needle_len).any(|index| self.matches_at(index, needle));
+        }
+
+        self.as_packed_str()
+            .contains_with(needle.as_packed_str(), options)
     }
 
     /// Returns the first matching character index using the supplied hints.
