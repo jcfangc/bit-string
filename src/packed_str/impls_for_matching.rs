@@ -28,6 +28,7 @@ const DUAL_ANCHOR_MIN_NEEDLE_LEN: usize = 24;
 enum SearchDirection {
     First,
     Last,
+    #[cfg(feature = "benchmark-internals")]
     Any,
 }
 
@@ -43,8 +44,10 @@ fn search_aligned<const BITS: u8>(
 
     if needle.bit_len() == 0 {
         return match direction {
-            SearchDirection::First | SearchDirection::Any => Some(0),
+            SearchDirection::First => Some(0),
             SearchDirection::Last => Some(haystack.bit_len() / width),
+            #[cfg(feature = "benchmark-internals")]
+            SearchDirection::Any => Some(0),
         };
     }
     if needle.bit_len() > haystack.bit_len() {
@@ -76,6 +79,7 @@ fn search_aligned<const BITS: u8>(
             needle.bit_len(),
             &mut verify,
         ),
+        #[cfg(feature = "benchmark-internals")]
         SearchDirection::Any => words.find_any_candidate(
             scan_bit_len,
             &needle_first_word,
