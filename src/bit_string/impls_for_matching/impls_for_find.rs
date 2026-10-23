@@ -9,12 +9,12 @@ impl BitString {
 
     /// Returns whether `needle` occurs in this string using the supplied hints.
     #[inline]
-    pub fn contains_str_with(&self, needle: crate::BitStr<'_>, _options: ContainsOptions) -> bool {
+    pub fn contains_str_with(&self, needle: crate::BitStr<'_>, options: ContainsOptions) -> bool {
         let view = self.as_bit_str();
         if needle.start % WORD_BITS == 0 {
-            view.contains_inner::<true, true>(needle)
+            view.contains_inner::<true, true>(needle, options)
         } else {
-            view.contains_inner::<true, false>(needle)
+            view.contains_inner::<true, false>(needle, options)
         }
     }
 
@@ -50,9 +50,9 @@ impl BitString {
 
     /// Returns whether `needle` occurs in this string using the supplied hints.
     #[inline]
-    pub fn contains_string_with(&self, needle: &BitString, _options: ContainsOptions) -> bool {
+    pub fn contains_string_with(&self, needle: &BitString, options: ContainsOptions) -> bool {
         self.as_bit_str()
-            .contains_inner::<true, true>(needle.as_bit_str())
+            .contains_inner::<true, true>(needle.as_bit_str(), options)
     }
 
     /// Returns the first matching bit index using the supplied hints.

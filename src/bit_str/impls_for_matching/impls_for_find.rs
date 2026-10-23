@@ -7,14 +7,14 @@ mod inner;
 impl<'bs> BitStr<'bs> {
     /// Returns whether `needle` occurs in this view using the supplied hints.
     #[inline]
-    pub fn contains_str_with(&self, needle: BitStr<'_>, _options: ContainsOptions) -> bool {
+    pub fn contains_str_with(&self, needle: BitStr<'_>, options: ContainsOptions) -> bool {
         let hs_aligned = self.start % WORD_BITS == 0;
         let nd_aligned = needle.start % WORD_BITS == 0;
         match (hs_aligned, nd_aligned) {
-            (true, true) => self.contains_inner::<true, true>(needle),
-            (true, false) => self.contains_inner::<true, false>(needle),
-            (false, true) => self.contains_inner::<false, true>(needle),
-            (false, false) => self.contains_inner::<false, false>(needle),
+            (true, true) => self.contains_inner::<true, true>(needle, options),
+            (true, false) => self.contains_inner::<true, false>(needle, options),
+            (false, true) => self.contains_inner::<false, true>(needle, options),
+            (false, false) => self.contains_inner::<false, false>(needle, options),
         }
     }
     /// Returns whether `needle` occurs in this view using the supplied hints.
@@ -22,13 +22,13 @@ impl<'bs> BitStr<'bs> {
     pub fn contains_string_with(
         &self,
         needle: &crate::BitString,
-        _options: ContainsOptions,
+        options: ContainsOptions,
     ) -> bool {
         let n = needle.as_bit_str();
         if self.start % WORD_BITS == 0 {
-            self.contains_inner::<true, true>(n)
+            self.contains_inner::<true, true>(n, options)
         } else {
-            self.contains_inner::<false, true>(n)
+            self.contains_inner::<false, true>(n, options)
         }
     }
     /// Returns the first matching bit index using the supplied hints.

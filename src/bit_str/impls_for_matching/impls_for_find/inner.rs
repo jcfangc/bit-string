@@ -3,7 +3,9 @@
 
 use crate::BitStr;
 use crate::traits::*;
+use crate::{AnchorHint, ContainsOptions, LocationHint};
 use crate::{SMALL_WORDS, WORD_BITS};
+use int_intervals::UsizeCO;
 
 impl<'bs> BitStr<'bs> {
     #[inline]
@@ -129,7 +131,14 @@ impl<'bs> BitStr<'bs> {
     pub(crate) fn contains_inner<const HS_WORD_ALIGNED: bool, const ND_WORD_ALIGNED: bool>(
         &self,
         needle: BitStr<'_>,
+        options: ContainsOptions,
     ) -> bool {
+        // Keep the established SIMD Any path for the default and prefix-only
+        // cases. Explicit location or suffix hints use a directional scan so
+        // they can prioritize the caller's expected match region or anchor.
+        if options.location() != LocationHint::Unknown || options.anchor() == AnchorHint::Suffix {
+            return self.contains_hinted(needle, options);
+        }
         if needle.bit_len == 0 {
             return true;
         }
@@ -172,5 +181,38 @@ impl<'bs> BitStr<'bs> {
                 self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos, needle)
             })
             .is_some()
+    }
+
+    fn contains_hinted(&self, needle: BitStr<'_>, options: ContainsOptions) -> bool {
+        let needle_len = needle.bit_len();
+        if needle_len == 0 {
+            return true;
+        }
+        if needle_len > self.bit_len() {
+            return false;
+        }
+
+        let anchor_len = needle_len.min(WORD_BITS);
+        let anchor_start = match options.anchor() {
+            AnchorHint::Prefix => 0,
+            AnchorHint::Suffix => needle_len - anchor_len,
+            _ => 0,
+        };
+        let anchor = (options.anchor() != AnchorHint::Unknown).then(|| {
+            needle.slice(
+                UsizeCO::checked_from_start_len(anchor_start, anchor_len)
+                    .expect("anchor interval is within the needle"),
+            )
+        });
+        let last_start = self.bit_len() - needle_len;
+
+        let matches_at = |start: usize| {
+            anchor.is_none_or(|anchor| self.matches_at_str(start + anchor_start, anchor))
+                && self.matches_at_str(start, needle)
+        };
+        match options.location() {
+            LocationHint::NearEnd => (0..=last_start).rev().any(matches_at),
+            _ => (0..=last_start).any(matches_at),
+        }
     }
 }
