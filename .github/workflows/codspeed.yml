@@ -18,4 +18,6 @@ jobs:
       cargo_codspeed_version: "5.0.1"
       runner: ubuntu-24.04
       build_command: RUSTFLAGS="-C target-feature=+avx2" cargo codspeed build -m simulation
-      run_command: cargo codspeed run -m simulation ours_
+      run_command: |
+        cargo codspeed run -m simulation ours_packed
+        cargo codspeed run -m simulation 'ours_(str(_str|_string|_unaligned)?|string(_str|_string)?)$'
