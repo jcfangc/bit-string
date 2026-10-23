@@ -7,6 +7,9 @@ use int_intervals::UsizeCO;
 #[path = "tests_for_matching/tests_for_vec_search_semantics.rs"]
 mod tests_for_vec_search_semantics;
 
+#[path = "tests_for_matching/tests_for_options_matrix.rs"]
+mod tests_for_options_matrix;
+
 #[path = "tests_for_matching/tests_for_prefix_suffix_stripping.rs"]
 mod tests_for_prefix_suffix_stripping;
 

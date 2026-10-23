@@ -15,6 +15,26 @@ fn padded_bits(text: &str, offset: usize) -> BitString {
     ]))
 }
 
+fn reference_find(
+    haystack: bit_string::BitStr<'_>,
+    needle: bit_string::BitStr<'_>,
+) -> Option<usize> {
+    let max_start = haystack.bit_len().saturating_sub(needle.bit_len());
+    (0..=max_start).find(|&start| {
+        (0..needle.bit_len()).all(|offset| haystack.get(start + offset) == needle.get(offset))
+    })
+}
+
+fn reference_rfind(
+    haystack: bit_string::BitStr<'_>,
+    needle: bit_string::BitStr<'_>,
+) -> Option<usize> {
+    let max_start = haystack.bit_len().saturating_sub(needle.bit_len());
+    (0..=max_start).rev().find(|&start| {
+        (0..needle.bit_len()).all(|offset| haystack.get(start + offset) == needle.get(offset))
+    })
+}
+
 #[test]
 fn attack_matching_alignment_matrix_at_word_boundaries() {
     for len in [0, 1, 63, 64, 65, 127, 128, 129] {
@@ -80,6 +100,110 @@ fn attack_matching_alignment_matrix_at_word_boundaries() {
                 }
             }
         }
+    }
+}
+
+#[test]
+fn search_hints_do_not_change_bit_string_results() {
+    use bit_string::{AnchorHint, ContainsOptions, FindOptions, LocationHint};
+
+    let haystack_owner = bs("111010101101101000");
+    let haystack_view = haystack_owner
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(3, 12).unwrap());
+    let needle_owner = bs("1101011");
+    let needle_view = needle_owner
+        .as_bit_str()
+        .slice(UsizeCO::checked_from_start_len(2, 3).unwrap());
+    let needle_string: BitString = (0..needle_view.bit_len())
+        .map(|index| needle_view.get(index).unwrap())
+        .collect();
+    let expected_find = reference_find(haystack_view, needle_view);
+    let expected_rfind = reference_rfind(haystack_view, needle_view);
+    let expected_owner_find = reference_find(haystack_owner.as_bit_str(), needle_view);
+    let expected_owner_rfind = reference_rfind(haystack_owner.as_bit_str(), needle_view);
+
+    for anchor in [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix] {
+        let options = FindOptions::default().with_anchor(anchor);
+        assert_eq!(
+            haystack_view.find_str_with(needle_view, options),
+            expected_find
+        );
+        assert_eq!(
+            haystack_view.rfind_str_with(needle_view, options),
+            expected_rfind
+        );
+        assert_eq!(
+            haystack_view.find_string_with(&needle_string, options),
+            expected_find
+        );
+        assert_eq!(
+            haystack_view.rfind_string_with(&needle_string, options),
+            expected_rfind
+        );
+        assert_eq!(
+            haystack_owner.find_str_with(needle_view, options),
+            expected_owner_find
+        );
+        assert_eq!(
+            haystack_owner.rfind_str_with(needle_view, options),
+            expected_owner_rfind
+        );
+        assert_eq!(
+            haystack_owner.find_string_with(&needle_string, options),
+            expected_owner_find
+        );
+        assert_eq!(
+            haystack_owner.rfind_string_with(&needle_string, options),
+            expected_owner_rfind
+        );
+    }
+
+    for anchor in [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix] {
+        for location in [
+            LocationHint::Unknown,
+            LocationHint::NearStart,
+            LocationHint::NearEnd,
+        ] {
+            let options = ContainsOptions::default()
+                .with_anchor(anchor)
+                .with_location(location);
+            assert!(haystack_view.contains_str_with(needle_view, options));
+            assert!(haystack_view.contains_string_with(&needle_string, options));
+            assert!(haystack_owner.contains_str_with(needle_view, options));
+            assert!(haystack_owner.contains_string_with(&needle_string, options));
+        }
+    }
+
+    let absent = bs("111");
+    for anchor in [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix] {
+        let options = FindOptions::default().with_anchor(anchor);
+        assert_eq!(haystack_view.find_string_with(&absent, options), None);
+        assert_eq!(haystack_view.rfind_string_with(&absent, options), None);
+    }
+    for anchor in [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix] {
+        for location in [
+            LocationHint::Unknown,
+            LocationHint::NearStart,
+            LocationHint::NearEnd,
+        ] {
+            assert!(
+                !haystack_view.contains_string_with(
+                    &absent,
+                    ContainsOptions::default()
+                        .with_anchor(anchor)
+                        .with_location(location)
+                )
+            );
+        }
+    }
+
+    let empty = BitString::new();
+    let empty_view = empty.as_bit_str();
+    for anchor in [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix] {
+        let options = FindOptions::default().with_anchor(anchor);
+        assert_eq!(empty_view.find_str_with(empty_view, options), Some(0));
+        assert_eq!(empty_view.rfind_str_with(empty_view, options), Some(0));
     }
 }
 

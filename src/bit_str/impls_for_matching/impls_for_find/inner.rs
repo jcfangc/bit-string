@@ -22,12 +22,17 @@ impl<'bs> BitStr<'bs> {
         let so = self.start % WORD_BITS;
         debug_assert!(!WORD_ALIGNED || so == 0);
         debug_assert!(!ND_WORD_ALIGNED || needle.start.is_multiple_of(WORD_BITS));
-        let needle_words = needle.source.words();
+        let needle_first_word = if ND_WORD_ALIGNED {
+            needle.source.words()[needle.start / WORD_BITS]
+        } else {
+            needle.get_chunk(0)
+        };
+        let needle_words = [needle_first_word];
         let needle_len = needle.bit_len;
         if WORD_ALIGNED || so == 0 {
             return words[sw..].find_first_word(
                 self.bit_len,
-                needle_words,
+                &needle_words,
                 needle_len,
                 &mut |pos| self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos, needle),
             );
@@ -46,7 +51,7 @@ impl<'bs> BitStr<'bs> {
         let aligned = &words[sw + 1..];
         if aligned.len() >= SMALL_WORDS
             && !aligned
-                .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
+                .find_any_candidate(remaining, &needle_words, needle_len, &mut |pos| {
                     self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos + first_bits, needle)
                 })
                 .is_some()
@@ -54,7 +59,7 @@ impl<'bs> BitStr<'bs> {
             return None;
         }
         aligned
-            .find_first_word(remaining, needle_words, needle_len, &mut |pos| {
+            .find_first_word(remaining, &needle_words, needle_len, &mut |pos| {
                 self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos + first_bits, needle)
             })
             .map(|pos| pos + first_bits)
@@ -76,12 +81,17 @@ impl<'bs> BitStr<'bs> {
         let so = self.start % WORD_BITS;
         debug_assert!(!WORD_ALIGNED || so == 0);
         debug_assert!(!ND_WORD_ALIGNED || needle.start.is_multiple_of(WORD_BITS));
-        let needle_words = needle.source.words();
+        let needle_first_word = if ND_WORD_ALIGNED {
+            needle.source.words()[needle.start / WORD_BITS]
+        } else {
+            needle.get_chunk(0)
+        };
+        let needle_words = [needle_first_word];
         let needle_len = needle.bit_len;
         if WORD_ALIGNED || so == 0 {
             return words[sw..].find_last_word(
                 self.bit_len,
-                needle_words,
+                &needle_words,
                 needle_len,
                 &mut |pos| self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos, needle),
             );
@@ -92,13 +102,13 @@ impl<'bs> BitStr<'bs> {
             let aligned = &words[sw + 1..];
             let maybe_candidate = aligned.len() < SMALL_WORDS
                 || aligned
-                    .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
+                    .find_any_candidate(remaining, &needle_words, needle_len, &mut |pos| {
                         self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos + first_bits, needle)
                     })
                     .is_some();
             if maybe_candidate {
                 if let Some(pos) =
-                    aligned.find_last_word(remaining, needle_words, needle_len, &mut |pos| {
+                    aligned.find_last_word(remaining, &needle_words, needle_len, &mut |pos| {
                         self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos + first_bits, needle)
                     })
                 {
@@ -131,7 +141,12 @@ impl<'bs> BitStr<'bs> {
         let so = self.start % WORD_BITS;
         debug_assert!(!HS_WORD_ALIGNED || so == 0);
         debug_assert!(!ND_WORD_ALIGNED || needle.start.is_multiple_of(WORD_BITS));
-        let needle_words = needle.source.words();
+        let needle_first_word = if ND_WORD_ALIGNED {
+            needle.source.words()[needle.start / WORD_BITS]
+        } else {
+            needle.get_chunk(0)
+        };
+        let needle_words = [needle_first_word];
         let needle_len = needle.bit_len;
         if !HS_WORD_ALIGNED && so != 0 {
             let first_bits = (WORD_BITS - so).min(self.bit_len);
@@ -147,13 +162,13 @@ impl<'bs> BitStr<'bs> {
             }
             let aligned = &words[sw + 1..];
             return aligned
-                .find_any_candidate(remaining, needle_words, needle_len, &mut |pos| {
+                .find_any_candidate(remaining, &needle_words, needle_len, &mut |pos| {
                     self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos + first_bits, needle)
                 })
                 .is_some();
         }
         words[sw..]
-            .find_any_candidate(self.bit_len, needle_words, needle_len, &mut |pos| {
+            .find_any_candidate(self.bit_len, &needle_words, needle_len, &mut |pos| {
                 self.bits_equal_at_inner::<false, ND_WORD_ALIGNED>(pos, needle)
             })
             .is_some()
