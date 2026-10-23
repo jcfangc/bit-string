@@ -179,10 +179,52 @@ assert_eq!(
     Some(3)
 ); // last "01" starts at index 3
 
+// Hints describe expected workload properties. They never constrain results,
+// and an implementation may ignore a hint if it cannot use it efficiently.
+use bit_string::{AnchorHint, LocationHint};
+let contains_options = ContainsOptions::default()
+    .with_anchor(AnchorHint::Suffix)
+    .with_location(LocationHint::NearEnd);
+assert!(haystack.contains_string_with(&needle, contains_options));
+assert_eq!(
+    haystack.find_string_with(
+        &needle,
+        FindOptions::default().with_anchor(AnchorHint::Prefix),
+    ),
+    Some(1)
+);
+
 // Strip
 let s = BitString::try_from("00010100").unwrap();
 let stripped = s.strip_prefix_str(BitString::try_from("00").unwrap().as_bit_str());
 assert_eq!(stripped.unwrap().to_string(), "010100");
+```
+
+Packed strings use the same options while keeping their results in character
+indices:
+
+```rust
+use bit_string::{AnchorHint, ContainsOptions, FindOptions, PackedString, packed};
+
+#[packed(bits = 2)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Base {
+    A = 0,
+    C = 1,
+    G = 2,
+    T = 3,
+}
+
+let sequence = PackedString::<Base, 2>::from_chars([Base::A, Base::C, Base::G, Base::T]);
+let pattern = PackedString::<Base, 2>::from_chars([Base::G, Base::T]);
+assert!(sequence.contains_with(&pattern, ContainsOptions::default()));
+assert_eq!(
+    sequence.find_with(
+        &pattern,
+        FindOptions::default().with_anchor(AnchorHint::Prefix),
+    ),
+    Some(2)
+);
 ```
 
 ### Bitwise operations
