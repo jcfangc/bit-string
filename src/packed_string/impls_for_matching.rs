@@ -30,16 +30,15 @@ where
     }
 
     /// Returns the first matching character index using the supplied hints.
-    pub fn find_with(&self, needle: &Self, _options: FindOptions) -> Option<usize> {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .find(|&index| self.matches_at(index, needle))
+    pub fn find_with(&self, needle: &Self, options: FindOptions) -> Option<usize> {
+        self.as_packed_str()
+            .find_with(needle.as_packed_str(), options)
     }
 
     /// Returns the last matching character index using the supplied hints.
-    pub fn rfind_with(&self, needle: &Self, _options: FindOptions) -> Option<usize> {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .rev()
-            .find(|&index| self.matches_at(index, needle))
+    pub fn rfind_with(&self, needle: &Self, options: FindOptions) -> Option<usize> {
+        self.as_packed_str()
+            .rfind_with(needle.as_packed_str(), options)
     }
 
     pub fn strip_prefix(&self, prefix: &Self) -> Option<Self> {

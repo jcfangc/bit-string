@@ -121,6 +121,87 @@ fn check_options_for_width<const BITS: u8>() {
 }
 
 #[test]
+fn eight_bit_dual_anchor_threshold_matches_the_character_model() {
+    const HAYSTACK_LEN: usize = 128;
+    let mask = u8::MAX;
+
+    for needle_len in [23, 24, 25] {
+        let mut haystack_codes: Vec<u8> = (0..HAYSTACK_LEN)
+            .map(|index| (index * 73 + index / 2 + 17) as u8)
+            .collect();
+        let needle_codes = haystack_codes[40..40 + needle_len].to_vec();
+        let last_start = HAYSTACK_LEN - needle_len;
+        haystack_codes[2..2 + needle_len].copy_from_slice(&needle_codes);
+        haystack_codes[last_start..].copy_from_slice(&needle_codes);
+
+        let haystack =
+            PackedString::<Code<8>, 8>::from_chars(haystack_codes.iter().copied().map(Code::<8>));
+        let needle =
+            PackedString::<Code<8>, 8>::from_chars(needle_codes.iter().copied().map(Code::<8>));
+        let absent_codes = vec![mask; needle_len];
+        let absent =
+            PackedString::<Code<8>, 8>::from_chars(absent_codes.iter().copied().map(Code::<8>));
+
+        let mut backing_codes = Vec::with_capacity(HAYSTACK_LEN + 2);
+        backing_codes.push(0xa5);
+        backing_codes.extend_from_slice(&haystack_codes);
+        backing_codes.push(0x5a);
+        let backing =
+            PackedString::<Code<8>, 8>::from_chars(backing_codes.iter().copied().map(Code::<8>));
+        let view = backing
+            .as_packed_str()
+            .slice_from(1)
+            .slice_until(HAYSTACK_LEN + 1);
+
+        let expected_find = haystack_codes
+            .windows(needle_len)
+            .position(|window| window == needle_codes);
+        let expected_rfind = haystack_codes
+            .windows(needle_len)
+            .rposition(|window| window == needle_codes);
+        assert_eq!(expected_find, Some(2));
+        assert_eq!(expected_rfind, Some(last_start));
+        assert_eq!(
+            haystack_codes
+                .windows(needle_len)
+                .position(|window| window == absent_codes),
+            None
+        );
+
+        for anchor in [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix] {
+            let options = FindOptions::default().with_anchor(anchor);
+            assert_eq!(haystack.find_with(&needle, options), expected_find);
+            assert_eq!(haystack.rfind_with(&needle, options), expected_rfind);
+            assert_eq!(
+                view.find_with(needle.as_packed_str(), options),
+                expected_find
+            );
+            assert_eq!(
+                view.rfind_with(needle.as_packed_str(), options),
+                expected_rfind
+            );
+            assert_eq!(haystack.find_with(&absent, options), None);
+            assert_eq!(haystack.rfind_with(&absent, options), None);
+        }
+
+        for anchor in [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix] {
+            for location in [
+                LocationHint::Unknown,
+                LocationHint::NearStart,
+                LocationHint::NearEnd,
+            ] {
+                let options = ContainsOptions::default()
+                    .with_anchor(anchor)
+                    .with_location(location);
+                assert!(haystack.contains_with(&needle, options));
+                assert!(view.contains_with(needle.as_packed_str(), options));
+                assert!(!haystack.contains_with(&absent, options));
+            }
+        }
+    }
+}
+
+#[test]
 fn packed_search_hints_never_change_results() {
     check_options_for_width::<1>();
     check_options_for_width::<2>();
