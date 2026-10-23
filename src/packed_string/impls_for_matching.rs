@@ -1,4 +1,5 @@
 use super::*;
+use crate::{ContainsOptions, FindOptions};
 
 impl<C, const BITS: u8> PackedString<C, BITS>
 where
@@ -22,20 +23,37 @@ where
         self.bits.ends_with_string(&suffix.bits)
     }
 
-    pub fn contains(&self, needle: &Self) -> bool {
+    /// Returns whether `needle` occurs in this string using the supplied hints.
+    pub fn contains_with(&self, needle: &Self, _options: ContainsOptions) -> bool {
         (0..=self.char_len().saturating_sub(needle.char_len()))
             .any(|index| self.matches_at(index, needle))
     }
 
-    pub fn find(&self, needle: &Self) -> Option<usize> {
+    /// Returns the first matching character index using the supplied hints.
+    pub fn find_with(&self, needle: &Self, _options: FindOptions) -> Option<usize> {
         (0..=self.char_len().saturating_sub(needle.char_len()))
             .find(|&index| self.matches_at(index, needle))
     }
 
-    pub fn rfind(&self, needle: &Self) -> Option<usize> {
+    /// Returns the last matching character index using the supplied hints.
+    pub fn rfind_with(&self, needle: &Self, _options: FindOptions) -> Option<usize> {
         (0..=self.char_len().saturating_sub(needle.char_len()))
             .rev()
             .find(|&index| self.matches_at(index, needle))
+    }
+
+    // Temporary compatibility wrappers are removed after call-site migration.
+    #[inline]
+    pub fn contains(&self, needle: &Self) -> bool {
+        self.contains_with(needle, ContainsOptions::default())
+    }
+    #[inline]
+    pub fn find(&self, needle: &Self) -> Option<usize> {
+        self.find_with(needle, FindOptions::default())
+    }
+    #[inline]
+    pub fn rfind(&self, needle: &Self) -> Option<usize> {
+        self.rfind_with(needle, FindOptions::default())
     }
 
     pub fn strip_prefix(&self, prefix: &Self) -> Option<Self> {
