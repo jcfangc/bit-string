@@ -177,16 +177,36 @@ fn contains_65536_no_native(b: Bencher) {
 // -- helpers ----------------------------------------------------------------
 
 fn bench_find_str(b: Bencher, c: NeedleCase) {
-    b.bench(|| black_box(&c.haystack_bits).find_str(black_box(c.needle_bits.as_bit_str())));
+    b.bench(|| {
+        black_box(&c.haystack_bits).find_str_with(
+            black_box(c.needle_bits.as_bit_str()),
+            bit_string::FindOptions::default(),
+        )
+    });
 }
 fn bench_find_string(b: Bencher, c: NeedleCase) {
-    b.bench(|| black_box(&c.haystack_bits).find_string(black_box(&c.needle_bits)));
+    b.bench(|| {
+        black_box(&c.haystack_bits).find_string_with(
+            black_box(&c.needle_bits),
+            bit_string::FindOptions::default(),
+        )
+    });
 }
 fn bench_contains_str(b: Bencher, c: NeedleCase) {
-    b.bench(|| black_box(&c.haystack_bits).contains_str(black_box(c.needle_bits.as_bit_str())));
+    b.bench(|| {
+        black_box(&c.haystack_bits).contains_str_with(
+            black_box(c.needle_bits.as_bit_str()),
+            bit_string::ContainsOptions::default(),
+        )
+    });
 }
 fn bench_contains_string(b: Bencher, c: NeedleCase) {
-    b.bench(|| black_box(&c.haystack_bits).contains_string(black_box(&c.needle_bits)));
+    b.bench(|| {
+        black_box(&c.haystack_bits).contains_string_with(
+            black_box(&c.needle_bits),
+            bit_string::ContainsOptions::default(),
+        )
+    });
 }
 fn bench_native_find(b: Bencher, c: NeedleCase) {
     b.bench(|| black_box(&c.haystack_string).find(black_box(&c.needle_string)));

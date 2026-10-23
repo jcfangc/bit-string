@@ -42,20 +42,6 @@ where
             .find(|&index| self.matches_at(index, needle))
     }
 
-    // Temporary compatibility wrappers are removed after call-site migration.
-    #[inline]
-    pub fn contains(&self, needle: Self) -> bool {
-        self.contains_with(needle, ContainsOptions::default())
-    }
-    #[inline]
-    pub fn find(&self, needle: Self) -> Option<usize> {
-        self.find_with(needle, FindOptions::default())
-    }
-    #[inline]
-    pub fn rfind(&self, needle: Self) -> Option<usize> {
-        self.rfind_with(needle, FindOptions::default())
-    }
-
     pub fn strip_prefix(&self, prefix: Self) -> Option<Self> {
         self.bits
             .strip_prefix_str(prefix.bits)

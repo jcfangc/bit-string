@@ -68,31 +68,4 @@ impl BitString {
         self.as_bit_str()
             .rfind_inner::<true, true>(needle.as_bit_str())
     }
-
-    // Temporary compatibility wrappers are removed once internal callers have
-    // migrated to the options-bearing API.
-    #[inline]
-    pub fn contains_str(&self, needle: crate::BitStr<'_>) -> bool {
-        self.contains_str_with(needle, ContainsOptions::default())
-    }
-    #[inline]
-    pub fn find_str(&self, needle: crate::BitStr<'_>) -> Option<usize> {
-        self.find_str_with(needle, FindOptions::default())
-    }
-    #[inline]
-    pub fn rfind_str(&self, needle: crate::BitStr<'_>) -> Option<usize> {
-        self.rfind_str_with(needle, FindOptions::default())
-    }
-    #[inline]
-    pub fn contains_string(&self, needle: &BitString) -> bool {
-        self.contains_string_with(needle, ContainsOptions::default())
-    }
-    #[inline]
-    pub fn find_string(&self, needle: &BitString) -> Option<usize> {
-        self.find_string_with(needle, FindOptions::default())
-    }
-    #[inline]
-    pub fn rfind_string(&self, needle: &BitString) -> Option<usize> {
-        self.rfind_string_with(needle, FindOptions::default())
-    }
 }

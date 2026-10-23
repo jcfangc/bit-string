@@ -147,8 +147,14 @@ fn packed_views_and_editing_remain_character_aligned() {
             .get(0),
         Some(super::Symbol::One)
     );
-    assert_eq!(view.find(view.slice_until(1)), Some(0));
-    assert!(view.contains(view.slice(UsizeCO::checked_from_start_len(1, 1).unwrap())));
+    assert_eq!(
+        view.find_with(view.slice_until(1), bit_string::FindOptions::default()),
+        Some(0)
+    );
+    assert!(view.contains_with(
+        view.slice(UsizeCO::checked_from_start_len(1, 1).unwrap()),
+        bit_string::ContainsOptions::default()
+    ));
 
     let haystack_string = PackedString::<super::Symbol, 2>::from_chars([
         super::Symbol::Zero,
@@ -158,9 +164,15 @@ fn packed_views_and_editing_remain_character_aligned() {
     let needle_string = PackedString::<super::Symbol, 2>::from_chars([super::Symbol::Two]);
     let haystack = haystack_string.as_packed_str();
     let needle = needle_string.as_packed_str();
-    assert!(!haystack.contains(needle));
-    assert_eq!(haystack.find(needle), None);
-    assert_eq!(haystack.rfind(needle), None);
+    assert!(!haystack.contains_with(needle, bit_string::ContainsOptions::default()));
+    assert_eq!(
+        haystack.find_with(needle, bit_string::FindOptions::default()),
+        None
+    );
+    assert_eq!(
+        haystack.rfind_with(needle, bit_string::FindOptions::default()),
+        None
+    );
     assert!(!haystack.matches_at(1, needle));
 
     string.insert(2, super::Symbol::Zero);
