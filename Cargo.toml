@@ -18,6 +18,8 @@ version = "0.6.1"
 
 [features]
 characterization = []
+# Exposes frozen packed-search strategy entrypoints for offline benchmarks.
+benchmark-internals = []
 
 [workspace.dependencies]
 bit-string-derive = { version = "0.6", path = "derive" }
