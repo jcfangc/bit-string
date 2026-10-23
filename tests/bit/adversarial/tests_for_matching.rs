@@ -19,7 +19,13 @@ fn reference_find(
     haystack: bit_string::BitStr<'_>,
     needle: bit_string::BitStr<'_>,
 ) -> Option<usize> {
-    let max_start = haystack.bit_len().saturating_sub(needle.bit_len());
+    if needle.bit_len() == 0 {
+        return Some(0);
+    }
+    if needle.bit_len() > haystack.bit_len() {
+        return None;
+    }
+    let max_start = haystack.bit_len() - needle.bit_len();
     (0..=max_start).find(|&start| {
         (0..needle.bit_len()).all(|offset| haystack.get(start + offset) == needle.get(offset))
     })
@@ -29,10 +35,118 @@ fn reference_rfind(
     haystack: bit_string::BitStr<'_>,
     needle: bit_string::BitStr<'_>,
 ) -> Option<usize> {
-    let max_start = haystack.bit_len().saturating_sub(needle.bit_len());
+    if needle.bit_len() == 0 {
+        return Some(haystack.bit_len());
+    }
+    if needle.bit_len() > haystack.bit_len() {
+        return None;
+    }
+    let max_start = haystack.bit_len() - needle.bit_len();
     (0..=max_start).rev().find(|&start| {
         (0..needle.bit_len()).all(|offset| haystack.get(start + offset) == needle.get(offset))
     })
+}
+
+#[test]
+fn search_options_match_independent_oracle_for_edge_cases_and_views() {
+    use bit_string::{AnchorHint, ContainsOptions, FindOptions, LocationHint};
+
+    for (haystack_text, needle_text) in [
+        ("1010101010110010101010", "101"),    // overlapping matches
+        ("1010101010110010101010", "111111"), // absent
+        ("1010101010110010101010", ""),       // empty needle
+        ("1010", "10101"),                    // oversized needle
+    ] {
+        let haystack_owner = bs(haystack_text);
+        let needle_owner = bs(needle_text);
+        let haystack_source = padded_bits(haystack_text, 3);
+        let needle_source = padded_bits(needle_text, 5);
+        let haystack_view = haystack_source
+            .as_bit_str()
+            .slice_from(3)
+            .slice_until(haystack_text.len());
+        let needle_view = needle_source
+            .as_bit_str()
+            .slice_from(5)
+            .slice_until(needle_text.len());
+
+        let expected_find = reference_find(haystack_view, needle_view);
+        let expected_rfind = reference_rfind(haystack_view, needle_view);
+        assert_eq!(
+            expected_find,
+            reference_find(haystack_owner.as_bit_str(), needle_owner.as_bit_str())
+        );
+        assert_eq!(
+            expected_rfind,
+            reference_rfind(haystack_owner.as_bit_str(), needle_owner.as_bit_str())
+        );
+        let expected_contains = expected_find.is_some();
+
+        for anchor in [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix] {
+            let find_options = FindOptions::default().with_anchor(anchor);
+            assert_eq!(
+                haystack_view.find_str_with(needle_view, find_options),
+                expected_find,
+                "find view: {haystack_text:?} / {needle_text:?} / {anchor:?}"
+            );
+            assert_eq!(
+                haystack_view.find_string_with(&needle_owner, find_options),
+                expected_find
+            );
+            assert_eq!(
+                haystack_owner.find_str_with(needle_view, find_options),
+                expected_find
+            );
+            assert_eq!(
+                haystack_owner.find_string_with(&needle_owner, find_options),
+                expected_find
+            );
+            assert_eq!(
+                haystack_view.rfind_str_with(needle_view, find_options),
+                expected_rfind
+            );
+            assert_eq!(
+                haystack_view.rfind_string_with(&needle_owner, find_options),
+                expected_rfind
+            );
+            assert_eq!(
+                haystack_owner.rfind_str_with(needle_view, find_options),
+                expected_rfind
+            );
+            assert_eq!(
+                haystack_owner.rfind_string_with(&needle_owner, find_options),
+                expected_rfind
+            );
+        }
+
+        for anchor in [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix] {
+            for location in [
+                LocationHint::Unknown,
+                LocationHint::NearStart,
+                LocationHint::NearEnd,
+            ] {
+                let contains_options = ContainsOptions::default()
+                    .with_anchor(anchor)
+                    .with_location(location);
+                assert_eq!(
+                    haystack_view.contains_str_with(needle_view, contains_options),
+                    expected_contains
+                );
+                assert_eq!(
+                    haystack_view.contains_string_with(&needle_owner, contains_options),
+                    expected_contains
+                );
+                assert_eq!(
+                    haystack_owner.contains_str_with(needle_view, contains_options),
+                    expected_contains
+                );
+                assert_eq!(
+                    haystack_owner.contains_string_with(&needle_owner, contains_options),
+                    expected_contains
+                );
+            }
+        }
+    }
 }
 
 #[test]
