@@ -1,4 +1,4 @@
-use crate::BitString;
+use crate::{BitString, ContainsOptions, FindOptions};
 
 // ---------------------------------------------------------------------------
 // contains
@@ -133,4 +133,50 @@ fn find_and_rfind_needle_appears_once() {
     let bs = BitString::try_from("101").unwrap();
     assert_eq!(v.find_str(bs.as_bit_str()), Some(1));
     assert_eq!(v.rfind_str(bs.as_bit_str()), Some(1));
+}
+
+#[test]
+fn with_entrypoints_preserve_bit_search_semantics() {
+    let bits = BitString::try_from("10110010").unwrap();
+    let needle = BitString::try_from("10").unwrap();
+    let view = bits.as_bit_str();
+
+    assert!(view.contains_str_with(needle.as_bit_str(), ContainsOptions::default()));
+    assert!(view.contains_string_with(&needle, ContainsOptions::default()));
+    assert!(bits.contains_str_with(needle.as_bit_str(), ContainsOptions::default()));
+    assert!(bits.contains_string_with(&needle, ContainsOptions::default()));
+
+    assert_eq!(
+        view.find_str_with(needle.as_bit_str(), FindOptions::default()),
+        Some(0)
+    );
+    assert_eq!(
+        view.find_string_with(&needle, FindOptions::default()),
+        Some(0)
+    );
+    assert_eq!(
+        bits.find_str_with(needle.as_bit_str(), FindOptions::default()),
+        Some(0)
+    );
+    assert_eq!(
+        bits.find_string_with(&needle, FindOptions::default()),
+        Some(0)
+    );
+
+    assert_eq!(
+        view.rfind_str_with(needle.as_bit_str(), FindOptions::default()),
+        Some(6)
+    );
+    assert_eq!(
+        view.rfind_string_with(&needle, FindOptions::default()),
+        Some(6)
+    );
+    assert_eq!(
+        bits.rfind_str_with(needle.as_bit_str(), FindOptions::default()),
+        Some(6)
+    );
+    assert_eq!(
+        bits.rfind_string_with(&needle, FindOptions::default()),
+        Some(6)
+    );
 }
