@@ -23,16 +23,25 @@ where
         self.bits.ends_with_string(&suffix.bits)
     }
 
+    /// Returns whether `needle` occurs at a character boundary in this string.
+    ///
+    /// The supplied options are workload hints and do not change matching semantics.
     pub fn contains_with(&self, needle: &Self, _options: ContainsOptions) -> bool {
         (0..=self.char_len().saturating_sub(needle.char_len()))
             .any(|index| self.matches_at(index, needle))
     }
 
+    /// Returns the character index, relative to this string, of the first occurrence of `needle`.
+    ///
+    /// The supplied options are workload hints and do not change matching semantics.
     pub fn find_with(&self, needle: &Self, _options: FindOptions) -> Option<usize> {
         (0..=self.char_len().saturating_sub(needle.char_len()))
             .find(|&index| self.matches_at(index, needle))
     }
 
+    /// Returns the character index, relative to this string, of the last occurrence of `needle`.
+    ///
+    /// The supplied options are workload hints and do not change matching semantics.
     pub fn rfind_with(&self, needle: &Self, _options: FindOptions) -> Option<usize> {
         (0..=self.char_len().saturating_sub(needle.char_len()))
             .rev()
