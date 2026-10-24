@@ -61,44 +61,4 @@ impl BitString {
         self.as_bit_str()
             .rfind_inner::<true, true>(needle.as_bit_str())
     }
-
-    // -------------------------------------------------------------------
-    // _str methods — needle is BitStr (hs is BitString-aligned)
-    // -------------------------------------------------------------------
-
-    /// Returns `true` if `needle` is contained within `self`.
-    #[inline]
-    pub fn contains_str(&self, needle: crate::BitStr<'_>) -> bool {
-        self.contains_str_with(needle, ContainsOptions::default())
-    }
-
-    #[inline]
-    pub fn find_str(&self, needle: crate::BitStr<'_>) -> Option<usize> {
-        self.find_str_with(needle, FindOptions::default())
-    }
-
-    #[inline]
-    pub fn rfind_str(&self, needle: crate::BitStr<'_>) -> Option<usize> {
-        self.rfind_str_with(needle, FindOptions::default())
-    }
-
-    // -------------------------------------------------------------------
-    // _string methods — both sides are BitString (double word-aligned)
-    // -------------------------------------------------------------------
-
-    /// Returns `true` if `needle` is contained within `self`.
-    #[inline]
-    pub fn contains_string(&self, needle: &BitString) -> bool {
-        self.contains_string_with(needle, ContainsOptions::default())
-    }
-
-    #[inline]
-    pub fn find_string(&self, needle: &BitString) -> Option<usize> {
-        self.find_string_with(needle, FindOptions::default())
-    }
-
-    #[inline]
-    pub fn rfind_string(&self, needle: &BitString) -> Option<usize> {
-        self.rfind_string_with(needle, FindOptions::default())
-    }
 }

@@ -88,31 +88,6 @@ impl<'bs> BitStr<'bs> {
             self.rfind_inner::<false, true>(n)
         }
     }
-
-    #[inline]
-    pub fn contains_str(&self, needle: BitStr<'_>) -> bool {
-        self.contains_str_with(needle, ContainsOptions::default())
-    }
-    #[inline]
-    pub fn contains_string(&self, needle: &crate::BitString) -> bool {
-        self.contains_string_with(needle, ContainsOptions::default())
-    }
-    #[inline]
-    pub fn find_str(&self, needle: BitStr<'_>) -> Option<usize> {
-        self.find_str_with(needle, FindOptions::default())
-    }
-    #[inline]
-    pub fn find_string(&self, needle: &crate::BitString) -> Option<usize> {
-        self.find_string_with(needle, FindOptions::default())
-    }
-    #[inline]
-    pub fn rfind_str(&self, needle: BitStr<'_>) -> Option<usize> {
-        self.rfind_str_with(needle, FindOptions::default())
-    }
-    #[inline]
-    pub fn rfind_string(&self, needle: &crate::BitString) -> Option<usize> {
-        self.rfind_string_with(needle, FindOptions::default())
-    }
 }
 
 #[cfg(test)]
