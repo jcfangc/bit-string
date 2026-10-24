@@ -150,8 +150,14 @@ fn attack_find_empty_needle() {
     let empty_binding2 = BitString::new();
     let needle = empty_binding2.as_bit_str();
 
-    assert_eq!(bits.find_str(needle), Some(0));
-    assert_eq!(bits.rfind_str(needle), Some(5)); // rfind with empty returns len
+    assert_eq!(
+        bits.find_str_with(needle, bit_string::FindOptions::default()),
+        Some(0)
+    );
+    assert_eq!(
+        bits.rfind_str_with(needle, bit_string::FindOptions::default()),
+        Some(5)
+    ); // rfind with empty returns len
 }
 
 #[test]
@@ -159,9 +165,15 @@ fn attack_find_needle_longer_than_haystack() {
     let bits = bs("10");
     let binding3 = bs("101");
     let needle = binding3.as_bit_str();
-    assert_eq!(bits.find_str(needle), None);
-    assert_eq!(bits.rfind_str(needle), None);
-    assert!(!bits.contains_str(needle));
+    assert_eq!(
+        bits.find_str_with(needle, bit_string::FindOptions::default()),
+        None
+    );
+    assert_eq!(
+        bits.rfind_str_with(needle, bit_string::FindOptions::default()),
+        None
+    );
+    assert!(!bits.contains_str_with(needle, bit_string::ContainsOptions::default()));
 }
 
 #[test]
@@ -173,9 +185,15 @@ fn attack_find_at_word_boundaries() {
     let binding4 = bs("101");
     let needle = binding4.as_bit_str();
 
-    assert_eq!(bits.find_str(needle), Some(128));
-    assert_eq!(bits.rfind_str(needle), Some(128));
-    assert!(bits.contains_str(needle));
+    assert_eq!(
+        bits.find_str_with(needle, bit_string::FindOptions::default()),
+        Some(128)
+    );
+    assert_eq!(
+        bits.rfind_str_with(needle, bit_string::FindOptions::default()),
+        Some(128)
+    );
+    assert!(bits.contains_str_with(needle, bit_string::ContainsOptions::default()));
 }
 
 #[test]
@@ -186,10 +204,10 @@ fn attack_find_pattern_at_word_edge() {
         let pattern = bs("110011");
         bits.replace_assign(offset, &pattern);
 
-        let found = bits.find_str(pattern.as_bit_str());
+        let found = bits.find_str_with(pattern.as_bit_str(), bit_string::FindOptions::default());
         assert_eq!(found, Some(offset), "find failed at offset {offset}");
 
-        let rfound = bits.rfind_str(pattern.as_bit_str());
+        let rfound = bits.rfind_str_with(pattern.as_bit_str(), bit_string::FindOptions::default());
         assert_eq!(rfound, Some(offset), "rfind failed at offset {offset}");
     }
 }
@@ -200,13 +218,23 @@ fn attack_find_multiple_occurrences() {
     let binding5 = bs("101");
     let needle = binding5.as_bit_str();
 
-    assert_eq!(bits.find_str(needle), Some(0));
-    assert_eq!(bits.rfind_str(needle), Some(126)); // 0 + 3 + 60 + 3 + 60 = 126
+    assert_eq!(
+        bits.find_str_with(needle, bit_string::FindOptions::default()),
+        Some(0)
+    );
+    assert_eq!(
+        bits.rfind_str_with(needle, bit_string::FindOptions::default()),
+        Some(126)
+    ); // 0 + 3 + 60 + 3 + 60 = 126
 
     // Find all occurrences
     let mut pos = 0;
     let mut count = 0;
-    while let Some(p) = bits.as_bit_str().slice_from(pos).find_str(needle) {
+    while let Some(p) = bits
+        .as_bit_str()
+        .slice_from(pos)
+        .find_str_with(needle, bit_string::FindOptions::default())
+    {
         count += 1;
         pos += p + needle.bit_len();
     }
@@ -284,9 +312,15 @@ fn attack_find_on_unaligned_haystack_aligned_needle() {
         .as_bit_str()
         .slice(UsizeCO::checked_from_start_len(3, 20).unwrap());
     let needle = bs("101");
-    assert_eq!(view.find_str(needle.as_bit_str()), Some(7));
-    assert_eq!(view.rfind_str(needle.as_bit_str()), Some(7));
-    assert!(view.contains_str(needle.as_bit_str()));
+    assert_eq!(
+        view.find_str_with(needle.as_bit_str(), bit_string::FindOptions::default()),
+        Some(7)
+    );
+    assert_eq!(
+        view.rfind_str_with(needle.as_bit_str(), bit_string::FindOptions::default()),
+        Some(7)
+    );
+    assert!(view.contains_str_with(needle.as_bit_str(), bit_string::ContainsOptions::default()));
 }
 
 #[test]
@@ -307,8 +341,11 @@ fn attack_find_on_unaligned_haystack_unaligned_needle() {
     let hay_view = hay
         .as_bit_str()
         .slice(UsizeCO::checked_from_start_len(1, 18).unwrap());
-    assert_eq!(hay_view.find_str(needle_view), Some(4));
-    assert!(hay_view.contains_str(needle_view));
+    assert_eq!(
+        hay_view.find_str_with(needle_view, bit_string::FindOptions::default()),
+        Some(4)
+    );
+    assert!(hay_view.contains_str_with(needle_view, bit_string::ContainsOptions::default()));
 }
 
 #[test]
@@ -326,11 +363,20 @@ fn attack_find_unaligned_multiple_occurrences() {
         .as_bit_str()
         .slice(UsizeCO::checked_from_start_len(2, 132).unwrap());
     let needle = bs("101");
-    assert_eq!(view.find_str(needle.as_bit_str()), Some(3));
-    assert_eq!(view.rfind_str(needle.as_bit_str()), Some(129));
+    assert_eq!(
+        view.find_str_with(needle.as_bit_str(), bit_string::FindOptions::default()),
+        Some(3)
+    );
+    assert_eq!(
+        view.rfind_str_with(needle.as_bit_str(), bit_string::FindOptions::default()),
+        Some(129)
+    );
     let mut pos = 0;
     let mut count = 0;
-    while let Some(p) = view.slice_from(pos).find_str(needle.as_bit_str()) {
+    while let Some(p) = view
+        .slice_from(pos)
+        .find_str_with(needle.as_bit_str(), bit_string::FindOptions::default())
+    {
         count += 1;
         pos += p + 3;
     }
@@ -347,8 +393,14 @@ fn attack_contains_on_unaligned_short_haystack() {
     let view = a
         .as_bit_str()
         .slice(UsizeCO::checked_from_start_len(37, 20).unwrap());
-    assert!(view.contains_str(bs("101").as_bit_str()));
-    assert!(!view.contains_str(bs("111").as_bit_str()));
+    assert!(view.contains_str_with(
+        bs("101").as_bit_str(),
+        bit_string::ContainsOptions::default()
+    ));
+    assert!(!view.contains_str_with(
+        bs("111").as_bit_str(),
+        bit_string::ContainsOptions::default()
+    ));
 }
 
 // ===========================================================================

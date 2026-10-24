@@ -167,9 +167,9 @@ assert!(!haystack.ends_with_string(&needle));
 assert!(!haystack.starts_with_string(&needle));
 
 // Substring search
-assert!(haystack.contains_string(&needle));
-assert_eq!(haystack.find_string(&needle), Some(1));   // "01" starts at index 1
-assert_eq!(haystack.rfind_string(&needle), Some(3));  // last "01" starts at index 3
+assert!(haystack.contains_string_with(&needle, bit_string::ContainsOptions::default()));
+assert_eq!(haystack.find_string_with(&needle, bit_string::FindOptions::default()), Some(1));   // "01" starts at index 1
+assert_eq!(haystack.rfind_string_with(&needle, bit_string::FindOptions::default()), Some(3));  // last "01" starts at index 3
 
 // Strip
 let s = BitString::try_from("00010100").unwrap();

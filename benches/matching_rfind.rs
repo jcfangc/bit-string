@@ -123,10 +123,20 @@ fn rfind_65536_miss_native(b: Bencher) {
 // -- helpers ----------------------------------------------------------------
 
 fn b_str(b: Bencher, c: NeedleCase) {
-    b.bench(|| black_box(&c.haystack_bits).rfind_str(black_box(c.needle_bits.as_bit_str())));
+    b.bench(|| {
+        black_box(&c.haystack_bits).rfind_str_with(
+            black_box(c.needle_bits.as_bit_str()),
+            bit_string::FindOptions::default(),
+        )
+    });
 }
 fn b_string(b: Bencher, c: NeedleCase) {
-    b.bench(|| black_box(&c.haystack_bits).rfind_string(black_box(&c.needle_bits)));
+    b.bench(|| {
+        black_box(&c.haystack_bits).rfind_string_with(
+            black_box(&c.needle_bits),
+            bit_string::FindOptions::default(),
+        )
+    });
 }
 fn b_native(b: Bencher, c: NeedleCase) {
     b.bench(|| black_box(&c.haystack_string).rfind(black_box(&c.needle_string)));
