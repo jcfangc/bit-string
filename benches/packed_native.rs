@@ -27,7 +27,9 @@ fn find_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
         value.find_with(&needle, bit_string::FindOptions::default()),
         Some(start)
     );
-    bencher.bench(|| black_box(value.find_with(&needle, bit_string::FindOptions::default())));
+    bencher.bench(|| {
+        black_box(&value).find_with(black_box(&needle), bit_string::FindOptions::default())
+    });
 }
 
 fn find_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -40,7 +42,9 @@ fn find_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
         value.find_with(needle, bit_string::FindOptions::default()),
         Some(start)
     );
-    bencher.bench(|| black_box(value.find_with(needle, bit_string::FindOptions::default())));
+    bencher.bench(|| {
+        black_box(value).find_with(black_box(needle), bit_string::FindOptions::default())
+    });
 }
 
 fn find_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -51,7 +55,9 @@ fn find_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
         value.find_with(&needle, bit_string::FindOptions::default()),
         None
     );
-    bencher.bench(|| black_box(value.find_with(&needle, bit_string::FindOptions::default())));
+    bencher.bench(|| {
+        black_box(&value).find_with(black_box(&needle), bit_string::FindOptions::default())
+    });
 }
 
 fn find_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -64,7 +70,9 @@ fn find_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
         value.find_with(needle, bit_string::FindOptions::default()),
         None
     );
-    bencher.bench(|| black_box(value.find_with(needle, bit_string::FindOptions::default())));
+    bencher.bench(|| {
+        black_box(value).find_with(black_box(needle), bit_string::FindOptions::default())
+    });
 }
 
 fn rfind_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -75,7 +83,9 @@ fn rfind_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
         value.rfind_with(&needle, bit_string::FindOptions::default()),
         Some(start)
     );
-    bencher.bench(|| black_box(value.rfind_with(&needle, bit_string::FindOptions::default())));
+    bencher.bench(|| {
+        black_box(&value).rfind_with(black_box(&needle), bit_string::FindOptions::default())
+    });
 }
 
 fn rfind_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -88,7 +98,9 @@ fn rfind_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
         value.rfind_with(needle, bit_string::FindOptions::default()),
         Some(start)
     );
-    bencher.bench(|| black_box(value.rfind_with(needle, bit_string::FindOptions::default())));
+    bencher.bench(|| {
+        black_box(value).rfind_with(black_box(needle), bit_string::FindOptions::default())
+    });
 }
 
 fn rfind_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -99,7 +111,9 @@ fn rfind_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
         value.rfind_with(&needle, bit_string::FindOptions::default()),
         None
     );
-    bencher.bench(|| black_box(value.rfind_with(&needle, bit_string::FindOptions::default())));
+    bencher.bench(|| {
+        black_box(&value).rfind_with(black_box(&needle), bit_string::FindOptions::default())
+    });
 }
 
 fn rfind_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -112,7 +126,9 @@ fn rfind_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
         value.rfind_with(needle, bit_string::FindOptions::default()),
         None
     );
-    bencher.bench(|| black_box(value.rfind_with(needle, bit_string::FindOptions::default())));
+    bencher.bench(|| {
+        black_box(value).rfind_with(black_box(needle), bit_string::FindOptions::default())
+    });
 }
 
 fn contains_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -124,8 +140,9 @@ fn contains_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
         Some(start)
     );
     assert!(value.contains_with(&needle, bit_string::ContainsOptions::default()));
-    bencher
-        .bench(|| black_box(value.contains_with(&needle, bit_string::ContainsOptions::default())));
+    bencher.bench(|| {
+        black_box(&value).contains_with(black_box(&needle), bit_string::ContainsOptions::default())
+    });
 }
 
 fn contains_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -139,8 +156,9 @@ fn contains_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
         Some(start)
     );
     assert!(value.contains_with(needle, bit_string::ContainsOptions::default()));
-    bencher
-        .bench(|| black_box(value.contains_with(needle, bit_string::ContainsOptions::default())));
+    bencher.bench(|| {
+        black_box(value).contains_with(black_box(needle), bit_string::ContainsOptions::default())
+    });
 }
 
 fn contains_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -148,8 +166,9 @@ fn contains_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
     assert!(!value.contains_with(&needle, bit_string::ContainsOptions::default()));
-    bencher
-        .bench(|| black_box(value.contains_with(&needle, bit_string::ContainsOptions::default())));
+    bencher.bench(|| {
+        black_box(&value).contains_with(black_box(&needle), bit_string::ContainsOptions::default())
+    });
 }
 
 fn contains_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -159,8 +178,9 @@ fn contains_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
     assert!(!value.contains_with(needle, bit_string::ContainsOptions::default()));
-    bencher
-        .bench(|| black_box(value.contains_with(needle, bit_string::ContainsOptions::default())));
+    bencher.bench(|| {
+        black_box(value).contains_with(black_box(needle), bit_string::ContainsOptions::default())
+    });
 }
 
 fn matches_at_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
