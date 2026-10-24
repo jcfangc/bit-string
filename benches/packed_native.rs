@@ -23,8 +23,11 @@ fn find_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let (input, needle_input, start) = present_case::<BITS>(len, false);
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
-    assert_eq!(value.find(&needle), Some(start));
-    bencher.bench(|| black_box(value.find(&needle)));
+    assert_eq!(
+        value.find_with(&needle, bit_string::FindOptions::default()),
+        Some(start)
+    );
+    bencher.bench(|| black_box(value.find_with(&needle, bit_string::FindOptions::default())));
 }
 
 fn find_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -33,16 +36,22 @@ fn find_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let needle_owner = packed::<BITS>(&needle_input);
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
-    assert_eq!(value.find(needle), Some(start));
-    bencher.bench(|| black_box(value.find(needle)));
+    assert_eq!(
+        value.find_with(needle, bit_string::FindOptions::default()),
+        Some(start)
+    );
+    bencher.bench(|| black_box(value.find_with(needle, bit_string::FindOptions::default())));
 }
 
 fn find_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let (input, needle_input) = absent_case::<BITS>(len);
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
-    assert_eq!(value.find(&needle), None);
-    bencher.bench(|| black_box(value.find(&needle)));
+    assert_eq!(
+        value.find_with(&needle, bit_string::FindOptions::default()),
+        None
+    );
+    bencher.bench(|| black_box(value.find_with(&needle, bit_string::FindOptions::default())));
 }
 
 fn find_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -51,16 +60,22 @@ fn find_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let needle_owner = packed::<BITS>(&needle_input);
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
-    assert_eq!(value.find(needle), None);
-    bencher.bench(|| black_box(value.find(needle)));
+    assert_eq!(
+        value.find_with(needle, bit_string::FindOptions::default()),
+        None
+    );
+    bencher.bench(|| black_box(value.find_with(needle, bit_string::FindOptions::default())));
 }
 
 fn rfind_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let (input, needle_input, start) = present_case::<BITS>(len, true);
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
-    assert_eq!(value.rfind(&needle), Some(start));
-    bencher.bench(|| black_box(value.rfind(&needle)));
+    assert_eq!(
+        value.rfind_with(&needle, bit_string::FindOptions::default()),
+        Some(start)
+    );
+    bencher.bench(|| black_box(value.rfind_with(&needle, bit_string::FindOptions::default())));
 }
 
 fn rfind_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -69,16 +84,22 @@ fn rfind_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let needle_owner = packed::<BITS>(&needle_input);
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
-    assert_eq!(value.rfind(needle), Some(start));
-    bencher.bench(|| black_box(value.rfind(needle)));
+    assert_eq!(
+        value.rfind_with(needle, bit_string::FindOptions::default()),
+        Some(start)
+    );
+    bencher.bench(|| black_box(value.rfind_with(needle, bit_string::FindOptions::default())));
 }
 
 fn rfind_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let (input, needle_input) = absent_case::<BITS>(len);
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
-    assert_eq!(value.rfind(&needle), None);
-    bencher.bench(|| black_box(value.rfind(&needle)));
+    assert_eq!(
+        value.rfind_with(&needle, bit_string::FindOptions::default()),
+        None
+    );
+    bencher.bench(|| black_box(value.rfind_with(&needle, bit_string::FindOptions::default())));
 }
 
 fn rfind_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -87,17 +108,24 @@ fn rfind_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let needle_owner = packed::<BITS>(&needle_input);
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
-    assert_eq!(value.rfind(needle), None);
-    bencher.bench(|| black_box(value.rfind(needle)));
+    assert_eq!(
+        value.rfind_with(needle, bit_string::FindOptions::default()),
+        None
+    );
+    bencher.bench(|| black_box(value.rfind_with(needle, bit_string::FindOptions::default())));
 }
 
 fn contains_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let (input, needle_input, start) = present_case::<BITS>(len, false);
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
-    assert_eq!(value.find(&needle), Some(start));
-    assert!(value.contains(&needle));
-    bencher.bench(|| black_box(value.contains(&needle)));
+    assert_eq!(
+        value.find_with(&needle, bit_string::FindOptions::default()),
+        Some(start)
+    );
+    assert!(value.contains_with(&needle, bit_string::ContainsOptions::default()));
+    bencher
+        .bench(|| black_box(value.contains_with(&needle, bit_string::ContainsOptions::default())));
 }
 
 fn contains_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -106,17 +134,22 @@ fn contains_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let needle_owner = packed::<BITS>(&needle_input);
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
-    assert_eq!(value.find(needle), Some(start));
-    assert!(value.contains(needle));
-    bencher.bench(|| black_box(value.contains(needle)));
+    assert_eq!(
+        value.find_with(needle, bit_string::FindOptions::default()),
+        Some(start)
+    );
+    assert!(value.contains_with(needle, bit_string::ContainsOptions::default()));
+    bencher
+        .bench(|| black_box(value.contains_with(needle, bit_string::ContainsOptions::default())));
 }
 
 fn contains_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let (input, needle_input) = absent_case::<BITS>(len);
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
-    assert!(!value.contains(&needle));
-    bencher.bench(|| black_box(value.contains(&needle)));
+    assert!(!value.contains_with(&needle, bit_string::ContainsOptions::default()));
+    bencher
+        .bench(|| black_box(value.contains_with(&needle, bit_string::ContainsOptions::default())));
 }
 
 fn contains_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -125,8 +158,9 @@ fn contains_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let needle_owner = packed::<BITS>(&needle_input);
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
-    assert!(!value.contains(needle));
-    bencher.bench(|| black_box(value.contains(needle)));
+    assert!(!value.contains_with(needle, bit_string::ContainsOptions::default()));
+    bencher
+        .bench(|| black_box(value.contains_with(needle, bit_string::ContainsOptions::default())));
 }
 
 fn matches_at_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {

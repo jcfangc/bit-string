@@ -15,8 +15,8 @@ proptest! {
         let expected_find = (0..=max_start).find(|&start| matches_at(&haystack, start, &needle));
         let expected_rfind = (0..=max_start).rev().find(|&start| matches_at(&haystack, start, &needle));
 
-        prop_assert_eq!(haystack_view.find(needle_view), expected_find);
-        prop_assert_eq!(haystack_view.rfind(needle_view), expected_rfind);
-        prop_assert_eq!(haystack_view.contains(needle_view), expected_find.is_some());
+        prop_assert_eq!(haystack_view.find_with(needle_view, bit_string::FindOptions::default()), expected_find);
+        prop_assert_eq!(haystack_view.rfind_with(needle_view, bit_string::FindOptions::default()), expected_rfind);
+        prop_assert_eq!(haystack_view.contains_with(needle_view, bit_string::ContainsOptions::default()), expected_find.is_some());
     }
 }

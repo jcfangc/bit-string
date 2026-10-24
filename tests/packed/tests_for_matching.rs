@@ -30,9 +30,6 @@ where
         .rev()
         .find(|&start| matches_at(haystack, start, needle));
 
-    assert_eq!(haystack_view.find(needle_view), expected_find);
-    assert_eq!(haystack_view.rfind(needle_view), expected_rfind);
-    assert_eq!(haystack_view.contains(needle_view), expected_find.is_some());
     assert_eq!(
         haystack_view.find_with(needle_view, FindOptions::default()),
         expected_find
