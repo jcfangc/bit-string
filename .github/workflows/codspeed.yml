@@ -19,7 +19,8 @@ jobs:
       runner: ubuntu-24.04
       build_command: RUSTFLAGS="-C target-feature=+avx2" cargo codspeed build -m simulation
       run_command: |
+        # Keep bit-level APIs and packed APIs in separate uploads.
+        cargo codspeed run -m simulation ours_bit
         cargo codspeed run -m simulation ours_packed
-        cargo codspeed run -m simulation 'ours_(str(_str|_string|_unaligned)?|string(_str|_string)?)$'
         cargo codspeed run -m simulation search_options/contains/
         cargo codspeed run -m simulation search_options/bit_contains/

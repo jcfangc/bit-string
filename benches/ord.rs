@@ -9,7 +9,7 @@ fn main() {
 // len = 64
 // ---------------------------------------------------------------------------
 
-#[divan::bench(name = "cmp/len_64/identical/ours_string")]
+#[divan::bench(name = "cmp/len_64/identical/ours_bit_string")]
 fn cmp_len_64_identical_bit_string(b: Bencher) {
     bench_bit_string(b, 64, CmpCase::Identical);
 }
@@ -24,7 +24,7 @@ fn cmp_len_64_identical_string(b: Bencher) {
     bench_string(b, 64, CmpCase::Identical);
 }
 
-#[divan::bench(name = "cmp/len_64/diff_first/ours_string")]
+#[divan::bench(name = "cmp/len_64/diff_first/ours_bit_string")]
 fn cmp_len_64_diff_first_bit_string(b: Bencher) {
     bench_bit_string(b, 64, CmpCase::DifferAtFirst);
 }
@@ -39,7 +39,7 @@ fn cmp_len_64_diff_first_string(b: Bencher) {
     bench_string(b, 64, CmpCase::DifferAtFirst);
 }
 
-#[divan::bench(name = "cmp/len_64/diff_last/ours_string")]
+#[divan::bench(name = "cmp/len_64/diff_last/ours_bit_string")]
 fn cmp_len_64_diff_last_bit_string(b: Bencher) {
     bench_bit_string(b, 64, CmpCase::DifferAtLast);
 }
@@ -58,7 +58,7 @@ fn cmp_len_64_diff_last_string(b: Bencher) {
 // len = 65 (one full word plus a partial-word tail)
 // ---------------------------------------------------------------------------
 
-#[divan::bench(name = "cmp/len_65/identical/ours_string")]
+#[divan::bench(name = "cmp/len_65/identical/ours_bit_string")]
 fn cmp_len_65_identical_bit_string(b: Bencher) {
     bench_bit_string(b, 65, CmpCase::Identical);
 }
@@ -68,7 +68,7 @@ fn cmp_len_65_identical_bit_str_unaligned(b: Bencher) {
     bench_bit_str_unaligned(b, 65, CmpCase::Identical);
 }
 
-#[divan::bench(name = "cmp/len_65/diff_last/ours_string")]
+#[divan::bench(name = "cmp/len_65/diff_last/ours_bit_string")]
 fn cmp_len_65_diff_last_bit_string(b: Bencher) {
     bench_bit_string(b, 65, CmpCase::DifferAtLast);
 }
@@ -82,7 +82,7 @@ fn cmp_len_65_diff_last_bit_str_unaligned(b: Bencher) {
 // len = 4096
 // ---------------------------------------------------------------------------
 
-#[divan::bench(name = "cmp/len_4096/identical/ours_string")]
+#[divan::bench(name = "cmp/len_4096/identical/ours_bit_string")]
 fn cmp_len_4096_identical_bit_string(b: Bencher) {
     bench_bit_string(b, 4096, CmpCase::Identical);
 }
@@ -97,7 +97,7 @@ fn cmp_len_4096_identical_string(b: Bencher) {
     bench_string(b, 4096, CmpCase::Identical);
 }
 
-#[divan::bench(name = "cmp/len_4096/diff_first/ours_string")]
+#[divan::bench(name = "cmp/len_4096/diff_first/ours_bit_string")]
 fn cmp_len_4096_diff_first_bit_string(b: Bencher) {
     bench_bit_string(b, 4096, CmpCase::DifferAtFirst);
 }
@@ -112,7 +112,7 @@ fn cmp_len_4096_diff_first_string(b: Bencher) {
     bench_string(b, 4096, CmpCase::DifferAtFirst);
 }
 
-#[divan::bench(name = "cmp/len_4096/diff_last/ours_string")]
+#[divan::bench(name = "cmp/len_4096/diff_last/ours_bit_string")]
 fn cmp_len_4096_diff_last_bit_string(b: Bencher) {
     bench_bit_string(b, 4096, CmpCase::DifferAtLast);
 }
@@ -131,7 +131,7 @@ fn cmp_len_4096_diff_last_string(b: Bencher) {
 // len = 65536
 // ---------------------------------------------------------------------------
 
-#[divan::bench(name = "cmp/len_65536/identical/ours_string")]
+#[divan::bench(name = "cmp/len_65536/identical/ours_bit_string")]
 fn cmp_len_65536_identical_bit_string(b: Bencher) {
     bench_bit_string(b, 65536, CmpCase::Identical);
 }
@@ -146,7 +146,7 @@ fn cmp_len_65536_identical_string(b: Bencher) {
     bench_string(b, 65536, CmpCase::Identical);
 }
 
-#[divan::bench(name = "cmp/len_65536/diff_first/ours_string")]
+#[divan::bench(name = "cmp/len_65536/diff_first/ours_bit_string")]
 fn cmp_len_65536_diff_first_bit_string(b: Bencher) {
     bench_bit_string(b, 65536, CmpCase::DifferAtFirst);
 }
@@ -161,7 +161,7 @@ fn cmp_len_65536_diff_first_string(b: Bencher) {
     bench_string(b, 65536, CmpCase::DifferAtFirst);
 }
 
-#[divan::bench(name = "cmp/len_65536/diff_last/ours_string")]
+#[divan::bench(name = "cmp/len_65536/diff_last/ours_bit_string")]
 fn cmp_len_65536_diff_last_bit_string(b: Bencher) {
     bench_bit_string(b, 65536, CmpCase::DifferAtLast);
 }

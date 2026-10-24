@@ -14,11 +14,11 @@ struct NeedleCase {
 
 // -- rfind/len_65 -----------------------------------------------------------
 
-#[divan::bench(name = "rfind/len_65/front/ours_string_str")]
+#[divan::bench(name = "rfind/len_65/front/ours_bit_string_str")]
 fn rfind_65_front_str(b: Bencher) {
     b_str(b, make_case(65, 0));
 }
-#[divan::bench(name = "rfind/len_65/front/ours_string_string")]
+#[divan::bench(name = "rfind/len_65/front/ours_bit_string_string")]
 fn rfind_65_front_string(b: Bencher) {
     b_string(b, make_case(65, 0));
 }
@@ -27,11 +27,11 @@ fn rfind_65_front_native(b: Bencher) {
     b_native(b, make_case(65, 0));
 }
 
-#[divan::bench(name = "rfind/len_65/middle/ours_string_str")]
+#[divan::bench(name = "rfind/len_65/middle/ours_bit_string_str")]
 fn rfind_65_middle_str(b: Bencher) {
     b_str(b, middle_case(65));
 }
-#[divan::bench(name = "rfind/len_65/middle/ours_string_string")]
+#[divan::bench(name = "rfind/len_65/middle/ours_bit_string_string")]
 fn rfind_65_middle_string(b: Bencher) {
     b_string(b, middle_case(65));
 }
@@ -40,11 +40,11 @@ fn rfind_65_middle_native(b: Bencher) {
     b_native(b, middle_case(65));
 }
 
-#[divan::bench(name = "rfind/len_65/end/ours_string_str")]
+#[divan::bench(name = "rfind/len_65/end/ours_bit_string_str")]
 fn rfind_65_end_str(b: Bencher) {
     b_str(b, end_case(65));
 }
-#[divan::bench(name = "rfind/len_65/end/ours_string_string")]
+#[divan::bench(name = "rfind/len_65/end/ours_bit_string_string")]
 fn rfind_65_end_string(b: Bencher) {
     b_string(b, end_case(65));
 }
@@ -53,11 +53,11 @@ fn rfind_65_end_native(b: Bencher) {
     b_native(b, end_case(65));
 }
 
-#[divan::bench(name = "rfind/len_65/miss/ours_string_str")]
+#[divan::bench(name = "rfind/len_65/miss/ours_bit_string_str")]
 fn rfind_65_miss_str(b: Bencher) {
     b_str(b, miss_case(65));
 }
-#[divan::bench(name = "rfind/len_65/miss/ours_string_string")]
+#[divan::bench(name = "rfind/len_65/miss/ours_bit_string_string")]
 fn rfind_65_miss_string(b: Bencher) {
     b_string(b, miss_case(65));
 }
@@ -68,11 +68,11 @@ fn rfind_65_miss_native(b: Bencher) {
 
 // -- rfind/len_65536 --------------------------------------------------------
 
-#[divan::bench(name = "rfind/len_65536/front/ours_string_str")]
+#[divan::bench(name = "rfind/len_65536/front/ours_bit_string_str")]
 fn rfind_65536_front_str(b: Bencher) {
     b_str(b, make_case(65536, 0));
 }
-#[divan::bench(name = "rfind/len_65536/front/ours_string_string")]
+#[divan::bench(name = "rfind/len_65536/front/ours_bit_string_string")]
 fn rfind_65536_front_string(b: Bencher) {
     b_string(b, make_case(65536, 0));
 }
@@ -81,11 +81,11 @@ fn rfind_65536_front_native(b: Bencher) {
     b_native(b, make_case(65536, 0));
 }
 
-#[divan::bench(name = "rfind/len_65536/middle/ours_string_str")]
+#[divan::bench(name = "rfind/len_65536/middle/ours_bit_string_str")]
 fn rfind_65536_middle_str(b: Bencher) {
     b_str(b, middle_case(65536));
 }
-#[divan::bench(name = "rfind/len_65536/middle/ours_string_string")]
+#[divan::bench(name = "rfind/len_65536/middle/ours_bit_string_string")]
 fn rfind_65536_middle_string(b: Bencher) {
     b_string(b, middle_case(65536));
 }
@@ -94,11 +94,11 @@ fn rfind_65536_middle_native(b: Bencher) {
     b_native(b, middle_case(65536));
 }
 
-#[divan::bench(name = "rfind/len_65536/end/ours_string_str")]
+#[divan::bench(name = "rfind/len_65536/end/ours_bit_string_str")]
 fn rfind_65536_end_str(b: Bencher) {
     b_str(b, end_case(65536));
 }
-#[divan::bench(name = "rfind/len_65536/end/ours_string_string")]
+#[divan::bench(name = "rfind/len_65536/end/ours_bit_string_string")]
 fn rfind_65536_end_string(b: Bencher) {
     b_string(b, end_case(65536));
 }
@@ -107,11 +107,11 @@ fn rfind_65536_end_native(b: Bencher) {
     b_native(b, end_case(65536));
 }
 
-#[divan::bench(name = "rfind/len_65536/miss/ours_string_str")]
+#[divan::bench(name = "rfind/len_65536/miss/ours_bit_string_str")]
 fn rfind_65536_miss_str(b: Bencher) {
     b_str(b, miss_case(65536));
 }
-#[divan::bench(name = "rfind/len_65536/miss/ours_string_string")]
+#[divan::bench(name = "rfind/len_65536/miss/ours_bit_string_string")]
 fn rfind_65536_miss_string(b: Bencher) {
     b_string(b, miss_case(65536));
 }

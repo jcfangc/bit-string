@@ -14,11 +14,11 @@ struct NeedleCase {
 
 // -- find/len_65 ------------------------------------------------------------
 
-#[divan::bench(name = "find_str/len_65/front/ours_string_str")]
+#[divan::bench(name = "find_str/len_65/front/ours_bit_string_str")]
 fn find_65_front_str(b: Bencher) {
     bench_find_str(b, make_case(65, 0));
 }
-#[divan::bench(name = "find_str/len_65/front/ours_string_string")]
+#[divan::bench(name = "find_str/len_65/front/ours_bit_string_string")]
 fn find_65_front_string(b: Bencher) {
     bench_find_string(b, make_case(65, 0));
 }
@@ -27,11 +27,11 @@ fn find_65_front_native(b: Bencher) {
     bench_native_find(b, make_case(65, 0));
 }
 
-#[divan::bench(name = "find_str/len_65/middle/ours_string_str")]
+#[divan::bench(name = "find_str/len_65/middle/ours_bit_string_str")]
 fn find_65_middle_str(b: Bencher) {
     bench_find_str(b, middle_case(65));
 }
-#[divan::bench(name = "find_str/len_65/middle/ours_string_string")]
+#[divan::bench(name = "find_str/len_65/middle/ours_bit_string_string")]
 fn find_65_middle_string(b: Bencher) {
     bench_find_string(b, middle_case(65));
 }
@@ -40,11 +40,11 @@ fn find_65_middle_native(b: Bencher) {
     bench_native_find(b, middle_case(65));
 }
 
-#[divan::bench(name = "find_str/len_65/end/ours_string_str")]
+#[divan::bench(name = "find_str/len_65/end/ours_bit_string_str")]
 fn find_65_end_str(b: Bencher) {
     bench_find_str(b, end_case(65));
 }
-#[divan::bench(name = "find_str/len_65/end/ours_string_string")]
+#[divan::bench(name = "find_str/len_65/end/ours_bit_string_string")]
 fn find_65_end_string(b: Bencher) {
     bench_find_string(b, end_case(65));
 }
@@ -53,11 +53,11 @@ fn find_65_end_native(b: Bencher) {
     bench_native_find(b, end_case(65));
 }
 
-#[divan::bench(name = "find_str/len_65/miss/ours_string_str")]
+#[divan::bench(name = "find_str/len_65/miss/ours_bit_string_str")]
 fn find_65_miss_str(b: Bencher) {
     bench_find_str(b, miss_case(65));
 }
-#[divan::bench(name = "find_str/len_65/miss/ours_string_string")]
+#[divan::bench(name = "find_str/len_65/miss/ours_bit_string_string")]
 fn find_65_miss_string(b: Bencher) {
     bench_find_string(b, miss_case(65));
 }
@@ -68,11 +68,11 @@ fn find_65_miss_native(b: Bencher) {
 
 // -- find/len_65536 ---------------------------------------------------------
 
-#[divan::bench(name = "find_str/len_65536/front/ours_string_str")]
+#[divan::bench(name = "find_str/len_65536/front/ours_bit_string_str")]
 fn find_65536_front_str(b: Bencher) {
     bench_find_str(b, make_case(65536, 0));
 }
-#[divan::bench(name = "find_str/len_65536/front/ours_string_string")]
+#[divan::bench(name = "find_str/len_65536/front/ours_bit_string_string")]
 fn find_65536_front_string(b: Bencher) {
     bench_find_string(b, make_case(65536, 0));
 }
@@ -81,11 +81,11 @@ fn find_65536_front_native(b: Bencher) {
     bench_native_find(b, make_case(65536, 0));
 }
 
-#[divan::bench(name = "find_str/len_65536/middle/ours_string_str")]
+#[divan::bench(name = "find_str/len_65536/middle/ours_bit_string_str")]
 fn find_65536_middle_str(b: Bencher) {
     bench_find_str(b, middle_case(65536));
 }
-#[divan::bench(name = "find_str/len_65536/middle/ours_string_string")]
+#[divan::bench(name = "find_str/len_65536/middle/ours_bit_string_string")]
 fn find_65536_middle_string(b: Bencher) {
     bench_find_string(b, middle_case(65536));
 }
@@ -94,11 +94,11 @@ fn find_65536_middle_native(b: Bencher) {
     bench_native_find(b, middle_case(65536));
 }
 
-#[divan::bench(name = "find_str/len_65536/end/ours_string_str")]
+#[divan::bench(name = "find_str/len_65536/end/ours_bit_string_str")]
 fn find_65536_end_str(b: Bencher) {
     bench_find_str(b, end_case(65536));
 }
-#[divan::bench(name = "find_str/len_65536/end/ours_string_string")]
+#[divan::bench(name = "find_str/len_65536/end/ours_bit_string_string")]
 fn find_65536_end_string(b: Bencher) {
     bench_find_string(b, end_case(65536));
 }
@@ -107,11 +107,11 @@ fn find_65536_end_native(b: Bencher) {
     bench_native_find(b, end_case(65536));
 }
 
-#[divan::bench(name = "find_str/len_65536/miss/ours_string_str")]
+#[divan::bench(name = "find_str/len_65536/miss/ours_bit_string_str")]
 fn find_65536_miss_str(b: Bencher) {
     bench_find_str(b, miss_case(65536));
 }
-#[divan::bench(name = "find_str/len_65536/miss/ours_string_string")]
+#[divan::bench(name = "find_str/len_65536/miss/ours_bit_string_string")]
 fn find_65536_miss_string(b: Bencher) {
     bench_find_string(b, miss_case(65536));
 }
@@ -122,11 +122,11 @@ fn find_65536_miss_native(b: Bencher) {
 
 // -- contains/len_65 --------------------------------------------------------
 
-#[divan::bench(name = "contains_str/len_65/yes/ours_string_str")]
+#[divan::bench(name = "contains_str/len_65/yes/ours_bit_string_str")]
 fn contains_65_yes_str(b: Bencher) {
     bench_contains_str(b, make_case(65, 0));
 }
-#[divan::bench(name = "contains_str/len_65/yes/ours_string_string")]
+#[divan::bench(name = "contains_str/len_65/yes/ours_bit_string_string")]
 fn contains_65_yes_string(b: Bencher) {
     bench_contains_string(b, make_case(65, 0));
 }
@@ -135,11 +135,11 @@ fn contains_65_yes_native(b: Bencher) {
     bench_native_contains(b, make_case(65, 0));
 }
 
-#[divan::bench(name = "contains_str/len_65/no/ours_string_str")]
+#[divan::bench(name = "contains_str/len_65/no/ours_bit_string_str")]
 fn contains_65_no_str(b: Bencher) {
     bench_contains_str(b, miss_case(65));
 }
-#[divan::bench(name = "contains_str/len_65/no/ours_string_string")]
+#[divan::bench(name = "contains_str/len_65/no/ours_bit_string_string")]
 fn contains_65_no_string(b: Bencher) {
     bench_contains_string(b, miss_case(65));
 }
@@ -148,11 +148,11 @@ fn contains_65_no_native(b: Bencher) {
     bench_native_contains(b, miss_case(65));
 }
 
-#[divan::bench(name = "contains_str/len_65536/yes/ours_string_str")]
+#[divan::bench(name = "contains_str/len_65536/yes/ours_bit_string_str")]
 fn contains_65536_yes_str(b: Bencher) {
     bench_contains_str(b, make_case(65536, 0));
 }
-#[divan::bench(name = "contains_str/len_65536/yes/ours_string_string")]
+#[divan::bench(name = "contains_str/len_65536/yes/ours_bit_string_string")]
 fn contains_65536_yes_string(b: Bencher) {
     bench_contains_string(b, make_case(65536, 0));
 }
@@ -161,11 +161,11 @@ fn contains_65536_yes_native(b: Bencher) {
     bench_native_contains(b, make_case(65536, 0));
 }
 
-#[divan::bench(name = "contains_str/len_65536/no/ours_string_str")]
+#[divan::bench(name = "contains_str/len_65536/no/ours_bit_string_str")]
 fn contains_65536_no_str(b: Bencher) {
     bench_contains_str(b, miss_case(65536));
 }
-#[divan::bench(name = "contains_str/len_65536/no/ours_string_string")]
+#[divan::bench(name = "contains_str/len_65536/no/ours_bit_string_string")]
 fn contains_65536_no_string(b: Bencher) {
     bench_contains_string(b, miss_case(65536));
 }

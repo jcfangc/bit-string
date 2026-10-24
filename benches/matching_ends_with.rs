@@ -43,19 +43,19 @@ fn no(len: usize, sfx: usize) -> Case {
     }
 }
 
-#[divan::bench(name = "ends_with/len_65/hit/ours_str_str")]
+#[divan::bench(name = "ends_with/len_65/hit/ours_bit_str_str")]
 fn ends_65_hit_str_str(b: Bencher) {
     bench_str_str(b, &hit(65, 4));
 }
-#[divan::bench(name = "ends_with/len_65/hit/ours_str_string")]
+#[divan::bench(name = "ends_with/len_65/hit/ours_bit_str_string")]
 fn ends_65_hit_str_string(b: Bencher) {
     bench_str_string(b, &hit(65, 4));
 }
-#[divan::bench(name = "ends_with/len_65/hit/ours_string_str")]
+#[divan::bench(name = "ends_with/len_65/hit/ours_bit_string_str")]
 fn ends_65_hit_string_str(b: Bencher) {
     bench_string_str(b, &hit(65, 4));
 }
-#[divan::bench(name = "ends_with/len_65/hit/ours_string_string")]
+#[divan::bench(name = "ends_with/len_65/hit/ours_bit_string_string")]
 fn ends_65_hit_string_string(b: Bencher) {
     bench_string_string(b, &hit(65, 4));
 }
@@ -64,19 +64,19 @@ fn ends_65_hit_native(b: Bencher) {
     bench_native(b, &hit(65, 4));
 }
 
-#[divan::bench(name = "ends_with/len_65/miss/ours_str_str")]
+#[divan::bench(name = "ends_with/len_65/miss/ours_bit_str_str")]
 fn ends_65_miss_str_str(b: Bencher) {
     bench_str_str(b, &no(65, 4));
 }
-#[divan::bench(name = "ends_with/len_65/miss/ours_str_string")]
+#[divan::bench(name = "ends_with/len_65/miss/ours_bit_str_string")]
 fn ends_65_miss_str_string(b: Bencher) {
     bench_str_string(b, &no(65, 4));
 }
-#[divan::bench(name = "ends_with/len_65/miss/ours_string_str")]
+#[divan::bench(name = "ends_with/len_65/miss/ours_bit_string_str")]
 fn ends_65_miss_string_str(b: Bencher) {
     bench_string_str(b, &no(65, 4));
 }
-#[divan::bench(name = "ends_with/len_65/miss/ours_string_string")]
+#[divan::bench(name = "ends_with/len_65/miss/ours_bit_string_string")]
 fn ends_65_miss_string_string(b: Bencher) {
     bench_string_string(b, &no(65, 4));
 }
@@ -85,19 +85,19 @@ fn ends_65_miss_native(b: Bencher) {
     bench_native(b, &no(65, 4));
 }
 
-#[divan::bench(name = "ends_with/len_65536/hit/ours_str_str")]
+#[divan::bench(name = "ends_with/len_65536/hit/ours_bit_str_str")]
 fn ends_65536_hit_str_str(b: Bencher) {
     bench_str_str(b, &hit(65536, 128));
 }
-#[divan::bench(name = "ends_with/len_65536/hit/ours_str_string")]
+#[divan::bench(name = "ends_with/len_65536/hit/ours_bit_str_string")]
 fn ends_65536_hit_str_string(b: Bencher) {
     bench_str_string(b, &hit(65536, 128));
 }
-#[divan::bench(name = "ends_with/len_65536/hit/ours_string_str")]
+#[divan::bench(name = "ends_with/len_65536/hit/ours_bit_string_str")]
 fn ends_65536_hit_string_str(b: Bencher) {
     bench_string_str(b, &hit(65536, 128));
 }
-#[divan::bench(name = "ends_with/len_65536/hit/ours_string_string")]
+#[divan::bench(name = "ends_with/len_65536/hit/ours_bit_string_string")]
 fn ends_65536_hit_string_string(b: Bencher) {
     bench_string_string(b, &hit(65536, 128));
 }
@@ -106,19 +106,19 @@ fn ends_65536_hit_native(b: Bencher) {
     bench_native(b, &hit(65536, 128));
 }
 
-#[divan::bench(name = "ends_with/len_65536/miss/ours_str_str")]
+#[divan::bench(name = "ends_with/len_65536/miss/ours_bit_str_str")]
 fn ends_65536_miss_str_str(b: Bencher) {
     bench_str_str(b, &no(65536, 128));
 }
-#[divan::bench(name = "ends_with/len_65536/miss/ours_str_string")]
+#[divan::bench(name = "ends_with/len_65536/miss/ours_bit_str_string")]
 fn ends_65536_miss_str_string(b: Bencher) {
     bench_str_string(b, &no(65536, 128));
 }
-#[divan::bench(name = "ends_with/len_65536/miss/ours_string_str")]
+#[divan::bench(name = "ends_with/len_65536/miss/ours_bit_string_str")]
 fn ends_65536_miss_string_str(b: Bencher) {
     bench_string_str(b, &no(65536, 128));
 }
-#[divan::bench(name = "ends_with/len_65536/miss/ours_string_string")]
+#[divan::bench(name = "ends_with/len_65536/miss/ours_bit_string_string")]
 fn ends_65536_miss_string_string(b: Bencher) {
     bench_string_string(b, &no(65536, 128));
 }

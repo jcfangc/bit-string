@@ -14,11 +14,11 @@ enum Pattern {
     Dense,
 }
 
-#[divan::bench(name = "leading_zeros/len_65/all_zeros/ours_str")]
+#[divan::bench(name = "leading_zeros/len_65/all_zeros/ours_bit_str")]
 fn leading_65_zeros_str(b: Bencher) {
     bench_str(b, 65, Pattern::Zeros);
 }
-#[divan::bench(name = "leading_zeros/len_65/all_zeros/ours_string")]
+#[divan::bench(name = "leading_zeros/len_65/all_zeros/ours_bit_string")]
 fn leading_65_zeros_string(b: Bencher) {
     bench_string(b, 65, Pattern::Zeros);
 }
@@ -27,11 +27,11 @@ fn leading_65_zeros_bitvec(b: Bencher) {
     bench_bitvec(b, 65, Pattern::Zeros);
 }
 
-#[divan::bench(name = "leading_zeros/len_65/alternating/ours_str")]
+#[divan::bench(name = "leading_zeros/len_65/alternating/ours_bit_str")]
 fn leading_65_alternating_str(b: Bencher) {
     bench_str(b, 65, Pattern::Alternating);
 }
-#[divan::bench(name = "leading_zeros/len_65/alternating/ours_string")]
+#[divan::bench(name = "leading_zeros/len_65/alternating/ours_bit_string")]
 fn leading_65_alternating_string(b: Bencher) {
     bench_string(b, 65, Pattern::Alternating);
 }
@@ -40,11 +40,11 @@ fn leading_65_alternating_bitvec(b: Bencher) {
     bench_bitvec(b, 65, Pattern::Alternating);
 }
 
-#[divan::bench(name = "leading_zeros/len_65/dense/ours_str")]
+#[divan::bench(name = "leading_zeros/len_65/dense/ours_bit_str")]
 fn leading_65_dense_str(b: Bencher) {
     bench_str(b, 65, Pattern::Dense);
 }
-#[divan::bench(name = "leading_zeros/len_65/dense/ours_string")]
+#[divan::bench(name = "leading_zeros/len_65/dense/ours_bit_string")]
 fn leading_65_dense_string(b: Bencher) {
     bench_string(b, 65, Pattern::Dense);
 }
@@ -53,11 +53,11 @@ fn leading_65_dense_bitvec(b: Bencher) {
     bench_bitvec(b, 65, Pattern::Dense);
 }
 
-#[divan::bench(name = "leading_zeros/len_4096/all_zeros/ours_str")]
+#[divan::bench(name = "leading_zeros/len_4096/all_zeros/ours_bit_str")]
 fn leading_4096_zeros_str(b: Bencher) {
     bench_str(b, 4096, Pattern::Zeros);
 }
-#[divan::bench(name = "leading_zeros/len_4096/all_zeros/ours_string")]
+#[divan::bench(name = "leading_zeros/len_4096/all_zeros/ours_bit_string")]
 fn leading_4096_zeros_string(b: Bencher) {
     bench_string(b, 4096, Pattern::Zeros);
 }
@@ -66,11 +66,11 @@ fn leading_4096_zeros_bitvec(b: Bencher) {
     bench_bitvec(b, 4096, Pattern::Zeros);
 }
 
-#[divan::bench(name = "leading_zeros/len_4096/dense/ours_str")]
+#[divan::bench(name = "leading_zeros/len_4096/dense/ours_bit_str")]
 fn leading_4096_dense_str(b: Bencher) {
     bench_str(b, 4096, Pattern::Dense);
 }
-#[divan::bench(name = "leading_zeros/len_4096/dense/ours_string")]
+#[divan::bench(name = "leading_zeros/len_4096/dense/ours_bit_string")]
 fn leading_4096_dense_string(b: Bencher) {
     bench_string(b, 4096, Pattern::Dense);
 }
@@ -79,11 +79,11 @@ fn leading_4096_dense_bitvec(b: Bencher) {
     bench_bitvec(b, 4096, Pattern::Dense);
 }
 
-#[divan::bench(name = "leading_zeros/len_65536/all_zeros/ours_str")]
+#[divan::bench(name = "leading_zeros/len_65536/all_zeros/ours_bit_str")]
 fn leading_65536_zeros_str(b: Bencher) {
     bench_str(b, 65536, Pattern::Zeros);
 }
-#[divan::bench(name = "leading_zeros/len_65536/all_zeros/ours_string")]
+#[divan::bench(name = "leading_zeros/len_65536/all_zeros/ours_bit_string")]
 fn leading_65536_zeros_string(b: Bencher) {
     bench_string(b, 65536, Pattern::Zeros);
 }
@@ -92,15 +92,15 @@ fn leading_65536_zeros_bitvec(b: Bencher) {
     bench_bitvec(b, 65536, Pattern::Zeros);
 }
 
-#[divan::bench(name = "leading_zeros/unaligned_3/len_4096/all_zeros/ours_str")]
+#[divan::bench(name = "leading_zeros/unaligned_3/len_4096/all_zeros/ours_bit_str")]
 fn leading_unaligned_3_4096_zeros_str(b: Bencher) {
     bench_unaligned_str(b, 4096, 3, Pattern::Zeros);
 }
-#[divan::bench(name = "leading_zeros/unaligned_31/len_4096/all_zeros/ours_str")]
+#[divan::bench(name = "leading_zeros/unaligned_31/len_4096/all_zeros/ours_bit_str")]
 fn leading_unaligned_31_4096_zeros_str(b: Bencher) {
     bench_unaligned_str(b, 4096, 31, Pattern::Zeros);
 }
-#[divan::bench(name = "leading_zeros/unaligned_63/len_4096/all_zeros/ours_str")]
+#[divan::bench(name = "leading_zeros/unaligned_63/len_4096/all_zeros/ours_bit_str")]
 fn leading_unaligned_63_4096_zeros_str(b: Bencher) {
     bench_unaligned_str(b, 4096, 63, Pattern::Zeros);
 }
