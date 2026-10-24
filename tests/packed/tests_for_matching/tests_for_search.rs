@@ -1,4 +1,5 @@
 use super::*;
+use bit_string::{AnchorHint, ContainsOptions, FindOptions, LocationHint};
 
 #[test]
 fn packed_str_contains_searches_character_aligned_windows() {
@@ -48,10 +49,29 @@ fn packed_str_contains_searches_character_aligned_windows() {
     let offset_needle = offset_haystack.slice_from(1);
     let offset_different_owner = packed(&[2, 2]);
     let offset_different = offset_different_owner.as_packed_str();
-    assert!(offset_haystack.contains_with(offset_needle, bit_string::ContainsOptions::default()));
-    assert!(
-        !offset_haystack.contains_with(offset_different, bit_string::ContainsOptions::default())
-    );
+    for anchor in [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix] {
+        let find_options = FindOptions::default().with_anchor(anchor);
+        assert_eq!(
+            offset_haystack.find_with(offset_needle, find_options),
+            Some(1)
+        );
+        assert_eq!(
+            offset_haystack.rfind_with(offset_needle, find_options),
+            Some(1)
+        );
+
+        for location in [
+            LocationHint::Unknown,
+            LocationHint::NearStart,
+            LocationHint::NearEnd,
+        ] {
+            let options = ContainsOptions::default()
+                .with_anchor(anchor)
+                .with_location(location);
+            assert!(offset_haystack.contains_with(offset_needle, options));
+            assert!(!offset_haystack.contains_with(offset_different, options));
+        }
+    }
 
     let binary = packed_as::<super::PackedSymbol, 1>(&[0, 1, 1], |code| match code {
         0 => super::PackedSymbol::Zero,

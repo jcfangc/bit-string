@@ -1,7 +1,7 @@
 use super::{
     Oct, PackedString, PackedSymbol, SparseByte, Symbol, WideCode, oct, packed, packed_as, wide,
 };
-use bit_string::{ContainsOptions, FindOptions, traits::PackedChar};
+use bit_string::{AnchorHint, ContainsOptions, FindOptions, LocationHint, traits::PackedChar};
 use int_intervals::UsizeCO;
 
 #[path = "tests_for_matching/tests_for_vec_search_semantics.rs"]
@@ -30,30 +30,43 @@ where
         .rev()
         .find(|&start| matches_at(haystack, start, needle));
 
-    assert_eq!(
-        haystack_view.find_with(needle_view, FindOptions::default()),
-        expected_find
-    );
-    assert_eq!(
-        haystack_view.rfind_with(needle_view, FindOptions::default()),
-        expected_rfind
-    );
-    assert_eq!(
-        haystack_view.contains_with(needle_view, ContainsOptions::default()),
-        expected_find.is_some()
-    );
-    assert_eq!(
-        haystack_string.find_with(&needle_string, FindOptions::default()),
-        expected_find
-    );
-    assert_eq!(
-        haystack_string.rfind_with(&needle_string, FindOptions::default()),
-        expected_rfind
-    );
-    assert_eq!(
-        haystack_string.contains_with(&needle_string, ContainsOptions::default()),
-        expected_find.is_some()
-    );
+    let anchors = [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix];
+    let locations = [
+        LocationHint::Unknown,
+        LocationHint::NearStart,
+        LocationHint::NearEnd,
+    ];
+
+    for anchor in anchors {
+        let options = FindOptions::default().with_anchor(anchor);
+        assert_eq!(haystack_view.find_with(needle_view, options), expected_find);
+        assert_eq!(
+            haystack_view.rfind_with(needle_view, options),
+            expected_rfind
+        );
+        assert_eq!(
+            haystack_string.find_with(&needle_string, options),
+            expected_find
+        );
+        assert_eq!(
+            haystack_string.rfind_with(&needle_string, options),
+            expected_rfind
+        );
+
+        for location in locations {
+            let options = ContainsOptions::default()
+                .with_anchor(anchor)
+                .with_location(location);
+            assert_eq!(
+                haystack_view.contains_with(needle_view, options),
+                expected_find.is_some()
+            );
+            assert_eq!(
+                haystack_string.contains_with(&needle_string, options),
+                expected_find.is_some()
+            );
+        }
+    }
 }
 
 #[path = "tests_for_matching/tests_for_character_alignment.rs"]

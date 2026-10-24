@@ -1,4 +1,4 @@
-use crate::{BitString, ContainsOptions, FindOptions};
+use crate::{AnchorHint, BitString, ContainsOptions, FindOptions, LocationHint};
 
 // ---------------------------------------------------------------------------
 // contains
@@ -179,46 +179,36 @@ fn find_and_rfind_needle_appears_once() {
 
 #[test]
 fn with_entrypoints_preserve_bit_search_semantics() {
-    let bits = BitString::try_from("10110010").unwrap();
-    let needle = BitString::try_from("10").unwrap();
-    let view = bits.as_bit_str();
+    let source = BitString::try_from("11101100101101001").unwrap();
+    let bits = source.as_bit_str().slice_from(2).slice_until(15);
+    let needle_owner = BitString::try_from("1011").unwrap();
+    let needle_view_owner = BitString::try_from("00110").unwrap();
+    let needle_view = needle_view_owner.as_bit_str().slice_from(2).slice_until(5);
+    let anchors = [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix];
+    let locations = [
+        LocationHint::Unknown,
+        LocationHint::NearStart,
+        LocationHint::NearEnd,
+    ];
 
-    assert!(view.contains_str_with(needle.as_bit_str(), ContainsOptions::default()));
-    assert!(view.contains_string_with(&needle, ContainsOptions::default()));
-    assert!(bits.contains_str_with(needle.as_bit_str(), ContainsOptions::default()));
-    assert!(bits.contains_string_with(&needle, ContainsOptions::default()));
+    // The bit-view contents are 1011001011010 and the needle is 110.
+    // These constants are the independent expected first/last positions.
+    let expected_find = Some(2);
+    let expected_rfind = Some(8);
 
-    assert_eq!(
-        view.find_str_with(needle.as_bit_str(), FindOptions::default()),
-        Some(0)
-    );
-    assert_eq!(
-        view.find_string_with(&needle, FindOptions::default()),
-        Some(0)
-    );
-    assert_eq!(
-        bits.find_str_with(needle.as_bit_str(), FindOptions::default()),
-        Some(0)
-    );
-    assert_eq!(
-        bits.find_string_with(&needle, FindOptions::default()),
-        Some(0)
-    );
+    for anchor in anchors {
+        let options = FindOptions::default().with_anchor(anchor);
+        assert_eq!(bits.find_str_with(needle_view, options), expected_find);
+        assert_eq!(bits.rfind_str_with(needle_view, options), expected_rfind);
+        assert_eq!(bits.find_string_with(&needle_owner, options), Some(0));
+        assert_eq!(bits.rfind_string_with(&needle_owner, options), Some(6));
 
-    assert_eq!(
-        view.rfind_str_with(needle.as_bit_str(), FindOptions::default()),
-        Some(6)
-    );
-    assert_eq!(
-        view.rfind_string_with(&needle, FindOptions::default()),
-        Some(6)
-    );
-    assert_eq!(
-        bits.rfind_str_with(needle.as_bit_str(), FindOptions::default()),
-        Some(6)
-    );
-    assert_eq!(
-        bits.rfind_string_with(&needle, FindOptions::default()),
-        Some(6)
-    );
+        for location in locations {
+            let options = ContainsOptions::default()
+                .with_anchor(anchor)
+                .with_location(location);
+            assert!(bits.contains_str_with(needle_view, options));
+            assert!(bits.contains_string_with(&needle_owner, options));
+        }
+    }
 }
