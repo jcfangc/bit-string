@@ -216,6 +216,14 @@ fn with_entrypoints_preserve_bit_search_semantics() {
             source.rfind_string_with(&needle_owner, options),
             expected_owned_rfind
         );
+        assert_eq!(
+            source.find_str_with(needle_owner.as_bit_str(), options),
+            expected_owned_find
+        );
+        assert_eq!(
+            source.rfind_str_with(needle_owner.as_bit_str(), options),
+            expected_owned_rfind
+        );
 
         for location in locations {
             let options = ContainsOptions::default()
@@ -225,6 +233,10 @@ fn with_entrypoints_preserve_bit_search_semantics() {
             assert!(bits.contains_string_with(&needle_owner, options));
             assert_eq!(
                 source.contains_string_with(&needle_owner, options),
+                expected_owned_find.is_some()
+            );
+            assert_eq!(
+                source.contains_str_with(needle_owner.as_bit_str(), options),
                 expected_owned_find.is_some()
             );
         }
