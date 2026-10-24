@@ -1,7 +1,7 @@
 use super::{
     Oct, PackedString, PackedSymbol, SparseByte, Symbol, WideCode, oct, packed, packed_as, wide,
 };
-use bit_string::traits::PackedChar;
+use bit_string::{ContainsOptions, FindOptions, traits::PackedChar};
 use int_intervals::UsizeCO;
 
 #[path = "tests_for_matching/tests_for_vec_search_semantics.rs"]
@@ -33,6 +33,30 @@ where
     assert_eq!(haystack_view.find(needle_view), expected_find);
     assert_eq!(haystack_view.rfind(needle_view), expected_rfind);
     assert_eq!(haystack_view.contains(needle_view), expected_find.is_some());
+    assert_eq!(
+        haystack_view.find_with(needle_view, FindOptions::default()),
+        expected_find
+    );
+    assert_eq!(
+        haystack_view.rfind_with(needle_view, FindOptions::default()),
+        expected_rfind
+    );
+    assert_eq!(
+        haystack_view.contains_with(needle_view, ContainsOptions::default()),
+        expected_find.is_some()
+    );
+    assert_eq!(
+        haystack_string.find_with(&needle_string, FindOptions::default()),
+        expected_find
+    );
+    assert_eq!(
+        haystack_string.rfind_with(&needle_string, FindOptions::default()),
+        expected_rfind
+    );
+    assert_eq!(
+        haystack_string.contains_with(&needle_string, ContainsOptions::default()),
+        expected_find.is_some()
+    );
 }
 
 #[path = "tests_for_matching/tests_for_character_alignment.rs"]

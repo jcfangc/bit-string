@@ -1,4 +1,5 @@
 use super::*;
+use crate::{ContainsOptions, FindOptions};
 
 impl<C, const BITS: u8> PackedStr<'_, C, BITS>
 where
@@ -22,20 +23,32 @@ where
         self.bits.ends_with_str(suffix.bits)
     }
 
-    pub fn contains(&self, needle: Self) -> bool {
+    pub fn contains_with(&self, needle: Self, _options: ContainsOptions) -> bool {
         (0..=self.char_len().saturating_sub(needle.char_len()))
             .any(|index| self.matches_at(index, needle))
     }
 
-    pub fn find(&self, needle: Self) -> Option<usize> {
+    pub fn find_with(&self, needle: Self, _options: FindOptions) -> Option<usize> {
         (0..=self.char_len().saturating_sub(needle.char_len()))
             .find(|&index| self.matches_at(index, needle))
     }
 
-    pub fn rfind(&self, needle: Self) -> Option<usize> {
+    pub fn rfind_with(&self, needle: Self, _options: FindOptions) -> Option<usize> {
         (0..=self.char_len().saturating_sub(needle.char_len()))
             .rev()
             .find(|&index| self.matches_at(index, needle))
+    }
+
+    pub fn contains(&self, needle: Self) -> bool {
+        self.contains_with(needle, ContainsOptions::default())
+    }
+
+    pub fn find(&self, needle: Self) -> Option<usize> {
+        self.find_with(needle, FindOptions::default())
+    }
+
+    pub fn rfind(&self, needle: Self) -> Option<usize> {
+        self.rfind_with(needle, FindOptions::default())
     }
 
     pub fn strip_prefix(&self, prefix: Self) -> Option<Self> {
