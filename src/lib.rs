@@ -15,12 +15,14 @@ mod bit_str;
 mod bit_string;
 mod packed_str;
 mod packed_string;
+mod search_options;
 
 pub use bit_str::BitStr;
 pub use bit_string::BitString;
 pub use bit_string_derive::packed;
 pub use packed_str::PackedStr;
 pub use packed_string::PackedString;
+pub use search_options::{AnchorHint, ContainsOptions, FindOptions, LocationHint};
 
 pub use bit_str::errors::*;
 pub use bit_string::errors::*;
