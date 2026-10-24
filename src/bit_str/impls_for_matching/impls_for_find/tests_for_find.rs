@@ -1,3 +1,5 @@
+use alloc::string::ToString;
+
 use crate::{AnchorHint, BitString, ContainsOptions, FindOptions, LocationHint};
 
 // ---------------------------------------------------------------------------
@@ -184,6 +186,10 @@ fn with_entrypoints_preserve_bit_search_semantics() {
     let needle_owner = BitString::try_from("1011").unwrap();
     let needle_view_owner = BitString::try_from("00110").unwrap();
     let needle_view = needle_view_owner.as_bit_str().slice_from(2).slice_until(5);
+    let source_text = source.to_string();
+    let needle_text = needle_owner.to_string();
+    let expected_owned_find = source_text.find(&needle_text);
+    let expected_owned_rfind = source_text.rfind(&needle_text);
     let anchors = [AnchorHint::Unknown, AnchorHint::Prefix, AnchorHint::Suffix];
     let locations = [
         LocationHint::Unknown,
@@ -202,6 +208,14 @@ fn with_entrypoints_preserve_bit_search_semantics() {
         assert_eq!(bits.rfind_str_with(needle_view, options), expected_rfind);
         assert_eq!(bits.find_string_with(&needle_owner, options), Some(0));
         assert_eq!(bits.rfind_string_with(&needle_owner, options), Some(6));
+        assert_eq!(
+            source.find_string_with(&needle_owner, options),
+            expected_owned_find
+        );
+        assert_eq!(
+            source.rfind_string_with(&needle_owner, options),
+            expected_owned_rfind
+        );
 
         for location in locations {
             let options = ContainsOptions::default()
@@ -209,6 +223,10 @@ fn with_entrypoints_preserve_bit_search_semantics() {
                 .with_location(location);
             assert!(bits.contains_str_with(needle_view, options));
             assert!(bits.contains_string_with(&needle_owner, options));
+            assert_eq!(
+                source.contains_string_with(&needle_owner, options),
+                expected_owned_find.is_some()
+            );
         }
     }
 }
