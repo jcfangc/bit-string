@@ -12,15 +12,22 @@ permissions:
 
 jobs:
   benchmarks:
+    strategy:
+      matrix:
+        include:
+          - group: bit APIs
+            run_command: cargo codspeed run -m simulation ours_bit
+          - group: packed APIs
+            run_command: cargo codspeed run -m simulation ours_packed
+          - group: packed contains hints
+            run_command: cargo codspeed run -m simulation search_options/contains/
+          - group: bit contains hints
+            run_command: cargo codspeed run -m simulation search_options/bit_contains/
+    name: CodSpeed (${{ matrix.group }})
     uses: jcfangc/ci/.github/workflows/rust-codspeed.yml@ccd19196bcd8e8a42924c0621c321ee2dc2db61a
     with:
       rust_toolchain: "1.98.1"
       cargo_codspeed_version: "5.0.1"
       runner: ubuntu-24.04
       build_command: RUSTFLAGS="-C target-feature=+avx2" cargo codspeed build -m simulation
-      run_command: |
-        # Keep bit-level APIs and packed APIs in separate uploads.
-        cargo codspeed run -m simulation ours_bit
-        cargo codspeed run -m simulation ours_packed
-        cargo codspeed run -m simulation search_options/contains/
-        cargo codspeed run -m simulation search_options/bit_contains/
+      run_command: ${{ matrix.run_command }}
