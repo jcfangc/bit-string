@@ -207,8 +207,13 @@ impl<'bs> BitStr<'bs> {
         let last_start = self.bit_len() - needle_len;
 
         let matches_at = |start: usize| {
-            anchor.is_none_or(|anchor| self.matches_at_str(start + anchor_start, anchor))
-                && self.matches_at_str(start, needle)
+            let Some(anchor) = anchor else {
+                return self.matches_at_str(start, needle);
+            };
+            if !self.matches_at_str(start + anchor_start, anchor) {
+                return false;
+            }
+            anchor_len == needle_len || self.matches_at_str(start, needle)
         };
         match options.location() {
             LocationHint::NearEnd => (0..=last_start).rev().any(matches_at),
