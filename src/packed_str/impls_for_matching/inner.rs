@@ -67,6 +67,34 @@ fn candidate_windows<const BITS: u8, const HAYSTACK_START_ZERO: bool>(
     })
 }
 
+fn matching_candidates<const BITS: u8, const HAYSTACK_START_ZERO: bool>(
+    haystack: BitStr<'_>,
+    first_char: usize,
+    candidate_count: usize,
+    needle_first_word: u64,
+    needle_first_word_mask: u64,
+) -> u8 {
+    if candidate_count == 4 {
+        if let Some(matching_lanes) = funcs_for_candidate_core::matching_candidates::<BITS>(
+            haystack,
+            first_char,
+            needle_first_word,
+            needle_first_word_mask,
+        ) {
+            return matching_lanes;
+        }
+    }
+
+    let windows =
+        candidate_windows::<BITS, HAYSTACK_START_ZERO>(haystack, first_char, candidate_count);
+    funcs_for_candidate_core::matching_lanes(
+        &windows,
+        needle_first_word,
+        needle_first_word_mask,
+        candidate_count,
+    )
+}
+
 pub(super) fn find<
     const BITS: u8,
     const HAYSTACK_START_ZERO: bool,
@@ -89,13 +117,12 @@ pub(super) fn find<
 
     while first_char <= last_start {
         let candidate_count = (last_start - first_char).min(3) + 1;
-        let windows =
-            candidate_windows::<BITS, HAYSTACK_START_ZERO>(haystack, first_char, candidate_count);
-        let matching_lanes = funcs_for_candidate_core::matching_lanes(
-            &windows,
+        let matching_lanes = matching_candidates::<BITS, HAYSTACK_START_ZERO>(
+            haystack,
+            first_char,
+            candidate_count,
             needle.first_word,
             needle.first_word_mask,
-            candidate_count,
         );
 
         for lane in 0..candidate_count {
@@ -138,13 +165,12 @@ pub(super) fn rfind<
     loop {
         let batch_start = batch_end.saturating_sub(3);
         let candidate_count = batch_end - batch_start + 1;
-        let windows =
-            candidate_windows::<BITS, HAYSTACK_START_ZERO>(haystack, batch_start, candidate_count);
-        let matching_lanes = funcs_for_candidate_core::matching_lanes(
-            &windows,
+        let matching_lanes = matching_candidates::<BITS, HAYSTACK_START_ZERO>(
+            haystack,
+            batch_start,
+            candidate_count,
             needle.first_word,
             needle.first_word_mask,
-            candidate_count,
         );
 
         for lane in (0..candidate_count).rev() {

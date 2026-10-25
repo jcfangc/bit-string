@@ -49,6 +49,34 @@ pub(super) fn matching_lanes(
     )
 }
 
+#[inline]
+pub(super) fn matching_candidates<const BITS: u8>(
+    _haystack: crate::BitStr<'_>,
+    _first_char: usize,
+    _needle_first_word: u64,
+    _needle_first_word_mask: u64,
+) -> Option<u8> {
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "avx2"
+    ))]
+    {
+        // SAFETY: This module is compiled for AVX2 targets, and the backend
+        // checks the backing slice bounds before issuing its gathers.
+        return unsafe {
+            avx2::matching_candidates::<BITS>(
+                _haystack,
+                _first_char,
+                _needle_first_word,
+                _needle_first_word_mask,
+            )
+        };
+    }
+
+    #[allow(unreachable_code)]
+    None
+}
+
 mod scalar;
 
 #[allow(unused)]
