@@ -90,6 +90,18 @@ fn find_at_end_of_view() {
     assert_eq!(v.find_str(bs.as_bit_str()), Some(3));
 }
 
+#[test]
+fn borrowed_offset_needle_uses_its_logical_prefix() {
+    let haystack = BitString::try_from("1101").unwrap();
+    let needle_source = BitString::try_from("001101").unwrap();
+    let needle = needle_source.as_bit_str().slice_from(2);
+    assert_ne!(needle_source.words()[0] & 0b1111, needle.get_chunk(0));
+
+    assert_eq!(haystack.find_str(needle), Some(0));
+    assert_eq!(haystack.rfind_str(needle), Some(0));
+    assert!(haystack.contains_str(needle));
+}
+
 // ---------------------------------------------------------------------------
 // rfind
 // ---------------------------------------------------------------------------

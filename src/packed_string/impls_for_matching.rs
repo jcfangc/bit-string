@@ -23,19 +23,15 @@ where
     }
 
     pub fn contains(&self, needle: &Self) -> bool {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .any(|index| self.matches_at(index, needle))
+        crate::packed_str::impls_for_matching::contains_owned::<BITS>(&self.bits, &needle.bits)
     }
 
     pub fn find(&self, needle: &Self) -> Option<usize> {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .find(|&index| self.matches_at(index, needle))
+        crate::packed_str::impls_for_matching::find_owned::<BITS>(&self.bits, &needle.bits)
     }
 
     pub fn rfind(&self, needle: &Self) -> Option<usize> {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .rev()
-            .find(|&index| self.matches_at(index, needle))
+        crate::packed_str::impls_for_matching::rfind_owned::<BITS>(&self.bits, &needle.bits)
     }
 
     pub fn strip_prefix(&self, prefix: &Self) -> Option<Self> {
