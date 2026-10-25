@@ -33,6 +33,12 @@ where
     assert_eq!(haystack_view.find(needle_view), expected_find);
     assert_eq!(haystack_view.rfind(needle_view), expected_rfind);
     assert_eq!(haystack_view.contains(needle_view), expected_find.is_some());
+    assert_eq!(haystack_string.find(&needle_string), expected_find);
+    assert_eq!(haystack_string.rfind(&needle_string), expected_rfind);
+    assert_eq!(
+        haystack_string.contains(&needle_string),
+        expected_find.is_some()
+    );
 }
 
 #[path = "tests_for_matching/tests_for_character_alignment.rs"]
