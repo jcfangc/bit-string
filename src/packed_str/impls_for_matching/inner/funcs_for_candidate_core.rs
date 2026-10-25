@@ -87,6 +87,24 @@ pub(super) fn matching_candidates<const BITS: u8>(
         };
     }
 
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "sse4.1",
+        not(target_feature = "avx2")
+    ))]
+    {
+        // SAFETY: This module is compiled for SSE4.1 targets, and the backend
+        // checks the backing slice bounds before loading its source words.
+        return unsafe {
+            sse41::matching_candidates::<BITS>(
+                _haystack,
+                _first_char,
+                _needle_first_word,
+                _needle_first_word_mask,
+            )
+        };
+    }
+
     #[allow(unreachable_code)]
     None
 }
