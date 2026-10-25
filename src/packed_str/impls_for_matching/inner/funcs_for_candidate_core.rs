@@ -73,6 +73,20 @@ pub(super) fn matching_candidates<const BITS: u8>(
         };
     }
 
+    #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+    {
+        // SAFETY: This module is compiled for NEON targets, and the backend
+        // checks the backing slice bounds before loading its source block.
+        return unsafe {
+            neon::matching_candidates::<BITS>(
+                _haystack,
+                _first_char,
+                _needle_first_word,
+                _needle_first_word_mask,
+            )
+        };
+    }
+
     #[allow(unreachable_code)]
     None
 }
