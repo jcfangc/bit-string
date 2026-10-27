@@ -1,14 +1,14 @@
 #[cfg(target_arch = "x86")]
 use core::arch::x86::{
-    __m256i, _mm256_and_si256, _mm256_cmpeq_epi64, _mm256_i64gather_epi64, _mm256_loadu_si256,
-    _mm256_movemask_epi8, _mm256_movemask_pd, _mm256_or_si256, _mm256_set1_epi64x,
-    _mm256_setr_epi64x, _mm256_sllv_epi64, _mm256_srlv_epi64,
+    __m256i, _mm256_and_si256, _mm256_cmpeq_epi64, _mm256_loadu_si256, _mm256_movemask_epi8,
+    _mm256_movemask_pd, _mm256_or_si256, _mm256_set1_epi64x, _mm256_setr_epi64x, _mm256_sllv_epi64,
+    _mm256_srlv_epi64,
 };
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::{
-    __m256i, _mm256_and_si256, _mm256_cmpeq_epi64, _mm256_i64gather_epi64, _mm256_loadu_si256,
-    _mm256_movemask_epi8, _mm256_movemask_pd, _mm256_or_si256, _mm256_set1_epi64x,
-    _mm256_setr_epi64x, _mm256_sllv_epi64, _mm256_srlv_epi64,
+    __m256i, _mm256_and_si256, _mm256_cmpeq_epi64, _mm256_loadu_si256, _mm256_movemask_epi8,
+    _mm256_movemask_pd, _mm256_or_si256, _mm256_set1_epi64x, _mm256_setr_epi64x, _mm256_sllv_epi64,
+    _mm256_srlv_epi64,
 };
 
 use crate::{BitStr, WORD_BITS};
@@ -51,32 +51,40 @@ pub(super) unsafe fn matching_candidates<const BITS: u8>(
         return None;
     }
 
-    let mut low_word_offsets = [0i64; 4];
-    let mut high_word_offsets = [0i64; 4];
+    let mut low_words = [0u64; 4];
+    let mut high_words = [0u64; 4];
     let mut shifts = [0i64; 4];
     let mut inverse_shifts = [0i64; 4];
+    let source_block = [
+        source_words[base_word],
+        source_words[base_word + 1],
+        if last_source_offset == 2 {
+            source_words[base_word + 2]
+        } else {
+            0
+        },
+    ];
     for lane in 0..4 {
         let lane_bit = first_shift + lane * width;
         let word_offset = lane_bit / WORD_BITS;
         let shift = lane_bit % WORD_BITS;
-        low_word_offsets[lane] = word_offset as i64;
-        high_word_offsets[lane] = (word_offset + 1) as i64;
+        low_words[lane] = source_block[word_offset];
+        high_words[lane] = source_block[word_offset + 1];
         shifts[lane] = shift as i64;
         inverse_shifts[lane] = (WORD_BITS - shift) as i64;
     }
 
-    let base = unsafe { source_words.as_ptr().add(base_word).cast::<i64>() };
-    let low_indices = _mm256_setr_epi64x(
-        low_word_offsets[0],
-        low_word_offsets[1],
-        low_word_offsets[2],
-        low_word_offsets[3],
+    let lower_words = _mm256_setr_epi64x(
+        low_words[0] as i64,
+        low_words[1] as i64,
+        low_words[2] as i64,
+        low_words[3] as i64,
     );
-    let high_indices = _mm256_setr_epi64x(
-        high_word_offsets[0],
-        high_word_offsets[1],
-        high_word_offsets[2],
-        high_word_offsets[3],
+    let upper_words = _mm256_setr_epi64x(
+        high_words[0] as i64,
+        high_words[1] as i64,
+        high_words[2] as i64,
+        high_words[3] as i64,
     );
     let shift_counts = _mm256_setr_epi64x(shifts[0], shifts[1], shifts[2], shifts[3]);
     let inverse_shift_counts = _mm256_setr_epi64x(
@@ -85,8 +93,6 @@ pub(super) unsafe fn matching_candidates<const BITS: u8>(
         inverse_shifts[2],
         inverse_shifts[3],
     );
-    let lower_words = unsafe { _mm256_i64gather_epi64::<8>(base, low_indices) };
-    let upper_words = unsafe { _mm256_i64gather_epi64::<8>(base, high_indices) };
     let lower_bits = _mm256_srlv_epi64(lower_words, shift_counts);
     let upper_bits = _mm256_sllv_epi64(upper_words, inverse_shift_counts);
     let candidate_windows = _mm256_or_si256(lower_bits, upper_bits);
