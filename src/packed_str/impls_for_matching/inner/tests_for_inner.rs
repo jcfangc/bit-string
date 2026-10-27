@@ -47,6 +47,17 @@ fn assert_search_crosses_word<const BITS: u8>() {
     assert!(contains::<BITS, false, false>(haystack, needle));
 }
 
+fn assert_find_falls_back_at_backing_end<const BITS: u8>() {
+    let haystack_source = bit_string_from_codes::<BITS>(&[0, 0, 0, 0, 1]);
+    let needle_source = bit_string_from_codes::<BITS>(&[1]);
+
+    assert_eq!(
+        find::<BITS, true, true>(haystack_source.as_bit_str(), needle_source.as_bit_str()),
+        Some(4),
+        "BITS={BITS} must find the tail match after a bounded SIMD batch falls back",
+    );
+}
+
 fn assert_search_matches_reference<const BITS: u8>(haystack_values: &[u8], needle_values: &[u8]) {
     let width = usize::from(BITS);
     let code_mask = ((1_u16 << BITS) - 1) as u8;
@@ -95,6 +106,18 @@ fn all_widths_find_a_character_aligned_match_crossing_a_word() {
     assert_search_crosses_word::<6>();
     assert_search_crosses_word::<7>();
     assert_search_crosses_word::<8>();
+}
+
+#[test]
+fn all_widths_find_tail_match_after_candidate_backend_fallback() {
+    assert_find_falls_back_at_backing_end::<1>();
+    assert_find_falls_back_at_backing_end::<2>();
+    assert_find_falls_back_at_backing_end::<3>();
+    assert_find_falls_back_at_backing_end::<4>();
+    assert_find_falls_back_at_backing_end::<5>();
+    assert_find_falls_back_at_backing_end::<6>();
+    assert_find_falls_back_at_backing_end::<7>();
+    assert_find_falls_back_at_backing_end::<8>();
 }
 
 proptest! {
