@@ -27,7 +27,7 @@ fn assert_candidate_batches_match_scalar<const BITS: u8>() {
     for first_char in 0..64 {
         let windows = core::array::from_fn(|lane| haystack.get_chunk((first_char + lane) * width));
         let needle_first_word = windows[2] & needle_mask;
-        let expected = scalar::matching_lanes(&windows, needle_first_word, needle_mask, 4);
+        let _expected = scalar::matching_lanes(&windows, needle_first_word, needle_mask, 4);
         let actual =
             matching_candidates::<BITS>(haystack, first_char, needle_first_word, needle_mask);
 
@@ -45,7 +45,7 @@ fn assert_candidate_batches_match_scalar<const BITS: u8>() {
         ))]
         assert_eq!(
             actual,
-            Some(expected),
+            Some(_expected),
             "BITS={BITS}, first_char={first_char}"
         );
 
