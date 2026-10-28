@@ -22,11 +22,11 @@ fn assert_candidate_batches_match_scalar<const BITS: u8>() {
         .collect();
     let source = bit_string_from_codes::<BITS>(&codes);
     let haystack = source.as_bit_str().slice_from(width);
-    let needle_mask = low_mask(width);
+    let needle_mask = u64::MAX;
 
     for first_char in 0..64 {
         let windows = core::array::from_fn(|lane| haystack.get_chunk((first_char + lane) * width));
-        let needle_first_word = windows[2] & needle_mask;
+        let needle_first_word = windows[2];
         let _expected = scalar::matching_lanes(&windows, needle_first_word, needle_mask, 4);
         let actual =
             matching_candidates::<BITS>(haystack, first_char, needle_first_word, needle_mask);
