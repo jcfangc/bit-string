@@ -25,6 +25,6 @@ mod impls_for_access;
 mod impls_for_conversion;
 mod impls_for_eq;
 mod impls_for_iter;
-mod impls_for_matching;
+pub(crate) mod impls_for_matching;
 mod impls_for_ord;
 mod impls_for_slice;

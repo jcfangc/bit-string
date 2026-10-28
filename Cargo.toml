@@ -14,7 +14,7 @@ exclude = ["/benches", "/src/**/tests_for_*", "/tests", ".github/"]
 members = ["derive"]
 
 [workspace.package]
-version = "0.6.1"
+version = "0.6.2"
 
 [features]
 characterization = []
@@ -154,6 +154,10 @@ harness = false
 
 [[bench]]
 name = "packed_native"
+harness = false
+
+[[bench]]
+name = "packed_search_candidates"
 harness = false
 
 [[bench]]

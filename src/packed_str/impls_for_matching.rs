@@ -1,5 +1,28 @@
 use super::*;
 
+mod inner;
+
+pub(crate) fn contains_owned<const BITS: u8>(
+    haystack: &crate::BitString,
+    needle: &crate::BitString,
+) -> bool {
+    inner::contains::<BITS, true, true>(haystack.as_bit_str(), needle.as_bit_str())
+}
+
+pub(crate) fn find_owned<const BITS: u8>(
+    haystack: &crate::BitString,
+    needle: &crate::BitString,
+) -> Option<usize> {
+    inner::find::<BITS, true, true>(haystack.as_bit_str(), needle.as_bit_str())
+}
+
+pub(crate) fn rfind_owned<const BITS: u8>(
+    haystack: &crate::BitString,
+    needle: &crate::BitString,
+) -> Option<usize> {
+    inner::rfind::<BITS, true, true>(haystack.as_bit_str(), needle.as_bit_str())
+}
+
 impl<C, const BITS: u8> PackedStr<'_, C, BITS>
 where
     C: PackedChar<BITS>,
@@ -23,19 +46,15 @@ where
     }
 
     pub fn contains(&self, needle: Self) -> bool {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .any(|index| self.matches_at(index, needle))
+        inner::contains::<BITS, false, false>(self.bits, needle.bits)
     }
 
     pub fn find(&self, needle: Self) -> Option<usize> {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .find(|&index| self.matches_at(index, needle))
+        inner::find::<BITS, false, false>(self.bits, needle.bits)
     }
 
     pub fn rfind(&self, needle: Self) -> Option<usize> {
-        (0..=self.char_len().saturating_sub(needle.char_len()))
-            .rev()
-            .find(|&index| self.matches_at(index, needle))
+        inner::rfind::<BITS, false, false>(self.bits, needle.bits)
     }
 
     pub fn strip_prefix(&self, prefix: Self) -> Option<Self> {
