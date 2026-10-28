@@ -103,29 +103,87 @@ macro_rules! for_each_grit_case {
     };
 }
 
-/// The small set of cases run by default in PR and CodSpeed benchmarks.
+/// Representative cases run by default in PR and CodSpeed benchmarks.
 ///
-/// Each width gets a tiny case and a large case.  The full width × length
-/// matrix remains available through the `characterization` feature below.
+/// Every width gets a large case, and selected widths also get a tiny case.
+/// The full width × length matrix remains available through the
+/// `characterization` feature below.
 #[macro_export]
 macro_rules! for_each_packed_regression_case {
     ($macro:ident) => {
-        $macro!(bits_1_len_64, 1, 64);
         $macro!(bits_1_len_1048576, 1, 1_048_576);
-        $macro!(bits_2_len_64, 2, 64);
         $macro!(bits_2_len_1048576, 2, 1_048_576);
-        $macro!(bits_3_len_1024, 3, 1_024);
+        $macro!(bits_3_len_64, 3, 64);
         $macro!(bits_3_len_1048576, 3, 1_048_576);
-        $macro!(bits_4_len_64, 4, 64);
         $macro!(bits_4_len_1048576, 4, 1_048_576);
-        $macro!(bits_5_len_1024, 5, 1_024);
+        $macro!(bits_5_len_64, 5, 64);
         $macro!(bits_5_len_1048576, 5, 1_048_576);
-        $macro!(bits_6_len_1024, 6, 1_024);
         $macro!(bits_6_len_1048576, 6, 1_048_576);
-        $macro!(bits_7_len_1024, 7, 1_024);
         $macro!(bits_7_len_1048576, 7, 1_048_576);
         $macro!(bits_8_len_64, 8, 64);
         $macro!(bits_8_len_1048576, 8, 1_048_576);
+    };
+}
+
+#[macro_export]
+macro_rules! for_each_packed_search_case {
+    ($macro:ident) => {
+        $macro!(bits_1_len_64, 1, 64);
+        $macro!(bits_2_len_64, 2, 64);
+        $macro!(bits_3_len_64, 3, 64);
+        $macro!(bits_4_len_64, 4, 64);
+        $macro!(bits_5_len_64, 5, 64);
+        $macro!(bits_6_len_64, 6, 64);
+        $macro!(bits_7_len_64, 7, 64);
+        $macro!(bits_8_len_64, 8, 64);
+        $macro!(bits_1_len_4096, 1, 4_096);
+        $macro!(bits_2_len_4096, 2, 4_096);
+        $macro!(bits_3_len_4096, 3, 4_096);
+        $macro!(bits_4_len_4096, 4, 4_096);
+        $macro!(bits_5_len_4096, 5, 4_096);
+        $macro!(bits_6_len_4096, 6, 4_096);
+        $macro!(bits_7_len_4096, 7, 4_096);
+        $macro!(bits_8_len_4096, 8, 4_096);
+        $macro!(bits_1_len_65536, 1, 65_536);
+        $macro!(bits_2_len_65536, 2, 65_536);
+        $macro!(bits_3_len_65536, 3, 65_536);
+        $macro!(bits_4_len_65536, 4, 65_536);
+        $macro!(bits_5_len_65536, 5, 65_536);
+        $macro!(bits_6_len_65536, 6, 65_536);
+        $macro!(bits_7_len_65536, 7, 65_536);
+        $macro!(bits_8_len_65536, 8, 65_536);
+    };
+}
+
+#[macro_export]
+macro_rules! for_each_packed_search_regression_case {
+    ($macro:ident) => {
+        $macro!(bits_1_len_65536, 1, 65_536);
+        $macro!(bits_3_len_65536, 3, 65_536);
+        $macro!(bits_5_len_65536, 5, 65_536);
+        $macro!(bits_8_len_65536, 8, 65_536);
+    };
+}
+
+#[macro_export]
+macro_rules! for_each_packed_search_offset_case {
+    ($macro:ident) => {
+        $macro!(offset_bits_1_len_65536, 1);
+        $macro!(offset_bits_2_len_65536, 2);
+        $macro!(offset_bits_3_len_65536, 3);
+        $macro!(offset_bits_4_len_65536, 4);
+        $macro!(offset_bits_5_len_65536, 5);
+        $macro!(offset_bits_6_len_65536, 6);
+        $macro!(offset_bits_7_len_65536, 7);
+        $macro!(offset_bits_8_len_65536, 8);
+    };
+}
+
+#[macro_export]
+macro_rules! for_each_packed_search_offset_regression_case {
+    ($macro:ident) => {
+        $macro!(offset_bits_3_len_65536, 3);
+        $macro!(offset_bits_8_len_65536, 8);
     };
 }
 
@@ -154,6 +212,38 @@ macro_rules! for_each_grit_regression_case {
 macro_rules! for_each_packed_bench_case {
     ($macro:ident) => {
         $crate::for_each_packed_case!($macro);
+    };
+}
+
+#[cfg(feature = "characterization")]
+#[macro_export]
+macro_rules! for_each_packed_search_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_search_case!($macro);
+    };
+}
+
+#[cfg(not(feature = "characterization"))]
+#[macro_export]
+macro_rules! for_each_packed_search_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_search_regression_case!($macro);
+    };
+}
+
+#[cfg(feature = "characterization")]
+#[macro_export]
+macro_rules! for_each_packed_search_offset_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_search_offset_case!($macro);
+    };
+}
+
+#[cfg(not(feature = "characterization"))]
+#[macro_export]
+macro_rules! for_each_packed_search_offset_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_search_offset_regression_case!($macro);
     };
 }
 

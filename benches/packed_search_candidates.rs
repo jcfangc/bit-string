@@ -262,7 +262,7 @@ macro_rules! define_cases {
                             bench_find::<$bits, false>(bencher, $len, $position);
                         }
 
-                        #[divan::bench(name = concat!("packed_search_candidates/find/", stringify!($case), "/", $label, "/candidate_scan"))]
+                        #[divan::bench(name = concat!("packed_search_candidates/find/", stringify!($case), "/", $label, "/ours_packed_string"))]
                         fn find_candidate(bencher: Bencher) {
                             bench_find::<$bits, true>(bencher, $len, $position);
                         }
@@ -272,7 +272,7 @@ macro_rules! define_cases {
                             bench_rfind::<$bits, false>(bencher, $len, $position);
                         }
 
-                        #[divan::bench(name = concat!("packed_search_candidates/rfind/", stringify!($case), "/", $label, "/candidate_scan"))]
+                        #[divan::bench(name = concat!("packed_search_candidates/rfind/", stringify!($case), "/", $label, "/ours_packed_string"))]
                         fn rfind_candidate(bencher: Bencher) {
                             bench_rfind::<$bits, true>(bencher, $len, $position);
                         }
@@ -282,7 +282,7 @@ macro_rules! define_cases {
                             bench_contains::<$bits, false>(bencher, $len, $position);
                         }
 
-                        #[divan::bench(name = concat!("packed_search_candidates/contains/", stringify!($case), "/", $label, "/candidate_scan"))]
+                        #[divan::bench(name = concat!("packed_search_candidates/contains/", stringify!($case), "/", $label, "/ours_packed_string"))]
                         fn contains_candidate(bencher: Bencher) {
                             bench_contains::<$bits, true>(bencher, $len, $position);
                         }
@@ -313,7 +313,7 @@ macro_rules! define_offset_cases {
                             bench_find_view::<$bits, false>(bencher, 65_536, $position);
                         }
 
-                        #[divan::bench(name = concat!("packed_search_candidates_offset/find/", stringify!($case), "/", $label, "/candidate_scan"))]
+                        #[divan::bench(name = concat!("packed_search_candidates_offset/find/", stringify!($case), "/", $label, "/ours_packed_str_unaligned"))]
                         fn find_candidate(bencher: Bencher) {
                             bench_find_view::<$bits, true>(bencher, 65_536, $position);
                         }
@@ -323,7 +323,7 @@ macro_rules! define_offset_cases {
                             bench_rfind_view::<$bits, false>(bencher, 65_536, $position);
                         }
 
-                        #[divan::bench(name = concat!("packed_search_candidates_offset/rfind/", stringify!($case), "/", $label, "/candidate_scan"))]
+                        #[divan::bench(name = concat!("packed_search_candidates_offset/rfind/", stringify!($case), "/", $label, "/ours_packed_str_unaligned"))]
                         fn rfind_candidate(bencher: Bencher) {
                             bench_rfind_view::<$bits, true>(bencher, 65_536, $position);
                         }
@@ -333,7 +333,7 @@ macro_rules! define_offset_cases {
                             bench_contains_view::<$bits, false>(bencher, 65_536, $position);
                         }
 
-                        #[divan::bench(name = concat!("packed_search_candidates_offset/contains/", stringify!($case), "/", $label, "/candidate_scan"))]
+                        #[divan::bench(name = concat!("packed_search_candidates_offset/contains/", stringify!($case), "/", $label, "/ours_packed_str_unaligned"))]
                         fn contains_candidate(bencher: Bencher) {
                             bench_contains_view::<$bits, true>(bencher, 65_536, $position);
                         }
@@ -349,36 +349,5 @@ macro_rules! define_offset_cases {
     };
 }
 
-define_cases!(bits_1_len_64, 1, 64);
-define_cases!(bits_2_len_64, 2, 64);
-define_cases!(bits_3_len_64, 3, 64);
-define_cases!(bits_4_len_64, 4, 64);
-define_cases!(bits_5_len_64, 5, 64);
-define_cases!(bits_6_len_64, 6, 64);
-define_cases!(bits_7_len_64, 7, 64);
-define_cases!(bits_8_len_64, 8, 64);
-define_cases!(bits_1_len_4096, 1, 4_096);
-define_cases!(bits_2_len_4096, 2, 4_096);
-define_cases!(bits_3_len_4096, 3, 4_096);
-define_cases!(bits_4_len_4096, 4, 4_096);
-define_cases!(bits_5_len_4096, 5, 4_096);
-define_cases!(bits_6_len_4096, 6, 4_096);
-define_cases!(bits_7_len_4096, 7, 4_096);
-define_cases!(bits_8_len_4096, 8, 4_096);
-define_cases!(bits_1_len_65536, 1, 65_536);
-define_cases!(bits_2_len_65536, 2, 65_536);
-define_cases!(bits_3_len_65536, 3, 65_536);
-define_cases!(bits_4_len_65536, 4, 65_536);
-define_cases!(bits_5_len_65536, 5, 65_536);
-define_cases!(bits_6_len_65536, 6, 65_536);
-define_cases!(bits_7_len_65536, 7, 65_536);
-define_cases!(bits_8_len_65536, 8, 65_536);
-
-define_offset_cases!(offset_bits_1_len_65536, 1);
-define_offset_cases!(offset_bits_2_len_65536, 2);
-define_offset_cases!(offset_bits_3_len_65536, 3);
-define_offset_cases!(offset_bits_4_len_65536, 4);
-define_offset_cases!(offset_bits_5_len_65536, 5);
-define_offset_cases!(offset_bits_6_len_65536, 6);
-define_offset_cases!(offset_bits_7_len_65536, 7);
-define_offset_cases!(offset_bits_8_len_65536, 8);
+crate::for_each_packed_search_bench_case!(define_cases);
+crate::for_each_packed_search_offset_bench_case!(define_offset_cases);
