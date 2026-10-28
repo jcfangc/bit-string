@@ -4,11 +4,7 @@ use super::*;
 
 impl fmt::Display for BitString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for index in 0..self.bit_len {
-            f.write_str(if self.get(index).unwrap() { "1" } else { "0" })?;
-        }
-
-        Ok(())
+        fmt::Display::fmt(&self.as_bit_str(), f)
     }
 }
 
