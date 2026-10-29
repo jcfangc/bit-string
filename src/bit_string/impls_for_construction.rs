@@ -7,3 +7,5 @@ mod impls_for_new;
 mod impls_for_repeat;
 
 use super::*;
+
+pub(crate) use funcs_for_pack_bools_core::pack_into;

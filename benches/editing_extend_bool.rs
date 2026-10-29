@@ -50,6 +50,17 @@ fn unknown(bencher: Bencher, prefix_len: usize, append_len: usize, reserve_tail:
         });
 }
 
+fn old_extend_reference(bencher: Bencher, prefix_len: usize) {
+    let values = input_bools(4096);
+    bencher
+        .with_inputs(|| prefix(prefix_len, 0))
+        .bench_refs(|bits| {
+            let rhs: BitString = black_box(values.as_slice()).iter().copied().collect();
+            bits.push_bit_string(black_box(&rhs));
+            black_box(&*bits);
+        });
+}
+
 macro_rules! define_case {
     ($module:ident, $prefix:literal, $append:literal) => {
         mod $module {
@@ -190,3 +201,25 @@ define_reserved_case!(reserved_4096_4096, 4096, 4096);
 define_reserved_case!(reserved_65536_64, 65536, 64);
 #[cfg(not(feature = "characterization"))]
 define_reserved_case!(reserved_65536_65536, 65536, 65536);
+
+macro_rules! define_old_reference {
+    ($module:ident, $prefix:literal) => {
+        mod $module {
+            use super::*;
+
+            #[divan::bench(name = concat!("extend_bool/prefix_", stringify!($prefix), "/append_4096/old_extend_reference"))]
+            fn old_extend_reference(bencher: Bencher) {
+                super::old_extend_reference(bencher, $prefix);
+            }
+        }
+    };
+}
+
+#[cfg(feature = "characterization")]
+mod old_reference_matrix {
+    use super::*;
+
+    define_old_reference!(old_reference_prefix_0, 0);
+    define_old_reference!(old_reference_prefix_65, 65);
+    define_old_reference!(old_reference_prefix_4096, 4096);
+}

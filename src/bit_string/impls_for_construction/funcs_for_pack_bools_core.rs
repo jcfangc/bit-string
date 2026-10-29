@@ -3,6 +3,19 @@ use alloc::vec::Vec;
 use crate::traits::*;
 use crate::word_len;
 
+/// Packs bytes into caller-provided words using the selected bool-pack backend.
+#[inline]
+pub(crate) fn pack_into(src: &[u8], dst: &mut [u64]) {
+    let bit_len = src.len();
+    assert_eq!(dst.len(), word_len(bit_len));
+
+    // SAFETY:
+    // - `src` and `dst` are valid slices with lengths matching `bit_len`.
+    // - `dispatch` writes every destination word in `0..word_len(bit_len)`.
+    unsafe { dispatch(dst.as_mut_ptr(), src.as_ptr(), bit_len) };
+    dst.mask_unused_bits(bit_len);
+}
+
 /// Pack `bit_len` LSBs from `src` into a `Vec<u64>`.
 ///
 /// Each source byte is treated as one bit (0 → 0, non-zero → 1).
