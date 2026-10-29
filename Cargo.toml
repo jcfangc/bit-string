@@ -109,6 +109,10 @@ name = "bit_fmt"
 harness = false
 
 [[bench]]
+name = "bit_reverse"
+harness = false
+
+[[bench]]
 name = "matching_starts_with"
 harness = false
 
