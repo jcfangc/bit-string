@@ -45,6 +45,10 @@ name = "construction_from_bool_iter"
 harness = false
 
 [[bench]]
+name = "editing_extend_bool"
+harness = false
+
+[[bench]]
 name = "construction_from_str"
 harness = false
 
