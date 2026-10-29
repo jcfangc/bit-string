@@ -110,3 +110,31 @@ fn reverse_preserves_bit_len() {
         assert_eq!(bits.reverse_bits().bit_len(), len, "len={len}");
     }
 }
+
+/// Word-boundary lengths match an independent reversed-iteration oracle.
+#[test]
+fn reverse_matches_reversed_iteration_at_word_boundaries() {
+    for len in [0, 1, 2, 63, 64, 65, 127, 128, 129, 4096, 4097, 65_537] {
+        let bits: BitString = (0usize..len)
+            .map(|index| (index.wrapping_mul(37) ^ (index >> 2)) & 3 == 1)
+            .collect();
+        let expected: BitString = bits.iter().rev().collect();
+
+        assert_eq!(bits.reverse_bits(), expected, "reverse_bits len={len}");
+
+        let mut assigned = bits.clone();
+        assigned.reverse_bits_assign();
+        assert_eq!(assigned, expected, "reverse_bits_assign len={len}");
+    }
+}
+
+/// In-place reversal retains the backing allocation for a non-empty value.
+#[test]
+fn reverse_bits_assign_does_not_reallocate() {
+    let mut bits: BitString = (0..65_537).map(|index| index % 5 == 2).collect();
+    let words_ptr = bits.words().as_ptr();
+
+    bits.reverse_bits_assign();
+
+    assert_eq!(bits.words().as_ptr(), words_ptr);
+}
