@@ -1,7 +1,4 @@
-use alloc::vec::Vec;
-
-use crate::traits::*;
-use crate::{WORD_BITS, funcs_for_bits::word_len};
+use crate::WORD_BITS;
 
 use super::BitString;
 
@@ -21,27 +18,9 @@ impl BitString {
     /// ```
     #[inline]
     pub fn reverse_bits(&self) -> Self {
-        if self.bit_len <= 1 {
-            return self.clone();
-        }
-
-        let n_words = word_len(self.bit_len);
-        let unused = n_words * WORD_BITS - self.bit_len;
-
-        // Step 1: Reverse bits within each word.
-        let mut words: Vec<u64> = self.words.iter().map(|w| w.reverse_bits()).collect();
-        words.resize(n_words, 0);
-
-        // Step 2: Reverse word order.
-        words[..n_words].reverse();
-
-        // Step 3: Right-shift by `unused` to align bits to LSB.
-        if unused > 0 {
-            words = words.shr(n_words * WORD_BITS, unused);
-        }
-
-        BitString::from_words(&words, self.bit_len)
-            .expect("reverse_bits: from_words should always succeed for valid inputs")
+        let mut reversed = self.clone();
+        reversed.reverse_bits_assign();
+        reversed
     }
 
     /// Reverses the bit order in place.
@@ -59,7 +38,26 @@ impl BitString {
     /// ```
     #[inline]
     pub fn reverse_bits_assign(&mut self) {
-        *self = self.reverse_bits();
+        if self.bit_len <= 1 {
+            return;
+        }
+
+        self.words.reverse();
+        for word in &mut self.words {
+            *word = word.reverse_bits();
+        }
+
+        let unused = self.words.len() * WORD_BITS - self.bit_len;
+        if unused == 0 {
+            return;
+        }
+
+        let last_word_index = self.words.len() - 1;
+        for index in 0..last_word_index {
+            self.words[index] =
+                (self.words[index] >> unused) | (self.words[index + 1] << (WORD_BITS - unused));
+        }
+        self.words[last_word_index] >>= unused;
     }
 }
 

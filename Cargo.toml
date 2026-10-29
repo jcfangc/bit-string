@@ -14,7 +14,7 @@ exclude = ["/benches", "/src/**/tests_for_*", "/tests", ".github/"]
 members = ["derive"]
 
 [workspace.package]
-version = "0.6.3"
+version = "0.6.4"
 
 [features]
 characterization = []
@@ -106,6 +106,10 @@ harness = false
 
 [[bench]]
 name = "bit_fmt"
+harness = false
+
+[[bench]]
+name = "bit_reverse"
 harness = false
 
 [[bench]]
