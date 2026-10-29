@@ -37,12 +37,17 @@ fn display_single_bit_views() {
 #[test]
 fn display_across_word_boundary() {
     let mut bits = BitString::zeros(130);
-    bits.set(62, true);
-    bits.set(63, true);
-    bits.set(64, true);
-    bits.set(65, true);
-    let expected = bits.to_string();
+    for index in 62..=65 {
+        bits.set(index, true);
+    }
+
+    let expected: alloc::string::String = (0..130)
+        .map(|index| if (62..=65).contains(&index) { '1' } else { '0' })
+        .collect();
     assert_eq!(bits.as_bit_str().to_string(), expected);
+
+    let offset_view = bits.as_bit_str().slice_until(67).slice_from(61);
+    assert_eq!(offset_view.to_string(), "011110");
 }
 
 #[test]
