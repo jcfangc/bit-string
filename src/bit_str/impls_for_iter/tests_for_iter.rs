@@ -162,6 +162,30 @@ fn to_bool_vec_on_offset_view() {
 }
 
 #[test]
+fn to_bool_vec_matches_slice_oracle_across_lengths_and_offsets() {
+    let lengths = [0, 1, 63, 64, 65, 4_096, 4_097, 65_536];
+    let offsets = [0, 1, 7, 63, 64];
+
+    for len in lengths {
+        for offset in offsets {
+            let source_values: Vec<_> = (0usize..offset + len)
+                .map(|index| (index.wrapping_mul(37) ^ (index >> 2)) % 11 < 5)
+                .collect();
+            let bits = BitString::from_bool_iter(source_values.iter().copied());
+            let view = if len == 0 {
+                bits.as_bit_str().slice_from(offset)
+            } else {
+                bits.as_bit_str()
+                    .slice(UsizeCO::try_new(offset, offset + len).unwrap())
+            };
+            let expected = source_values[offset..offset + len].to_vec();
+
+            assert_eq!(view.to_bool_vec(), expected, "len={len}, offset={offset}");
+        }
+    }
+}
+
+#[test]
 fn for_loop_over_view() {
     let bits = BitString::try_from("101").unwrap();
     let v = bits.as_bit_str();

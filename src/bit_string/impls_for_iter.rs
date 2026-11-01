@@ -12,7 +12,7 @@ impl BitString {
 
     #[inline]
     pub fn to_bool_vec(&self) -> Vec<bool> {
-        self.iter().collect()
+        self.as_bit_str().to_bool_vec()
     }
 }
 
