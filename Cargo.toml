@@ -14,7 +14,7 @@ exclude = ["/benches", "/src/**/tests_for_*", "/tests", ".github/"]
 members = ["derive"]
 
 [workspace.package]
-version = "0.6.5"
+version = "0.6.6"
 
 [features]
 characterization = []
@@ -46,6 +46,10 @@ harness = false
 
 [[bench]]
 name = "editing_extend_bool"
+harness = false
+
+[[bench]]
+name = "bit_to_bool_vec"
 harness = false
 
 [[bench]]
