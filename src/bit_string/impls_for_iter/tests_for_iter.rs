@@ -105,7 +105,7 @@ fn works_across_word_boundaries() {
 
 #[test]
 fn to_bool_vec_matches_slice_oracle_across_word_boundaries() {
-    for len in [0, 1, 63, 64, 65, 4_096, 4_097, 65_536] {
+    for len in [0, 1, 63, 64, 65, 127, 4_096, 4_097, 65_536] {
         let expected: Vec<_> = (0usize..len)
             .map(|index| (index.wrapping_mul(37) ^ (index >> 2)) % 11 < 5)
             .collect();

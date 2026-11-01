@@ -163,7 +163,7 @@ fn to_bool_vec_on_offset_view() {
 
 #[test]
 fn to_bool_vec_matches_slice_oracle_across_lengths_and_offsets() {
-    let lengths = [0, 1, 63, 64, 65, 4_096, 4_097, 65_536];
+    let lengths = [0, 1, 63, 64, 65, 127, 4_096, 4_097, 65_536];
     let offsets = [0, 1, 7, 63, 64];
 
     for len in lengths {
