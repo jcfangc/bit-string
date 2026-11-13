@@ -116,3 +116,50 @@ fn retain_mixed_values_preserves_relative_order() {
 
     assert_eq!(bits.to_string(), "1111");
 }
+
+#[test]
+fn retain_handles_word_boundary_lengths() {
+    for len in [0, 1, 63, 64, 65, 127, 128, 129] {
+        let original = (0..len)
+            .map(|index| index % 3 == 0)
+            .collect::<alloc::vec::Vec<_>>();
+        let expected = original
+            .iter()
+            .copied()
+            .filter(|&value| value)
+            .collect::<alloc::vec::Vec<_>>();
+        let mut bits = BitString::from_bool_iter(original.iter().copied());
+
+        bits.retain(|value| value);
+
+        assert_eq!(bits.to_bool_vec(), expected, "length {len}");
+    }
+}
+
+#[test]
+fn predicate_panic_leaves_a_valid_bit_string() {
+    extern crate std;
+
+    let mut bits = BitString::from_bool_iter((0..130).map(|index| index % 3 == 0));
+    let mut calls = 0usize;
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        bits.retain(|value| {
+            if calls == 70 {
+                panic!("predicate panic");
+            }
+            calls += 1;
+            value
+        });
+    }));
+
+    assert!(result.is_err());
+    assert_eq!(calls, 70);
+    assert_eq!(bits.bit_len(), 130);
+    assert_eq!(bits.words.len(), 3);
+    assert_eq!(bits.words[2] & !crate::low_mask(2), 0);
+    assert_eq!(bits.to_bool_vec().len(), bits.bit_len());
+
+    bits.push(true);
+    assert_eq!(bits.bit_len(), 131);
+    assert_eq!(bits.get(130), Some(true));
+}
