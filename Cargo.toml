@@ -53,6 +53,10 @@ name = "bit_to_bool_vec"
 harness = false
 
 [[bench]]
+name = "bit_retain"
+harness = false
+
+[[bench]]
 name = "construction_from_str"
 harness = false
 
