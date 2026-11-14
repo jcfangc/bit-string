@@ -20,17 +20,30 @@ fn convert_to_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     bencher.bench(|| black_box(&value).to_vec());
 }
 
+fn convert_to_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
+    let owner = offset_packed::<BITS>(&codes(BITS, len));
+    let value = owner.as_packed_str().slice_from(1);
+    bencher.bench(|| black_box(value.to_packed_string()));
+}
+
+fn offset_packed<const BITS: u8>(input: &[u8]) -> bit_string::PackedString<support::Code, BITS> {
+    let mut source = Vec::with_capacity(input.len() + 1);
+    source.push(0);
+    source.extend_from_slice(input);
+    packed::<BITS>(&source)
+}
+
 macro_rules! define_case {
     ($case:ident, $bits:literal, $len:literal) => {
         mod $case {
             use super::*;
 
-            #[divan::bench(name = concat!("packed_conversion/to_vec/", stringify!($case), "/iter_collect"))]
+            #[divan::bench(name = concat!("packed_conversion/to_vec/", stringify!($case), "/iterator_collect_reference"))]
             fn iter_collect(bencher: Bencher) {
                 super::collect_via_iter::<$bits>(bencher, $len);
             }
 
-            #[divan::bench(name = concat!("packed_conversion/to_vec/", stringify!($case), "/to_vec"))]
+            #[divan::bench(name = concat!("packed_conversion/to_vec/", stringify!($case), "/ours_to_vec"))]
             fn to_vec(bencher: Bencher) {
                 super::convert_to_vec::<$bits>(bencher, $len);
             }
@@ -40,17 +53,37 @@ macro_rules! define_case {
 
 crate::for_each_packed_bench_case!(define_case);
 
+mod conversion_cases {
+    use super::*;
+
+    macro_rules! define_case {
+        ($case:ident, $bits:literal, $len:literal) => {
+            mod $case {
+                use super::*;
+
+                #[divan::bench(name = concat!("packed_conversion/to_packed_string/", stringify!($case), "/ours_packed_str"))]
+                fn to_packed_string(bencher: Bencher) {
+                    super::super::convert_to_packed_string::<$bits>(bencher, $len);
+                }
+            }
+        };
+    }
+
+    crate::for_each_packed_bench_case!(define_case);
+}
+
+#[cfg(feature = "characterization")]
 macro_rules! define_boundary_case {
     ($case:ident, $width:ident, $bits:literal, $len:literal) => {
         mod $case {
             use super::*;
 
-            #[divan::bench(name = concat!("packed_conversion/to_vec_boundary/", stringify!($width), "/", stringify!($case), "/iter_collect"))]
+            #[divan::bench(name = concat!("packed_conversion/to_vec_boundary/", stringify!($width), "/", stringify!($case), "/iterator_collect_reference"))]
             fn iter_collect(bencher: Bencher) {
                 super::super::collect_via_iter::<$bits>(bencher, $len);
             }
 
-            #[divan::bench(name = concat!("packed_conversion/to_vec_boundary/", stringify!($width), "/", stringify!($case), "/to_vec"))]
+            #[divan::bench(name = concat!("packed_conversion/to_vec_boundary/", stringify!($width), "/", stringify!($case), "/ours_to_vec"))]
             fn to_vec(bencher: Bencher) {
                 super::super::convert_to_vec::<$bits>(bencher, $len);
             }
@@ -58,6 +91,7 @@ macro_rules! define_boundary_case {
     };
 }
 
+#[cfg(feature = "characterization")]
 macro_rules! define_width_boundaries {
     ($width:ident, $bits:literal; $($case:ident: $len:literal),+ $(,)?) => {
         mod $width {
@@ -68,6 +102,7 @@ macro_rules! define_width_boundaries {
     };
 }
 
+#[cfg(feature = "characterization")]
 mod boundaries {
     use super::*;
 

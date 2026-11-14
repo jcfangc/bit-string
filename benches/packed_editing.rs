@@ -3,6 +3,7 @@ mod support;
 
 use bit_string::PackedString;
 use divan::{Bencher, black_box};
+use int_intervals::UsizeCO;
 use support::{Code, aligned_index, codes, cross_word_index, packed, unaligned_index};
 
 fn main() {
@@ -315,6 +316,17 @@ fn extend_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
+fn replace_interval<const BITS: u8>(bencher: Bencher, len: usize) {
+    let value = packed::<BITS>(&codes(BITS, len));
+    let replacement = packed::<BITS>(&codes(BITS, len / 4));
+    bencher.bench(|| {
+        black_box(value.replace_interval(
+            UsizeCO::checked_from_start_len(len / 4, len / 4).unwrap(),
+            &replacement,
+        ))
+    });
+}
+
 macro_rules! define_case {
     ($case:ident, $bits:literal, $len:literal) => {
         mod $case {
@@ -382,7 +394,26 @@ macro_rules! define_case {
     };
 }
 
-crate::for_each_packed_bench_case!(define_case);
+crate::for_each_packed_editing_bench_case!(define_case);
+
+mod replacement_cases {
+    use super::*;
+
+    macro_rules! define_case {
+        ($case:ident, $bits:literal, $len:literal) => {
+            mod $case {
+                use super::*;
+
+                #[divan::bench(name = concat!("packed_editing/replace_interval/", stringify!($case), "/ours_packed_string"))]
+                fn replace_interval(bencher: Bencher) {
+                    super::super::replace_interval::<$bits>(bencher, $len);
+                }
+            }
+        };
+    }
+
+    crate::for_each_packed_editing_bench_case!(define_case);
+}
 
 macro_rules! define_extend_length_case {
     ($case:ident, $bits:literal) => {
@@ -490,12 +521,19 @@ macro_rules! define_cross_word_case {
     };
 }
 
+#[cfg(feature = "characterization")]
 define_push_shape_case!(push_shape_bits_1, 1);
+#[cfg(feature = "characterization")]
 define_push_shape_case!(push_shape_bits_2, 2);
+#[cfg(feature = "characterization")]
 define_push_shape_case!(push_shape_bits_3, 3);
+#[cfg(feature = "characterization")]
 define_push_shape_case!(push_shape_bits_4, 4);
+#[cfg(feature = "characterization")]
 define_push_shape_case!(push_shape_bits_5, 5);
+#[cfg(feature = "characterization")]
 define_push_shape_case!(push_shape_bits_6, 6);
+#[cfg(feature = "characterization")]
 define_push_shape_case!(push_shape_bits_7, 7);
 define_push_shape_case!(push_shape_bits_8, 8);
 

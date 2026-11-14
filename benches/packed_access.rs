@@ -2,6 +2,7 @@
 mod support;
 
 use divan::{Bencher, black_box};
+use int_intervals::UsizeCO;
 use support::{codes, indices, packed};
 
 fn main() {
@@ -98,6 +99,25 @@ fn get_random_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
+fn slice_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
+    let value = packed::<BITS>(&codes(BITS, len));
+    bencher.bench(|| black_box(value.slice(slice_interval(len / 4, len / 2))));
+}
+
+fn slice_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = codes(BITS, len);
+    let mut source = Vec::with_capacity(len + 1);
+    source.push(0);
+    source.extend_from_slice(&input);
+    let owner = packed::<BITS>(&source);
+    let value = owner.as_packed_str().slice_from(1);
+    bencher.bench(|| black_box(value.slice(slice_interval(len / 4, len / 2))));
+}
+
+fn slice_interval(start: usize, len: usize) -> UsizeCO {
+    UsizeCO::checked_from_start_len(start, len).unwrap()
+}
+
 macro_rules! define_case {
     ($case:ident, $bits:literal, $len:literal) => {
         mod $case {
@@ -172,4 +192,28 @@ macro_rules! define_case {
     };
 }
 
-crate::for_each_packed_bench_case!(define_case);
+crate::for_each_packed_access_bench_case!(define_case);
+
+mod slice_cases {
+    use super::*;
+
+    macro_rules! define_case {
+        ($case:ident, $bits:literal, $len:literal) => {
+            mod $case {
+                use super::*;
+
+                #[divan::bench(name = concat!("packed_slice/slice_middle/unaligned_view/", stringify!($case), "/ours_packed_string_aligned"))]
+                fn ours_packed_string(bencher: Bencher) {
+                    super::super::slice_packed_string::<$bits>(bencher, $len);
+                }
+
+                #[divan::bench(name = concat!("packed_slice/slice_middle/unaligned_view/", stringify!($case), "/ours_packed_str_unaligned"))]
+                fn ours_packed_str(bencher: Bencher) {
+                    super::super::slice_packed_str::<$bits>(bencher, $len);
+                }
+            }
+        };
+    }
+
+    crate::for_each_packed_access_bench_case!(define_case);
+}

@@ -1,15 +1,4 @@
-#[path = "packed_support/mod.rs"]
-mod support;
-
-use bit_string::{PackedStr, PackedString};
-use divan::{Bencher, black_box};
-use support::{Code, mix64, packed};
-
 const NEEDLE_LEN: usize = 32;
-
-fn main() {
-    divan::main();
-}
 
 #[derive(Clone, Copy)]
 enum Position {

@@ -1,30 +1,11 @@
-#[path = "packed_support/mod.rs"]
-mod support;
-
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
-
-use bit_string::PackedString;
-use divan::{Bencher, black_box};
-use int_intervals::UsizeCO;
-use support::{
-    codes, cross_word_index, cross_word_index_for_offset, mix64, packed, unaligned_index,
-};
-
 const NEEDLE_LENGTH: usize = 8;
-
-fn main() {
-    divan::main();
-}
 
 fn find_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let (input, needle_input, start) = present_case::<BITS>(len, false);
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
     assert_eq!(value.find(&needle), Some(start));
-    bencher.bench(|| black_box(value.find(&needle)));
+    bencher.bench(|| black_box(black_box(&value).find(black_box(&needle))));
 }
 
 fn find_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -34,7 +15,7 @@ fn find_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
     assert_eq!(value.find(needle), Some(start));
-    bencher.bench(|| black_box(value.find(needle)));
+    bencher.bench(|| black_box(black_box(&value).find(black_box(needle))));
 }
 
 fn find_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -42,7 +23,7 @@ fn find_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
     assert_eq!(value.find(&needle), None);
-    bencher.bench(|| black_box(value.find(&needle)));
+    bencher.bench(|| black_box(black_box(&value).find(black_box(&needle))));
 }
 
 fn find_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -52,7 +33,7 @@ fn find_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
     assert_eq!(value.find(needle), None);
-    bencher.bench(|| black_box(value.find(needle)));
+    bencher.bench(|| black_box(black_box(&value).find(black_box(needle))));
 }
 
 fn rfind_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -60,7 +41,7 @@ fn rfind_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
     assert_eq!(value.rfind(&needle), Some(start));
-    bencher.bench(|| black_box(value.rfind(&needle)));
+    bencher.bench(|| black_box(black_box(&value).rfind(black_box(&needle))));
 }
 
 fn rfind_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -70,7 +51,7 @@ fn rfind_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
     assert_eq!(value.rfind(needle), Some(start));
-    bencher.bench(|| black_box(value.rfind(needle)));
+    bencher.bench(|| black_box(black_box(&value).rfind(black_box(needle))));
 }
 
 fn rfind_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -78,7 +59,7 @@ fn rfind_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
     assert_eq!(value.rfind(&needle), None);
-    bencher.bench(|| black_box(value.rfind(&needle)));
+    bencher.bench(|| black_box(black_box(&value).rfind(black_box(&needle))));
 }
 
 fn rfind_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -88,7 +69,7 @@ fn rfind_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
     assert_eq!(value.rfind(needle), None);
-    bencher.bench(|| black_box(value.rfind(needle)));
+    bencher.bench(|| black_box(black_box(&value).rfind(black_box(needle))));
 }
 
 fn contains_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -97,7 +78,7 @@ fn contains_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let needle = packed::<BITS>(&needle_input);
     assert_eq!(value.find(&needle), Some(start));
     assert!(value.contains(&needle));
-    bencher.bench(|| black_box(value.contains(&needle)));
+    bencher.bench(|| black_box(black_box(&value).contains(black_box(&needle))));
 }
 
 fn contains_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -108,7 +89,7 @@ fn contains_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let needle = needle_owner.as_packed_str();
     assert_eq!(value.find(needle), Some(start));
     assert!(value.contains(needle));
-    bencher.bench(|| black_box(value.contains(needle)));
+    bencher.bench(|| black_box(black_box(&value).contains(black_box(needle))));
 }
 
 fn contains_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -116,7 +97,7 @@ fn contains_absent_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = packed::<BITS>(&input);
     let needle = packed::<BITS>(&needle_input);
     assert!(!value.contains(&needle));
-    bencher.bench(|| black_box(value.contains(&needle)));
+    bencher.bench(|| black_box(black_box(&value).contains(black_box(&needle))));
 }
 
 fn contains_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -126,7 +107,7 @@ fn contains_absent_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
     assert!(!value.contains(needle));
-    bencher.bench(|| black_box(value.contains(needle)));
+    bencher.bench(|| black_box(black_box(&value).contains(black_box(needle))));
 }
 
 fn matches_at_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -136,7 +117,7 @@ fn matches_at_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let needle_len = NEEDLE_LENGTH.min(len - start);
     let needle = packed::<BITS>(&input[start..start + needle_len]);
     assert!(value.matches_at(start, &needle));
-    bencher.bench(|| black_box(value.matches_at(start, &needle)));
+    bencher.bench(|| black_box(black_box(&value).matches_at(black_box(start), black_box(&needle))));
 }
 
 fn matches_at_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -148,14 +129,14 @@ fn matches_at_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let value = value_owner.as_packed_str().slice_from(1);
     let needle = needle_owner.as_packed_str();
     assert!(value.matches_at(start, needle));
-    bencher.bench(|| black_box(value.matches_at(start, needle)));
+    bencher.bench(|| black_box(black_box(&value).matches_at(black_box(start), black_box(needle))));
 }
 
 fn starts_with_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let value = packed::<BITS>(&input);
     let prefix = packed::<BITS>(&input[..NEEDLE_LENGTH]);
-    bencher.bench(|| black_box(value.starts_with(&prefix)));
+    bencher.bench(|| black_box(black_box(&value).starts_with(black_box(&prefix))));
 }
 
 fn starts_with_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -164,14 +145,14 @@ fn starts_with_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let prefix_owner = packed::<BITS>(&input[..NEEDLE_LENGTH]);
     let value = value_owner.as_packed_str().slice_from(1);
     let prefix = prefix_owner.as_packed_str();
-    bencher.bench(|| black_box(value.starts_with(prefix)));
+    bencher.bench(|| black_box(black_box(&value).starts_with(black_box(prefix))));
 }
 
 fn ends_with_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let value = packed::<BITS>(&input);
     let suffix = packed::<BITS>(&input[len - NEEDLE_LENGTH..]);
-    bencher.bench(|| black_box(value.ends_with(&suffix)));
+    bencher.bench(|| black_box(black_box(&value).ends_with(black_box(&suffix))));
 }
 
 fn ends_with_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -180,14 +161,14 @@ fn ends_with_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let suffix_owner = packed::<BITS>(&input[len - NEEDLE_LENGTH..]);
     let value = value_owner.as_packed_str().slice_from(1);
     let suffix = suffix_owner.as_packed_str();
-    bencher.bench(|| black_box(value.ends_with(suffix)));
+    bencher.bench(|| black_box(black_box(&value).ends_with(black_box(suffix))));
 }
 
 fn strip_prefix_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let value = packed::<BITS>(&input);
     let prefix = packed::<BITS>(&input[..NEEDLE_LENGTH]);
-    bencher.bench(|| black_box(value.strip_prefix(&prefix)));
+    bencher.bench(|| black_box(black_box(&value).strip_prefix(black_box(&prefix))));
 }
 
 fn strip_prefix_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -196,14 +177,14 @@ fn strip_prefix_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let prefix_owner = packed::<BITS>(&input[..NEEDLE_LENGTH]);
     let value = value_owner.as_packed_str().slice_from(1);
     let prefix = prefix_owner.as_packed_str();
-    bencher.bench(|| black_box(value.strip_prefix(prefix)));
+    bencher.bench(|| black_box(black_box(&value).strip_prefix(black_box(prefix))));
 }
 
 fn strip_suffix_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = codes(BITS, len);
     let value = packed::<BITS>(&input);
     let suffix = packed::<BITS>(&input[len - NEEDLE_LENGTH..]);
-    bencher.bench(|| black_box(value.strip_suffix(&suffix)));
+    bencher.bench(|| black_box(black_box(&value).strip_suffix(black_box(&suffix))));
 }
 
 fn strip_suffix_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
@@ -212,63 +193,11 @@ fn strip_suffix_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
     let suffix_owner = packed::<BITS>(&input[len - NEEDLE_LENGTH..]);
     let value = value_owner.as_packed_str().slice_from(1);
     let suffix = suffix_owner.as_packed_str();
-    bencher.bench(|| black_box(value.strip_suffix(suffix)));
-}
-
-fn cmp_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
-    let left_codes = codes(BITS, len);
-    let mut right_codes = left_codes.clone();
-    right_codes[cross_word_index::<BITS>(len)] ^= 1;
-    let left = packed::<BITS>(&left_codes);
-    let right = packed::<BITS>(&right_codes);
-    bencher.bench(|| black_box(left.cmp(&right)));
-}
-
-fn cmp_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
-    let left_codes = codes(BITS, len);
-    let mut right_codes = left_codes.clone();
-    right_codes[cross_word_index_for_offset(usize::from(BITS), len, usize::from(BITS))] ^= 1;
-    let left_owner = offset_packed::<BITS>(&left_codes);
-    let right_owner = offset_packed::<BITS>(&right_codes);
-    let left = left_owner.as_packed_str().slice_from(1);
-    let right = right_owner.as_packed_str().slice_from(1);
-    bencher.bench(|| black_box(left.cmp(&right)));
-}
-
-fn hash_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
-    let value = packed::<BITS>(&codes(BITS, len));
-    bencher.bench(|| {
-        let mut hasher = DefaultHasher::new();
-        value.hash(&mut hasher);
-        black_box(hasher.finish())
-    });
-}
-
-fn slice_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
-    let value = packed::<BITS>(&codes(BITS, len));
-    bencher.bench(|| black_box(value.slice(interval(len / 4, len / 2))));
-}
-
-fn slice_packed_str<const BITS: u8>(bencher: Bencher, len: usize) {
-    let owner = offset_packed::<BITS>(&codes(BITS, len));
-    let value = owner.as_packed_str().slice_from(1);
-    bencher.bench(|| black_box(value.slice(interval(len / 4, len / 2))));
-}
-
-fn to_packed_string<const BITS: u8>(bencher: Bencher, len: usize) {
-    let owner = offset_packed::<BITS>(&codes(BITS, len));
-    let value = owner.as_packed_str().slice_from(1);
-    bencher.bench(|| black_box(value.to_packed_string()));
-}
-
-fn replace_interval<const BITS: u8>(bencher: Bencher, len: usize) {
-    let value = packed::<BITS>(&codes(BITS, len));
-    let replacement = packed::<BITS>(&codes(BITS, len / 4));
-    bencher.bench(|| black_box(value.replace_interval(interval(len / 4, len / 4), &replacement)));
+    bencher.bench(|| black_box(black_box(&value).strip_suffix(black_box(suffix))));
 }
 
 macro_rules! define_two_case_benchmarks {
-    ($module:ident, $scenario:literal, $string_fn:ident, $str_fn:ident) => {
+    ($module:ident, $scenario:literal, $case_macro:ident, $string_fn:ident, $str_fn:ident) => {
         mod $module {
             macro_rules! define_case {
                 ($case:ident, $bits:literal, $len:literal) => {
@@ -300,34 +229,7 @@ macro_rules! define_two_case_benchmarks {
                 };
             }
 
-            crate::for_each_packed_bench_case!(define_case);
-        }
-    };
-}
-
-macro_rules! define_one_case_benchmark {
-    ($module:ident, $scenario:literal, $fn_name:ident, $legend:literal) => {
-        mod $module {
-            macro_rules! define_case {
-                ($case:ident, $bits:literal, $len:literal) => {
-                    mod $case {
-                        #[divan::bench(
-                                                                            name = concat!(
-                                                                                $scenario,
-                                                                                "/",
-                                                                                stringify!($case),
-                                                                                "/",
-                                                                                $legend
-                                                                            )
-                                                                        )]
-                                fn benchmark(bencher: divan::Bencher) {
-                                    crate::$fn_name::<$bits>(bencher, $len);
-                                }
-                            }
-                        };
-                    }
-
-            crate::for_each_packed_bench_case!(define_case);
+            crate::$case_macro!(define_case);
         }
     };
 }
@@ -335,106 +237,81 @@ macro_rules! define_one_case_benchmark {
 define_two_case_benchmarks!(
     find_cases,
     "packed_matching/find_present_late",
+    for_each_packed_matching_search_bench_case,
     find_packed_string,
     find_packed_str
 );
 define_two_case_benchmarks!(
     find_absent_cases,
     "packed_matching/find_absent_early_reject",
+    for_each_packed_matching_search_bench_case,
     find_absent_packed_string,
     find_absent_packed_str
 );
 define_two_case_benchmarks!(
     rfind_cases,
     "packed_matching/rfind_present_scan_late",
+    for_each_packed_matching_search_bench_case,
     rfind_packed_string,
     rfind_packed_str
 );
 define_two_case_benchmarks!(
     rfind_absent_cases,
     "packed_matching/rfind_absent_early_reject",
+    for_each_packed_matching_search_bench_case,
     rfind_absent_packed_string,
     rfind_absent_packed_str
 );
 define_two_case_benchmarks!(
     contains_cases,
     "packed_matching/contains_present_late",
+    for_each_packed_matching_search_bench_case,
     contains_packed_string,
     contains_packed_str
 );
 define_two_case_benchmarks!(
     contains_absent_cases,
     "packed_matching/contains_absent_early_reject",
+    for_each_packed_matching_search_bench_case,
     contains_absent_packed_string,
     contains_absent_packed_str
 );
 define_two_case_benchmarks!(
     matches_at_cases,
     "packed_matching/matches_at/unaligned",
+    for_each_packed_matching_exact_bench_case,
     matches_at_packed_string,
     matches_at_packed_str
 );
 define_two_case_benchmarks!(
     starts_with_cases,
     "packed_matching/starts_with",
+    for_each_packed_matching_boundary_bench_case,
     starts_with_packed_string,
     starts_with_packed_str
 );
 define_two_case_benchmarks!(
     ends_with_cases,
     "packed_matching/ends_with",
+    for_each_packed_matching_boundary_bench_case,
     ends_with_packed_string,
     ends_with_packed_str
 );
 define_two_case_benchmarks!(
     strip_prefix_cases,
     "packed_matching/strip_prefix",
+    for_each_packed_matching_boundary_bench_case,
     strip_prefix_packed_string,
     strip_prefix_packed_str
 );
 define_two_case_benchmarks!(
     strip_suffix_cases,
     "packed_matching/strip_suffix",
+    for_each_packed_matching_boundary_bench_case,
     strip_suffix_packed_string,
     strip_suffix_packed_str
 );
-define_two_case_benchmarks!(
-    cmp_cases,
-    "packed_ordering/cmp_difference/word_boundary_or_fallback",
-    cmp_packed_string,
-    cmp_packed_str
-);
-define_two_case_benchmarks!(
-    slice_cases,
-    "packed_slice/slice_middle/unaligned_view",
-    slice_packed_string,
-    slice_packed_str
-);
-
-define_one_case_benchmark!(
-    hash_cases,
-    "packed_hash/hash",
-    hash_packed_string,
-    "ours_packed_string"
-);
-define_one_case_benchmark!(
-    conversion_cases,
-    "packed_conversion/to_packed_string",
-    to_packed_string,
-    "ours_packed_str"
-);
-define_one_case_benchmark!(
-    replacement_cases,
-    "packed_editing/replace_interval",
-    replace_interval,
-    "ours_packed_string"
-);
-
-fn interval(start: usize, len: usize) -> UsizeCO {
-    UsizeCO::checked_from_start_len(start, len).unwrap()
-}
-
-fn offset_packed<const BITS: u8>(input: &[u8]) -> PackedString<support::Code, BITS> {
+fn offset_packed<const BITS: u8>(input: &[u8]) -> PackedString<crate::support::Code, BITS> {
     let mut source = Vec::with_capacity(input.len() + 1);
     source.push(0);
     source.extend_from_slice(input);
