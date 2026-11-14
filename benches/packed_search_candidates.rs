@@ -34,7 +34,9 @@ fn input<const BITS: u8>(
     };
     let mut needle_seed = 0xa076_1d64_78bd_642fu64;
     let needle_codes = if matches!(position, Position::HighRepeatAbsent) {
-        vec![mask; needle_len]
+        let mut needle_codes = vec![0; needle_len];
+        needle_codes[needle_len - 1] = mask;
+        needle_codes
     } else {
         loop {
             let candidate: Vec<u8> = (0..needle_len)
