@@ -10,6 +10,7 @@ include!("editing/push_bit_string.rs");
 include!("editing/truncate.rs");
 include!("editing/insert_middle.rs");
 include!("editing/remove_middle.rs");
+include!("editing/insert_remove_word_growth.rs");
 include!("editing/replace_interval.rs");
 include!("editing/slice.rs");
 
