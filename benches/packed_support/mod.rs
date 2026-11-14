@@ -236,8 +236,12 @@ macro_rules! for_each_packed_search_case {
 macro_rules! for_each_packed_search_regression_case {
     ($macro:ident) => {
         $macro!(bits_1_len_65536, 1, 65_536);
+        $macro!(bits_2_len_65536, 2, 65_536);
         $macro!(bits_3_len_65536, 3, 65_536);
+        $macro!(bits_4_len_65536, 4, 65_536);
         $macro!(bits_5_len_65536, 5, 65_536);
+        $macro!(bits_6_len_65536, 6, 65_536);
+        $macro!(bits_7_len_65536, 7, 65_536);
         $macro!(bits_8_len_65536, 8, 65_536);
     };
 }
