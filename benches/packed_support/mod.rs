@@ -164,22 +164,6 @@ macro_rules! for_each_packed_editing_regression_case {
 }
 
 #[macro_export]
-macro_rules! for_each_packed_matching_search_regression_case {
-    ($macro:ident) => {
-        $macro!(bits_1_len_1048576, 1, 1_048_576);
-        $macro!(bits_2_len_1048576, 2, 1_048_576);
-        $macro!(bits_3_len_64, 3, 64);
-        $macro!(bits_3_len_1048576, 3, 1_048_576);
-        $macro!(bits_4_len_1048576, 4, 1_048_576);
-        $macro!(bits_5_len_1048576, 5, 1_048_576);
-        $macro!(bits_6_len_1048576, 6, 1_048_576);
-        $macro!(bits_7_len_1048576, 7, 1_048_576);
-        $macro!(bits_8_len_64, 8, 64);
-        $macro!(bits_8_len_1048576, 8, 1_048_576);
-    };
-}
-
-#[macro_export]
 macro_rules! for_each_packed_matching_exact_regression_case {
     ($macro:ident) => {
         $macro!(bits_1_len_1048576, 1, 1_048_576);
@@ -333,22 +317,6 @@ macro_rules! for_each_packed_access_bench_case {
 macro_rules! for_each_packed_editing_bench_case {
     ($macro:ident) => {
         $crate::for_each_packed_case!($macro);
-    };
-}
-
-#[cfg(feature = "characterization")]
-#[macro_export]
-macro_rules! for_each_packed_matching_search_bench_case {
-    ($macro:ident) => {
-        $crate::for_each_packed_case!($macro);
-    };
-}
-
-#[cfg(not(feature = "characterization"))]
-#[macro_export]
-macro_rules! for_each_packed_matching_search_bench_case {
-    ($macro:ident) => {
-        $crate::for_each_packed_matching_search_regression_case!($macro);
     };
 }
 
