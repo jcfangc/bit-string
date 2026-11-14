@@ -1,6 +1,7 @@
 #[path = "packed_support/mod.rs"]
 mod support;
 
+#[cfg(feature = "characterization")]
 use bit_string::PackedString;
 use divan::{Bencher, black_box};
 use int_intervals::UsizeCO;
@@ -202,6 +203,28 @@ fn insert_middle_vec<const BITS: u8>(bencher: Bencher, len: usize) {
     });
 }
 
+fn insert_cross_word_packed<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = packed::<BITS>(&codes(BITS, len));
+    let index = cross_word_index::<BITS>(len);
+    debug_assert!((index * usize::from(BITS)) % 64 > 64 - usize::from(BITS));
+    bencher.with_inputs(|| input.clone()).bench_refs(|value| {
+        value.insert(index, Code(0));
+        black_box(&*value);
+        black_box(value.char_len())
+    });
+}
+
+fn insert_cross_word_vec<const BITS: u8>(bencher: Bencher, len: usize) {
+    let input = codes(BITS, len);
+    let index = cross_word_index::<BITS>(len);
+    debug_assert!((index * usize::from(BITS)) % 64 > 64 - usize::from(BITS));
+    bencher.with_inputs(|| input.clone()).bench_refs(|value| {
+        value.insert(index, 0);
+        black_box(&*value);
+        black_box(value.len())
+    });
+}
+
 fn remove_middle_packed<const BITS: u8>(bencher: Bencher, len: usize) {
     let input = packed::<BITS>(&codes(BITS, len));
     let index = cross_word_index::<BITS>(len);
@@ -259,6 +282,7 @@ fn extend_from_chars_concat_at<const BITS: u8>(bencher: Bencher, len: usize, pre
     });
 }
 
+#[cfg(feature = "characterization")]
 fn extend_with_length<const BITS: u8>(bencher: Bencher, extension_len: usize, concat: bool) {
     let input = extend_length_input::<BITS>(extension_len);
     let extension = codes(BITS, extension_len);
@@ -276,6 +300,7 @@ fn extend_with_length<const BITS: u8>(bencher: Bencher, extension_len: usize, co
         });
 }
 
+#[cfg(feature = "characterization")]
 fn extend_per_character_with_length<const BITS: u8>(bencher: Bencher, extension_len: usize) {
     let input = extend_length_input::<BITS>(extension_len);
     let extension = codes(BITS, extension_len);
@@ -290,11 +315,13 @@ fn extend_per_character_with_length<const BITS: u8>(bencher: Bencher, extension_
         });
 }
 
+#[cfg(feature = "characterization")]
 fn extend_length_input<const BITS: u8>(extension_len: usize) -> PackedString<Code, BITS> {
     const PREFIX_LEN: usize = 1_048_576;
     packed::<BITS>(&codes(BITS, PREFIX_LEN + extension_len))
 }
 
+#[cfg(feature = "characterization")]
 fn extend_length_bench_input<const BITS: u8>(
     input: &PackedString<Code, BITS>,
 ) -> PackedString<Code, BITS> {
@@ -415,65 +442,108 @@ mod replacement_cases {
     crate::for_each_packed_editing_bench_case!(define_case);
 }
 
-macro_rules! define_extend_length_case {
-    ($case:ident, $bits:literal) => {
-        mod $case {
-            use super::*;
+#[cfg(feature = "characterization")]
+mod extend_length_cases {
+    use super::*;
 
-            #[divan::bench(args = [1, 16, 63, 64, 262144])]
-            fn streaming_batches(bencher: Bencher, extension_len: usize) {
-                crate::extend_with_length::<$bits>(bencher, extension_len, false);
-            }
+    macro_rules! define_extend_length_case {
+        ($case:ident, $bits:literal) => {
+            mod $case {
+                use super::*;
 
-            #[divan::bench(args = [1, 16, 63, 64, 262144])]
-            fn suffix_concat(bencher: Bencher, extension_len: usize) {
-                crate::extend_with_length::<$bits>(bencher, extension_len, true);
-            }
+                #[divan::bench(args = [1, 16, 63, 64, 262144])]
+                fn streaming_batches(bencher: Bencher, extension_len: usize) {
+                    crate::extend_with_length::<$bits>(bencher, extension_len, false);
+                }
 
-            #[divan::bench(args = [1, 16, 63, 64, 262144])]
-            fn per_character_preallocated(bencher: Bencher, extension_len: usize) {
-                crate::extend_per_character_with_length::<$bits>(bencher, extension_len);
+                #[divan::bench(args = [1, 16, 63, 64, 262144])]
+                fn suffix_concat(bencher: Bencher, extension_len: usize) {
+                    crate::extend_with_length::<$bits>(bencher, extension_len, true);
+                }
+
+                #[divan::bench(args = [1, 16, 63, 64, 262144])]
+                fn per_character_preallocated(bencher: Bencher, extension_len: usize) {
+                    crate::extend_per_character_with_length::<$bits>(bencher, extension_len);
+                }
             }
-        }
-    };
+        };
+    }
+
+    define_extend_length_case!(extend_length_bits_1, 1);
+    define_extend_length_case!(extend_length_bits_2, 2);
+    define_extend_length_case!(extend_length_bits_3, 3);
+    define_extend_length_case!(extend_length_bits_4, 4);
+    define_extend_length_case!(extend_length_bits_5, 5);
+    define_extend_length_case!(extend_length_bits_6, 6);
+    define_extend_length_case!(extend_length_bits_7, 7);
+    define_extend_length_case!(extend_length_bits_8, 8);
 }
-
-define_extend_length_case!(extend_length_bits_1, 1);
-define_extend_length_case!(extend_length_bits_2, 2);
-define_extend_length_case!(extend_length_bits_3, 3);
-define_extend_length_case!(extend_length_bits_4, 4);
-define_extend_length_case!(extend_length_bits_5, 5);
-define_extend_length_case!(extend_length_bits_6, 6);
-define_extend_length_case!(extend_length_bits_7, 7);
-define_extend_length_case!(extend_length_bits_8, 8);
 
 // Adjacent lengths exercise backing-word growth/shrink and partial tails.
-macro_rules! define_edit_boundary_case {
+#[cfg(feature = "characterization")]
+mod edit_boundary_cases {
+    use super::*;
+
+    macro_rules! define_edit_boundary_case {
+        ($case:ident, $bits:literal) => {
+            mod $case {
+                use super::*;
+
+                #[divan::bench(args = [63, 64, 65, 127, 128, 129])]
+                fn insert_middle(bencher: Bencher, len: usize) {
+                    crate::insert_middle_packed::<$bits>(bencher, len);
+                }
+
+                #[divan::bench(args = [63, 64, 65, 127, 128, 129])]
+                fn remove_middle(bencher: Bencher, len: usize) {
+                    crate::remove_middle_packed::<$bits>(bencher, len);
+                }
+            }
+        };
+    }
+
+    define_edit_boundary_case!(edit_boundary_bits_1, 1);
+    define_edit_boundary_case!(edit_boundary_bits_2, 2);
+    define_edit_boundary_case!(edit_boundary_bits_3, 3);
+    define_edit_boundary_case!(edit_boundary_bits_4, 4);
+    define_edit_boundary_case!(edit_boundary_bits_5, 5);
+    define_edit_boundary_case!(edit_boundary_bits_6, 6);
+    define_edit_boundary_case!(edit_boundary_bits_7, 7);
+    define_edit_boundary_case!(edit_boundary_bits_8, 8);
+}
+
+macro_rules! define_cross_word_edit_case {
     ($case:ident, $bits:literal) => {
         mod $case {
             use super::*;
 
-            #[divan::bench(args = [63, 64, 65, 127, 128, 129])]
-            fn insert_middle(bencher: Bencher, len: usize) {
-                crate::insert_middle_packed::<$bits>(bencher, len);
+            #[divan::bench(name = concat!("packed_editing/insert_cross_word/", stringify!($case), "/ours_packed_string"))]
+            fn insert_packed(bencher: Bencher) {
+                crate::insert_cross_word_packed::<$bits>(bencher, 1_024);
             }
 
-            #[divan::bench(args = [63, 64, 65, 127, 128, 129])]
-            fn remove_middle(bencher: Bencher, len: usize) {
-                crate::remove_middle_packed::<$bits>(bencher, len);
+            #[divan::bench(name = concat!("packed_editing/insert_cross_word/", stringify!($case), "/vec_u8"))]
+            fn insert_vec(bencher: Bencher) {
+                crate::insert_cross_word_vec::<$bits>(bencher, 1_024);
+            }
+
+            #[divan::bench(name = concat!("packed_editing/remove_cross_word/", stringify!($case), "/ours_packed_string"))]
+            fn remove_packed(bencher: Bencher) {
+                crate::remove_middle_packed::<$bits>(bencher, 1_024);
+            }
+
+            #[divan::bench(name = concat!("packed_editing/remove_cross_word/", stringify!($case), "/vec_u8"))]
+            fn remove_vec(bencher: Bencher) {
+                crate::remove_middle_vec::<$bits>(bencher, 1_024);
             }
         }
     };
 }
 
-define_edit_boundary_case!(edit_boundary_bits_1, 1);
-define_edit_boundary_case!(edit_boundary_bits_2, 2);
-define_edit_boundary_case!(edit_boundary_bits_3, 3);
-define_edit_boundary_case!(edit_boundary_bits_4, 4);
-define_edit_boundary_case!(edit_boundary_bits_5, 5);
-define_edit_boundary_case!(edit_boundary_bits_6, 6);
-define_edit_boundary_case!(edit_boundary_bits_7, 7);
-define_edit_boundary_case!(edit_boundary_bits_8, 8);
+define_cross_word_edit_case!(edit_cross_word_bits_3, 3);
+define_cross_word_edit_case!(edit_cross_word_bits_5, 5);
+define_cross_word_edit_case!(edit_cross_word_bits_6, 6);
+define_cross_word_edit_case!(edit_cross_word_bits_7, 7);
 
 macro_rules! define_push_shape_case {
     ($case:ident, $bits:literal) => {
