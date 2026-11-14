@@ -95,26 +95,25 @@ impl BitString {
             .expect("bit string length overflow");
         let new_words = word_len(new_len);
 
-        // In-place fast path: word count unchanged (~98% of operations).
-        if new_words == self.words.len() {
-            // Ensure the last word is present (Vec::len == new_words already).
+        if new_words > self.words.capacity() {
+            // When allocation is required, copy directly into the new buffer
+            // instead of shifting the existing words after Vec grows.
+            let mut bits = zero_words(new_words);
+
+            self.words.copy_bits(0, index).paste_to(&mut bits, 0);
+            bits.set_bit_at(index, value);
+            self.words
+                .copy_bits(index, self.bit_len - index)
+                .paste_to(&mut bits, index + 1);
+
+            self.words = bits;
+        } else {
+            // Grow first so the existing allocation is reused before bits move.
             self.words.resize(new_words, 0);
             self.words.shift_right_in_place(index, self.bit_len - index);
             self.words.set_bit_at(index, value);
-            self.bit_len = new_len;
-            return;
         }
 
-        // Word count changed — allocate a fresh buffer.
-        let mut bits = zero_words(new_words);
-
-        self.words.copy_bits(0, index).paste_to(&mut bits, 0);
-        bits.set_bit_at(index, value);
-        self.words
-            .copy_bits(index, self.bit_len - index)
-            .paste_to(&mut bits, index + 1);
-
-        self.words = bits;
         self.bit_len = new_len;
     }
 

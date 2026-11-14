@@ -94,6 +94,28 @@ fn inserts_true_at_word_boundary() {
 }
 
 #[test]
+fn insertion_growth_reuses_spare_word_capacity() {
+    let mut bits = BitString::zeros(128);
+    bits.set(0, true);
+    bits.set(31, true);
+    bits.set(32, true);
+    bits.set(63, true);
+    bits.truncate(64);
+
+    let expected = {
+        let mut expected: alloc::vec::Vec<_> = bits.iter().collect();
+        expected.insert(32, false);
+        expected
+    };
+    let words_ptr = bits.words().as_ptr();
+
+    bits.insert(32, false);
+
+    assert_eq!(bits.words().as_ptr(), words_ptr);
+    assert_eq!(bits.iter().collect::<alloc::vec::Vec<_>>(), expected);
+}
+
+#[test]
 fn inserts_at_clamped_index_when_index_gt_len() {
     let mut bits = BitString::try_from("101").unwrap();
 
