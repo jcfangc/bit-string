@@ -85,7 +85,7 @@ macro_rules! define_case {
                         super::retain_in_place::<$bits>(bencher, $len, $rate);
                     }
 
-                    #[divan::bench(name = concat!("packed_retain/", $scenario, "/", stringify!($case), "/ours_packed_string_rebuild_reference"))]
+                    #[divan::bench(name = concat!("packed_retain/", $scenario, "/", stringify!($case), "/rebuild_reference"))]
                     fn $reference_name(bencher: Bencher) {
                         super::retain_rebuild_reference::<$bits>(bencher, $len, $rate);
                     }

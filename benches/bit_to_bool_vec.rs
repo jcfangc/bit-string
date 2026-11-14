@@ -98,8 +98,10 @@ macro_rules! define_case_with_views {
             }
 
             view_case!(offset_1, 1, "1", $len, $length_label, $pattern, $pattern_label);
+            #[cfg(feature = "characterization")]
             view_case!(offset_7, 7, "7", $len, $length_label, $pattern, $pattern_label);
             view_case!(offset_63, 63, "63", $len, $length_label, $pattern, $pattern_label);
+            #[cfg(feature = "characterization")]
             view_case!(offset_64, 64, "64", $len, $length_label, $pattern, $pattern_label);
         }
     };

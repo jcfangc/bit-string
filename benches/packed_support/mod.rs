@@ -126,6 +126,67 @@ macro_rules! for_each_packed_regression_case {
 }
 
 #[macro_export]
+macro_rules! for_each_packed_access_regression_case {
+    ($macro:ident) => {
+        $macro!(bits_1_len_1048576, 1, 1_048_576);
+        $macro!(bits_3_len_64, 3, 64);
+        $macro!(bits_3_len_1048576, 3, 1_048_576);
+        $macro!(bits_4_len_1048576, 4, 1_048_576);
+        $macro!(bits_7_len_1048576, 7, 1_048_576);
+        $macro!(bits_8_len_64, 8, 64);
+        $macro!(bits_8_len_1048576, 8, 1_048_576);
+    };
+}
+
+#[macro_export]
+macro_rules! for_each_packed_trait_regression_case {
+    ($macro:ident) => {
+        $macro!(bits_1_len_1048576, 1, 1_048_576);
+        $macro!(bits_2_len_1048576, 2, 1_048_576);
+        $macro!(bits_4_len_1048576, 4, 1_048_576);
+        $macro!(bits_7_len_1048576, 7, 1_048_576);
+        $macro!(bits_8_len_64, 8, 64);
+        $macro!(bits_8_len_1048576, 8, 1_048_576);
+    };
+}
+
+#[macro_export]
+macro_rules! for_each_packed_editing_regression_case {
+    ($macro:ident) => {
+        $macro!(bits_1_len_1048576, 1, 1_048_576);
+        $macro!(bits_2_len_1048576, 2, 1_048_576);
+        $macro!(bits_3_len_64, 3, 64);
+        $macro!(bits_4_len_1048576, 4, 1_048_576);
+        $macro!(bits_7_len_1048576, 7, 1_048_576);
+        $macro!(bits_8_len_64, 8, 64);
+        $macro!(bits_8_len_1048576, 8, 1_048_576);
+    };
+}
+
+#[macro_export]
+macro_rules! for_each_packed_matching_exact_regression_case {
+    ($macro:ident) => {
+        $macro!(bits_1_len_1048576, 1, 1_048_576);
+        $macro!(bits_3_len_1048576, 3, 1_048_576);
+        $macro!(bits_4_len_1048576, 4, 1_048_576);
+        $macro!(bits_7_len_1048576, 7, 1_048_576);
+        $macro!(bits_8_len_64, 8, 64);
+        $macro!(bits_8_len_1048576, 8, 1_048_576);
+    };
+}
+
+#[macro_export]
+macro_rules! for_each_packed_matching_boundary_regression_case {
+    ($macro:ident) => {
+        $macro!(bits_1_len_1048576, 1, 1_048_576);
+        $macro!(bits_4_len_1048576, 4, 1_048_576);
+        $macro!(bits_7_len_1048576, 7, 1_048_576);
+        $macro!(bits_8_len_64, 8, 64);
+        $macro!(bits_8_len_1048576, 8, 1_048_576);
+    };
+}
+
+#[macro_export]
 macro_rules! for_each_packed_search_case {
     ($macro:ident) => {
         $macro!(bits_1_len_64, 1, 64);
@@ -159,8 +220,12 @@ macro_rules! for_each_packed_search_case {
 macro_rules! for_each_packed_search_regression_case {
     ($macro:ident) => {
         $macro!(bits_1_len_65536, 1, 65_536);
+        $macro!(bits_2_len_65536, 2, 65_536);
         $macro!(bits_3_len_65536, 3, 65_536);
+        $macro!(bits_4_len_65536, 4, 65_536);
         $macro!(bits_5_len_65536, 5, 65_536);
+        $macro!(bits_6_len_65536, 6, 65_536);
+        $macro!(bits_7_len_65536, 7, 65_536);
         $macro!(bits_8_len_65536, 8, 65_536);
     };
 }
@@ -212,6 +277,86 @@ macro_rules! for_each_grit_regression_case {
 macro_rules! for_each_packed_bench_case {
     ($macro:ident) => {
         $crate::for_each_packed_case!($macro);
+    };
+}
+
+#[cfg(feature = "characterization")]
+#[macro_export]
+macro_rules! for_each_packed_access_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_case!($macro);
+    };
+}
+
+#[cfg(feature = "characterization")]
+#[macro_export]
+macro_rules! for_each_packed_trait_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_case!($macro);
+    };
+}
+
+#[cfg(not(feature = "characterization"))]
+#[macro_export]
+macro_rules! for_each_packed_trait_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_trait_regression_case!($macro);
+    };
+}
+
+#[cfg(not(feature = "characterization"))]
+#[macro_export]
+macro_rules! for_each_packed_access_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_access_regression_case!($macro);
+    };
+}
+
+#[cfg(feature = "characterization")]
+#[macro_export]
+macro_rules! for_each_packed_editing_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_case!($macro);
+    };
+}
+
+#[cfg(feature = "characterization")]
+#[macro_export]
+macro_rules! for_each_packed_matching_exact_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_case!($macro);
+    };
+}
+
+#[cfg(not(feature = "characterization"))]
+#[macro_export]
+macro_rules! for_each_packed_matching_exact_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_matching_exact_regression_case!($macro);
+    };
+}
+
+#[cfg(feature = "characterization")]
+#[macro_export]
+macro_rules! for_each_packed_matching_boundary_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_case!($macro);
+    };
+}
+
+#[cfg(not(feature = "characterization"))]
+#[macro_export]
+macro_rules! for_each_packed_matching_boundary_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_matching_boundary_regression_case!($macro);
+    };
+}
+
+#[cfg(not(feature = "characterization"))]
+#[macro_export]
+macro_rules! for_each_packed_editing_bench_case {
+    ($macro:ident) => {
+        $crate::for_each_packed_editing_regression_case!($macro);
     };
 }
 

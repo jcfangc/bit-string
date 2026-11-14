@@ -1,6 +1,7 @@
 [package]
 name = "bit-string"
 version.workspace = true
+autobenches = false
 edition = "2024"
 description = "A compact owned bit string type with editing, matching, and bitwise operations."
 readme = "README.md"
@@ -18,6 +19,8 @@ version = "0.7.1"
 
 [features]
 characterization = []
+bench-experimental = []
+bench-competitors = []
 
 [workspace.dependencies]
 bit-string-derive = { version = "0.7", path = "derive" }
@@ -41,11 +44,11 @@ value-traits = "0.2.1"
 
 
 [[bench]]
-name = "construction_from_bool_iter"
+name = "construction"
 harness = false
 
 [[bench]]
-name = "editing_extend_bool"
+name = "editing"
 harness = false
 
 [[bench]]
@@ -57,92 +60,25 @@ name = "bit_retain"
 harness = false
 
 [[bench]]
-name = "construction_from_str"
+name = "bit_ops"
 harness = false
 
 [[bench]]
-name = "construction_zeros"
+name = "bit_scan"
 harness = false
 
 [[bench]]
-name = "bit_ops_xor"
+name = "matching"
 harness = false
 
 [[bench]]
-name = "bit_ops_not"
-harness = false
-
-[[bench]]
-name = "bit_ops_count_ones"
-harness = false
-
-[[bench]]
-name = "bit_ops_shl"
-harness = false
-
-[[bench]]
-name = "editing_push"
-harness = false
-
-[[bench]]
-name = "editing_insert_middle"
-harness = false
-
-[[bench]]
-name = "editing_remove_middle"
-harness = false
-
-[[bench]]
-name = "editing_push_bit_string"
-harness = false
-
-[[bench]]
-name = "editing_replace_interval"
-harness = false
-
-[[bench]]
-name = "editing_slice"
-harness = false
-
-[[bench]]
-name = "matching_ends_with"
-harness = false
-
-[[bench]]
-name = "matching_find"
-harness = false
-
-[[bench]]
-name = "matching_matches_at"
-harness = false
-
-[[bench]]
-name = "bit_fmt"
+name = "bit_traits"
 harness = false
 
 [[bench]]
 name = "bit_reverse"
 harness = false
 
-[[bench]]
-name = "matching_starts_with"
-harness = false
-
-[[bench]]
-name = "matching_strip_prefix"
-harness = false
-
-[[bench]]
-name = "matching_rfind"
-harness = false
-
-[[bench]]
-name = "editing_truncate"
-harness = false
-
-[[bench]]
-name = "editing_pop"
-harness = false
 
 [[bench]]
 name = "packed_construction"
@@ -151,6 +87,7 @@ harness = false
 [[bench]]
 name = "packed_thresholds"
 harness = false
+required-features = ["bench-experimental"]
 
 [[bench]]
 name = "packed_access"
@@ -175,35 +112,8 @@ harness = false
 [[bench]]
 name = "packed_competitors"
 harness = false
+required-features = ["bench-competitors"]
 
 [[bench]]
-name = "packed_native"
-harness = false
-
-[[bench]]
-name = "packed_search_candidates"
-harness = false
-
-[[bench]]
-name = "bit_ops_shl_assign"
-harness = false
-
-[[bench]]
-name = "bit_ops_shr_assign"
-harness = false
-
-[[bench]]
-name = "hash"
-harness = false
-
-[[bench]]
-name = "ord"
-harness = false
-
-[[bench]]
-name = "bit_ops_leading"
-harness = false
-
-[[bench]]
-name = "bit_ops_trailing"
+name = "packed_matching"
 harness = false
