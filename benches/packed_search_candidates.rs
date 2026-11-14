@@ -1,4 +1,5 @@
 const NEEDLE_LEN: usize = 32;
+const HIGH_REPEAT_ABSENT_NEEDLE_LEN: usize = NEEDLE_LEN;
 
 #[derive(Clone, Copy)]
 enum Position {
@@ -14,6 +15,15 @@ fn input<const BITS: u8>(
     needle_len: usize,
     position: Position,
 ) -> (PackedString<Code, BITS>, PackedString<Code, BITS>) {
+    let needle_len = if matches!(position, Position::HighRepeatAbsent) {
+        assert!(
+            HIGH_REPEAT_ABSENT_NEEDLE_LEN * usize::from(BITS) > u64::BITS as usize,
+            "high-repeat absent needle must cross the 64-bit prefix filter"
+        );
+        HIGH_REPEAT_ABSENT_NEEDLE_LEN
+    } else {
+        needle_len
+    };
     let mask = if BITS == 8 {
         u8::MAX
     } else {
@@ -367,7 +377,11 @@ macro_rules! define_long_cases {
             define_position!(middle, Position::Middle, "middle");
             define_position!(tail, Position::Tail, "tail");
             define_position!(absent, Position::Absent, "absent");
-            define_position!(high_repeat_absent, Position::HighRepeatAbsent, "high_repeat_absent");
+            define_position!(
+                high_repeat_absent,
+                Position::HighRepeatAbsent,
+                "high_repeat_absent_needle_32_chars"
+            );
         }
     };
 }
