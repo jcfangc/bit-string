@@ -4,6 +4,7 @@ use divan::{Bencher, black_box};
 use int_intervals::UsizeCO;
 
 include!("bit_scan/count_ones.rs");
+include!("bit_scan/any_all.rs");
 include!("bit_scan/leading.rs");
 include!("bit_scan/trailing.rs");
 

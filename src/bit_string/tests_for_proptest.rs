@@ -379,6 +379,12 @@ proptest! {
     }
 
     #[test]
+    fn predicates_match_bit_iterator(bits in any_bit_string()) {
+        assert_eq!(bits.any(), bits.iter().any(|bit| bit));
+        assert_eq!(bits.all(), bits.iter().all(|bit| bit));
+    }
+
+    #[test]
     fn shl_preserves_invariant(bits in any_bit_string(), amount in 0usize..=256) {
         let bit_len = bits.bit_len();
         let r = bits.shl(amount);

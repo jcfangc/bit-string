@@ -15,7 +15,7 @@ exclude = ["/benches", "/src/**/tests_for_*", "/tests", ".github/"]
 members = ["derive"]
 
 [workspace.package]
-version = "0.7.2"
+version = "0.7.3"
 
 [features]
 characterization = []
