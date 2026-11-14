@@ -129,25 +129,24 @@ impl BitString {
         let new_len = self.bit_len - 1;
         let new_words = word_len(new_len);
 
-        // In-place fast path: word count unchanged.
-        if new_words == self.words.len() {
-            self.words
-                .shift_left_in_place(index + 1, self.bit_len - index - 1);
-            self.bit_len = new_len;
-            self.words.mask_unused_bits(self.bit_len);
-            return value;
+        let first_word = index / WORD_BITS;
+        let first_shift = index % WORD_BITS;
+        let prefix_mask = crate::low_mask(first_shift);
+        let first = self.words[first_word];
+        let carry = self.words.get(first_word + 1).copied().unwrap_or(0) << (WORD_BITS - 1);
+        self.words[first_word] = (first & prefix_mask) | ((first >> 1) & !prefix_mask) | carry;
+
+        for word_index in first_word + 1..self.words.len() {
+            let current = self.words[word_index];
+            let carry = self.words.get(word_index + 1).copied().unwrap_or(0) << (WORD_BITS - 1);
+            self.words[word_index] = (current >> 1) | carry;
         }
 
-        // Word count changed — allocate a fresh buffer.
-        let mut bits = zero_words(new_words);
-
-        self.words.copy_bits(0, index).paste_to(&mut bits, 0);
-        self.words
-            .copy_bits(index + 1, self.bit_len - index - 1)
-            .paste_to(&mut bits, index);
-
-        self.words = bits;
         self.bit_len = new_len;
+        if new_words < self.words.len() {
+            self.truncate_words(new_words);
+        }
+        self.words.mask_unused_bits(new_len);
 
         value
     }

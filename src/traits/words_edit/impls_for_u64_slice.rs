@@ -150,56 +150,6 @@ impl WordsEdit for [u64] {
         }
     }
 
-    /// Walks each word in `[start - 1, start + count)` in reverse, extracts the
-    /// affected range, shifts it right by one (toward lower indices), and ORs
-    /// the carry from the previous word into the high side. The vacated high
-    /// bit in the range is zero-filled and the low bit that falls off becomes
-    /// the carry to the previous word.
-    #[inline]
-    fn shift_left_in_place(&mut self, start: usize, count: usize) {
-        if count == 0 {
-            return;
-        }
-
-        let combined_start = start - 1;
-        let end = start + count;
-        let first_word = combined_start / WORD_BITS;
-        let last_word = (end - 1) / WORD_BITS;
-        let first_shift = combined_start % WORD_BITS;
-        let end_shift = end % WORD_BITS;
-
-        let mut carry: u64 = 0;
-
-        for w in (first_word..=last_word).rev() {
-            let cur = self[w];
-            let lo = if w == first_word { first_shift } else { 0 };
-            let hi = if w == last_word {
-                if end_shift == 0 { WORD_BITS } else { end_shift }
-            } else {
-                WORD_BITS
-            };
-
-            let preserve_mask = low_mask(lo) | !low_mask(hi);
-            let range_mask = low_mask(hi) & !low_mask(lo);
-            let range = cur & range_mask;
-
-            let overflow = if lo == 0 && w > first_word {
-                range & 1
-            } else {
-                0
-            };
-
-            let shifted = if hi > 0 {
-                ((range >> 1) & range_mask) | (carry << (hi - 1))
-            } else {
-                0
-            };
-
-            self[w] = (cur & preserve_mask) | shifted;
-            carry = overflow;
-        }
-    }
-
     /// Clears `len` bits in `self` starting at `start`. `len` must be > 0.
     #[inline]
     fn clear_bits_at(&mut self, start: usize, len: usize) {

@@ -56,13 +56,6 @@ pub(crate) trait WordsEdit {
     /// The vacated bit at `start` is zero-filled. The bit that was at
     /// `start + count - 1` moves to `start + count`. `count` must be > 0.
     fn shift_right_in_place(&mut self, start: usize, count: usize);
-
-    /// Shifts bits in `[start, start + count)` one position to the left
-    /// (toward lower indices), closing the gap at `start`.
-    ///
-    /// The bit that was at `start` is dropped. The vacated bit at
-    /// `start + count - 1` is zero-filled. `count` must be > 0.
-    fn shift_left_in_place(&mut self, start: usize, count: usize);
 }
 
 pub(crate) mod bits_copied;

@@ -71,6 +71,28 @@ fn removes_across_word_boundary() {
 }
 
 #[test]
+fn removal_shrink_reuses_word_capacity() {
+    let mut bits = BitString::zeros(128);
+    bits.set(0, true);
+    bits.set(31, true);
+    bits.set(32, true);
+    bits.set(63, true);
+    bits.set(64, true);
+    bits.truncate(65);
+
+    let mut expected: alloc::vec::Vec<_> = bits.iter().collect();
+    let expected_removed = expected.remove(32);
+    let words_ptr = bits.words().as_ptr();
+
+    assert_eq!(bits.remove(32), expected_removed);
+
+    assert_eq!(bits.words().as_ptr(), words_ptr);
+    assert_eq!(bits.bit_len(), 64);
+    assert_eq!(bits.words().len(), 1);
+    assert_eq!(bits.iter().collect::<alloc::vec::Vec<_>>(), expected);
+}
+
+#[test]
 fn remove_preserves_counts_after_shift() {
     let mut bits = BitString::try_from("111001").unwrap();
 
