@@ -48,6 +48,30 @@ fn attack_predicates_word_boundaries() {
     }
 }
 
+#[test]
+fn attack_predicates_group_and_tail_boundaries() {
+    let bit_len = 10 * 64 + 5;
+    let zeros = BitString::zeros(bit_len);
+    let ones = BitString::ones(bit_len);
+
+    assert!(!zeros.any());
+    assert!(!zeros.all());
+    assert!(ones.any());
+    assert!(ones.all());
+
+    for index in [0, 511, 512, 639, 640, 644] {
+        let mut one_at_index = zeros.clone();
+        one_at_index.set(index, true);
+        assert!(one_at_index.any(), "one at {index}");
+        assert!(!one_at_index.all(), "one at {index}");
+
+        let mut zero_at_index = ones.clone();
+        zero_at_index.set(index, false);
+        assert!(zero_at_index.any(), "zero at {index}");
+        assert!(!zero_at_index.all(), "zero at {index}");
+    }
+}
+
 // ===========================================================================
 // K. BitStr predicates on unaligned views
 // ===========================================================================
