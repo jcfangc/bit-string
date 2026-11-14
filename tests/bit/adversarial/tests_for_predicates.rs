@@ -21,6 +21,33 @@ fn attack_predicates_corner() {
     assert!(o.is_all_ones());
 }
 
+#[test]
+fn attack_predicates_word_boundaries() {
+    for bit_len in [0, 1, 63, 64, 65, 127, 128, 129, 255, 256] {
+        let zeros = BitString::zeros(bit_len);
+        assert!(!zeros.any(), "any on zeros, len={bit_len}");
+        assert_eq!(zeros.all(), bit_len == 0, "all on zeros, len={bit_len}");
+
+        let ones = BitString::ones(bit_len);
+        assert_eq!(ones.any(), bit_len != 0, "any on ones, len={bit_len}");
+        assert!(ones.all(), "all on ones, len={bit_len}");
+
+        if bit_len == 0 {
+            continue;
+        }
+
+        let mut one_at_tail = zeros.clone();
+        one_at_tail.set(bit_len - 1, true);
+        assert!(one_at_tail.any(), "tail one, len={bit_len}");
+        assert_eq!(one_at_tail.all(), bit_len == 1, "tail one, len={bit_len}");
+
+        let mut zero_at_tail = ones;
+        zero_at_tail.set(bit_len - 1, false);
+        assert_eq!(zero_at_tail.any(), bit_len > 1, "tail zero, len={bit_len}");
+        assert!(!zero_at_tail.all(), "tail zero, len={bit_len}");
+    }
+}
+
 // ===========================================================================
 // K. BitStr predicates on unaligned views
 // ===========================================================================

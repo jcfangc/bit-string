@@ -3,12 +3,21 @@ use super::*;
 impl BitString {
     #[inline]
     pub fn any(&self) -> bool {
-        self.count_ones() != 0
+        self.words.iter().any(|&word| word != 0)
     }
 
     #[inline]
     pub fn all(&self) -> bool {
-        self.count_ones() == self.bit_len
+        let full_word_len = self.bit_len / crate::WORD_BITS;
+        if self.words[..full_word_len]
+            .iter()
+            .any(|&word| word != u64::MAX)
+        {
+            return false;
+        }
+
+        let tail_len = self.bit_len % crate::WORD_BITS;
+        tail_len == 0 || self.words[full_word_len] == crate::low_mask(tail_len)
     }
 
     #[inline]

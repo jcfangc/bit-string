@@ -11,37 +11,40 @@ enum AllFixture {
 }
 
 macro_rules! define_any_case {
-    ($old:ident, $scan:ident, $case:literal, $len:expr, $fixture:expr) => {
-        #[divan::bench(name = concat!("any/", $case, "/ours_count_ones"))]
-        fn $old(bencher: Bencher) {
+    ($reference:ident, $ours:ident, $case:literal, $len:expr, $fixture:expr) => {
+        #[divan::bench(name = concat!("any/", $case, "/count_ones_reference"))]
+        fn $reference(bencher: Bencher) {
             let bits = make_any_fixture($len, $fixture);
-            assert_eq!(bits.any(), early_any(&bits));
-            bencher.bench(|| black_box(&bits).any());
+            assert_eq!(bits.any(), bits.count_ones() != 0);
+            bencher.bench(|| black_box(&bits).count_ones() != 0);
         }
 
-        #[divan::bench(name = concat!("any/", $case, "/ours_word_scan"))]
-        fn $scan(bencher: Bencher) {
+        #[divan::bench(name = concat!("any/", $case, "/ours_string"))]
+        fn $ours(bencher: Bencher) {
             let bits = make_any_fixture($len, $fixture);
-            assert_eq!(bits.any(), early_any(&bits));
-            bencher.bench(|| early_any(black_box(&bits)));
+            assert_eq!(bits.any(), bits.count_ones() != 0);
+            bencher.bench(|| black_box(&bits).any());
         }
     };
 }
 
 macro_rules! define_all_case {
-    ($old:ident, $scan:ident, $case:literal, $len:expr, $fixture:expr) => {
-        #[divan::bench(name = concat!("all/", $case, "/ours_count_ones"))]
-        fn $old(bencher: Bencher) {
+    ($reference:ident, $ours:ident, $case:literal, $len:expr, $fixture:expr) => {
+        #[divan::bench(name = concat!("all/", $case, "/count_ones_reference"))]
+        fn $reference(bencher: Bencher) {
             let bits = make_all_fixture($len, $fixture);
-            assert_eq!(bits.all(), early_all(&bits));
-            bencher.bench(|| black_box(&bits).all());
+            assert_eq!(bits.all(), bits.count_ones() == bits.bit_len());
+            bencher.bench(|| {
+                let bits = black_box(&bits);
+                bits.count_ones() == bits.bit_len()
+            });
         }
 
-        #[divan::bench(name = concat!("all/", $case, "/ours_word_scan"))]
-        fn $scan(bencher: Bencher) {
+        #[divan::bench(name = concat!("all/", $case, "/ours_string"))]
+        fn $ours(bencher: Bencher) {
             let bits = make_all_fixture($len, $fixture);
-            assert_eq!(bits.all(), early_all(&bits));
-            bencher.bench(|| early_all(black_box(&bits)));
+            assert_eq!(bits.all(), bits.count_ones() == bits.bit_len());
+            bencher.bench(|| black_box(&bits).all());
         }
     };
 }
@@ -78,31 +81,4 @@ fn make_all_fixture(len: usize, fixture: AllFixture) -> BitString {
         bits.set(index, false);
     }
     bits
-}
-
-fn early_any(bits: &BitString) -> bool {
-    let full_word_len = bits.bit_len() / 64;
-    if bits.words()[..full_word_len].iter().any(|&word| word != 0) {
-        return true;
-    }
-
-    let tail_len = bits.bit_len() % 64;
-    tail_len != 0 && bits.words()[full_word_len] & low_mask(tail_len) != 0
-}
-
-fn early_all(bits: &BitString) -> bool {
-    let full_word_len = bits.bit_len() / 64;
-    if bits.words()[..full_word_len]
-        .iter()
-        .any(|&word| word != u64::MAX)
-    {
-        return false;
-    }
-
-    let tail_len = bits.bit_len() % 64;
-    tail_len == 0 || bits.words()[full_word_len] & low_mask(tail_len) == low_mask(tail_len)
-}
-
-fn low_mask(bit_len: usize) -> u64 {
-    (1u64 << bit_len) - 1
 }
