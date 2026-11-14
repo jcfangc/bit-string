@@ -50,6 +50,47 @@ fn bs_with_index() -> impl Strategy<Value = (BitString, usize)> {
     })
 }
 
+const REMOVE_BOUNDARY_CASES: &[(usize, usize)] = &[
+    (64, 62),
+    (64, 63),
+    (65, 63),
+    (65, 64),
+    (66, 63),
+    (66, 64),
+    (66, 65),
+    (127, 63),
+    (128, 63),
+    (128, 64),
+    (128, 127),
+    (129, 63),
+    (129, 64),
+    (129, 127),
+    (129, 128),
+    (130, 127),
+    (130, 128),
+    (130, 129),
+];
+
+#[derive(Debug)]
+struct RemoveCase {
+    source: alloc::vec::Vec<bool>,
+    index: usize,
+}
+
+fn remove_case() -> impl Strategy<Value = RemoveCase> {
+    prop_oneof![
+        2 => (1usize..=MAX_BITS).prop_flat_map(|len| {
+            (vec(any::<bool>(), len), 0usize..len)
+                .prop_map(|(source, index)| RemoveCase { source, index })
+        }),
+        5 => (0usize..REMOVE_BOUNDARY_CASES.len()).prop_flat_map(|case_index| {
+            let (len, index) = REMOVE_BOUNDARY_CASES[case_index];
+            vec(any::<bool>(), len)
+                .prop_map(move |source| RemoveCase { source, index })
+        }),
+    ]
+}
+
 // ---------------------------------------------------------------------------
 // Core invariants
 // ---------------------------------------------------------------------------
@@ -215,13 +256,20 @@ proptest! {
     }
 
     #[test]
-    fn remove_decrements_len((bits, idx) in bs_with_index()) {
-        if bits.is_empty() { return Ok(()); }
-        let orig_len = bits.bit_len();
-        let mut bits = bits;
-        bits.remove(idx);
-        assert_all_invariants(&bits);
-        assert_eq!(bits.bit_len(), orig_len - 1);
+    fn remove_matches_vec_model(case in remove_case()) {
+        let mut expected = case.source.clone();
+        let expected_removed = expected.remove(case.index);
+        let mut actual = BitString::from_bool_iter(case.source);
+
+        let actual_removed = actual.remove(case.index);
+
+        prop_assert_eq!(actual_removed, expected_removed);
+        prop_assert_eq!(actual.bit_len(), expected.len());
+        for (index, expected_bit) in expected.iter().copied().enumerate() {
+            prop_assert_eq!(actual.get(index), Some(expected_bit));
+        }
+        prop_assert_eq!(actual.get(expected.len()), None);
+        assert_all_invariants(&actual);
     }
 }
 
