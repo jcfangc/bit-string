@@ -106,6 +106,10 @@ name = "packed_editing"
 harness = false
 
 [[bench]]
+name = "packed_reverse"
+harness = false
+
+[[bench]]
 name = "packed_retain"
 harness = false
 
