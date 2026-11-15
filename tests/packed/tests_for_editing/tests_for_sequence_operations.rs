@@ -1,5 +1,71 @@
 use super::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ReversibleCode<const BITS: u8>(u8);
+
+impl<const BITS: u8> PackedChar<BITS> for ReversibleCode<BITS> {
+    fn code(self) -> u8 {
+        self.0
+    }
+
+    fn from_code(code: u8) -> Option<Self> {
+        let mask = ((1u16 << BITS) - 1) as u8;
+        (code <= mask).then_some(Self(code))
+    }
+}
+
+fn assert_reverse_assign_matches_vec<const BITS: u8>()
+where
+    ReversibleCode<BITS>: PackedChar<BITS>,
+{
+    let code_mask = ((1u16 << BITS) - 1) as usize;
+    let lengths: [usize; 11] = [0, 1, 7, 8, 21, 22, 63, 64, 65, 1024, 65_536];
+
+    for len in lengths {
+        for pattern in 0..3 {
+            let original: Vec<_> = (0..len)
+                .map(|index| {
+                    let code = match pattern {
+                        0 => index.wrapping_mul(73).wrapping_add(len * 19),
+                        1 => index % 5,
+                        _ => code_mask / 2,
+                    } & code_mask;
+                    ReversibleCode::<BITS>(code as u8)
+                })
+                .collect();
+            let mut expected = original.clone();
+            expected.reverse();
+
+            let mut string = PackedString::from_chars(original.iter().copied());
+            string.reverse_assign();
+
+            assert_eq!(string.to_vec(), expected);
+            assert_eq!(string.char_len(), len);
+            assert_eq!(string.bits().bit_len(), len * usize::from(BITS));
+            let remainder = string.bits().bit_len() % u64::BITS as usize;
+            if remainder != 0 {
+                let unused_mask = !((1u64 << remainder) - 1);
+                assert_eq!(string.bits().words().last().unwrap() & unused_mask, 0);
+            }
+
+            string.reverse_assign();
+            assert_eq!(string.to_vec(), original);
+        }
+    }
+}
+
+#[test]
+fn packed_reverse_assign_matches_vec_for_all_widths_and_boundaries() {
+    assert_reverse_assign_matches_vec::<1>();
+    assert_reverse_assign_matches_vec::<2>();
+    assert_reverse_assign_matches_vec::<3>();
+    assert_reverse_assign_matches_vec::<4>();
+    assert_reverse_assign_matches_vec::<5>();
+    assert_reverse_assign_matches_vec::<6>();
+    assert_reverse_assign_matches_vec::<7>();
+    assert_reverse_assign_matches_vec::<8>();
+}
+
 #[test]
 fn packed_reverse_reverses_characters_without_mutating_source() {
     let original: Vec<_> = (0..22).map(|index| super::oct(index as u8 % 8)).collect();
