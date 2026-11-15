@@ -261,20 +261,39 @@ fn case3_guard_exactly_one_extra_word_hits_simd() {
 }
 
 #[test]
-fn case3_guard_exact_fit_falls_to_scalar() {
-    // src.len() == sw + full_words — no spare word for SIMD spill, falls to Case 4.
-    let count = 16;
-    let src: Vec<u64> = (0..count) // sw=0, src.len() = count = sw+full_words
-        .map(|i| (i as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15))
-        .collect();
-    let len = count * WORD_BITS;
-    let mut dst_impl = vec![0; count + 2];
-    let mut dst_oracle = vec![0; count + 2];
+fn case3_guard_exact_source_fit_matches_scalar_at_offsets() {
+    for count in [2, 4, 5, 16, 64, 1024] {
+        for src_word in [0, 2] {
+            let src_len = src_word + count;
+            let src: Vec<u64> = (0..src_len)
+                .map(|index| (index as u64 + 1).wrapping_mul(0x9e37_79b9_7f4a_7c15))
+                .collect();
 
-    src.copy_bits(0, len).paste_to(&mut dst_impl, 21);
-    scalar_paste(&src, 0, len, &mut dst_oracle, 21);
+            for dst_shift in [1, 31, 63] {
+                let dst_start = WORD_BITS * 2 + dst_shift;
+                let dst_len = dst_start + count * WORD_BITS;
+                let mut dst_impl = vec![0; crate::word_len(dst_len + 1)];
+                dst_impl.set_bit_at(0, true);
+                dst_impl.set_bit_at(dst_len, true);
+                let mut dst_oracle = dst_impl.clone();
 
-    assert_eq!(&dst_impl[..count + 2], &dst_oracle[..count + 2]);
+                src.copy_bits(src_word * WORD_BITS, count * WORD_BITS)
+                    .paste_to(&mut dst_impl, dst_start);
+                scalar_paste(
+                    &src,
+                    src_word * WORD_BITS,
+                    count * WORD_BITS,
+                    &mut dst_oracle,
+                    dst_start,
+                );
+
+                assert_eq!(
+                    dst_impl, dst_oracle,
+                    "count={count}, src_word={src_word}, dst_shift={dst_shift}"
+                );
+            }
+        }
+    }
 }
 
 #[test]

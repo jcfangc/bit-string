@@ -68,11 +68,12 @@ impl BitsCopied<'_> {
         //   dst[dw+1..] ←  reversed windows              (SIMD bulk)
         //   dst[dw+N]  ←  src[N-1] >> (64-dst_shift)    (high boundary)
         //
-        // Guard: need src[N] in the backing array for the SIMD window, hence
-        // `self.src.len() > sw + full_words`.
+        // The middle copy reads `mid_count + 1 == full_words` source words.
+        // The last source word is also used by the high-boundary spill, so an
+        // exact fit at `sw + full_words` is sufficient.
         else if self.aligned
             && full_words > 1
-            && self.src.len() > self.src_start / WORD_BITS + full_words
+            && self.src.len() >= self.src_start / WORD_BITS + full_words
         {
             let dst_shift = dst_start % WORD_BITS;
             let sw = self.src_start / WORD_BITS;
